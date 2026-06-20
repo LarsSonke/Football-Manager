@@ -1,0 +1,19 @@
+{
+  "name": "football-webgame",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n shared,backend,frontend -c yellow,cyan,magenta \"npm run dev -w @football/shared\" \"npm run dev -w @football/backend\" \"npm run dev -w @football/frontend\"",
+    "build": "npm run build -w @football/shared && npm run build -w @football/backend && npm run build -w @football/frontend",
+    "db:migrate": "npm run db:migrate -w @football/backend",
+    "db:seed": "npm run db:seed -w @football/backend",
+    "db:seed-real": "npm run db:seed-real -w @football/backend",
+    "db:studio": "npm run db:studio -w @football/backend",
+    "db:reset": "npm run db:reset -w @football/backend"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0"
+  }
+}

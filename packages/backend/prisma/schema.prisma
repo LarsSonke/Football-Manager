@@ -1,0 +1,310 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── AUTH ─────────────────────────────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  username  String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  clubs Club[]
+}
+
+// ─── LEAGUE ───────────────────────────────────────────────────────────────────
+
+model League {
+  id             String       @id @default(cuid())
+  name           String
+  startingBudget Int
+  maxClubs       Int          @default(18)
+  seasonLength   Int          @default(34)
+  status         LeagueStatus @default(SETUP)
+  currentDay     Int          @default(0)
+  matchTime      String       @default("20:00") // UTC time for daily match simulation
+  squadSize      Int          @default(25)     // players per club drafted
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  clubs           Club[]
+  matches         Match[]
+  playerInstances PlayerInstance[]
+  draftSession    DraftSession?
+}
+
+enum LeagueStatus {
+  SETUP
+  DRAFTING
+  ACTIVE
+  FINISHED
+}
+
+// ─── CLUB ─────────────────────────────────────────────────────────────────────
+
+model Club {
+  id     String  @id @default(cuid())
+  name   String
+  budget Int
+  isAI   Boolean @default(false)
+  tactic      Json?   // TacticConfig
+  physioLevel Int     @default(0)  // 0=none 1=basic 2=advanced
+
+  leagueId String
+  league   League @relation(fields: [leagueId], references: [id])
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
+
+  wins         Int @default(0)
+  draws        Int @default(0)
+  losses       Int @default(0)
+  goalsFor     Int @default(0)
+  goalsAgainst Int @default(0)
+  points       Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  squad       PlayerInstance[]
+  homeMatches Match[]          @relation("HomeClub")
+  awayMatches Match[]          @relation("AwayClub")
+  draftPicks  DraftPick[]
+}
+
+// ─── GLOBAL PLAYER POOL ───────────────────────────────────────────────────────
+
+model Player {
+  id          String   @id @default(cuid())
+  name        String
+  nationality String?
+  position    Position
+  age         Int
+  potential   Int
+
+  overall   Int
+  pace      Int
+  shooting  Int
+  passing   Int
+  dribbling Int
+  defending Int
+  physical  Int
+
+  // ── Detailed attributes ───────────────────────────────────────────────────
+  atkCrossing       Int @default(50)  // attacking_crossing
+  atkFinishing      Int @default(50)  // attacking_finishing
+  atkHeadAccuracy   Int @default(50)  // attacking_heading_accuracy
+  atkShortPassing   Int @default(50)  // attacking_short_passing
+  atkVolleys        Int @default(50)  // attacking_volleys
+  sklDribbling      Int @default(50)  // skill_dribbling
+  sklCurve          Int @default(50)  // skill_curve
+  sklFkAccuracy     Int @default(50)  // skill_fk_accuracy
+  sklLongPassing    Int @default(50)  // skill_long_passing
+  sklBallControl    Int @default(50)  // skill_ball_control
+  movAcceleration   Int @default(50)  // movement_acceleration
+  movSprintSpeed    Int @default(50)  // movement_sprint_speed
+  movAgility        Int @default(50)  // movement_agility
+  movReactions      Int @default(50)  // movement_reactions
+  movBalance        Int @default(50)  // movement_balance
+  powShotPower      Int @default(50)  // power_shot_power
+  powJumping        Int @default(50)  // power_jumping
+  powStamina        Int @default(50)  // power_stamina
+  powStrength       Int @default(50)  // power_strength
+  powLongShots      Int @default(50)  // power_long_shots
+  menAggression     Int @default(50)  // mentality_aggression
+  menInterceptions  Int @default(50)  // mentality_interceptions
+  menPositioning    Int @default(50)  // mentality_positioning
+  menVision         Int @default(50)  // mentality_vision
+  menPenalties      Int @default(50)  // mentality_penalties
+  menComposure      Int @default(50)  // mentality_composure
+  defMarkingAware   Int @default(50)  // defending_marking_awareness
+  defStandingTackle Int @default(50)  // defending_standing_tackle
+  defSlidingTackle  Int @default(50)  // defending_sliding_tackle
+  gkDiving          Int @default(10)  // goalkeeping_diving
+  gkHandling        Int @default(10)  // goalkeeping_handling
+  gkKicking         Int @default(10)  // goalkeeping_kicking
+  gkPositioning     Int @default(10)  // goalkeeping_positioning
+  gkReflexes        Int @default(10)  // goalkeeping_reflexes
+  gkSpeed           Int @default(10)  // goalkeeping_speed
+  weakFoot          Int @default(3)   // 1–5 scale
+  skillMoves        Int @default(3)   // 1–5 scale
+  heightCm          Int @default(181) // height in cm
+
+  positions      String[]
+  preferredRoles String[]
+  baseValue      Int
+  photoUrl       String?
+
+  instances PlayerInstance[]
+}
+
+enum Position {
+  GK
+  CB
+  LB
+  RB
+  CDM
+  CM
+  CAM
+  LM
+  RM
+  LW
+  RW
+  CF
+  ST
+}
+
+// ─── PLAYER INSTANCE (mutable state per league) ───────────────────────────────
+
+model PlayerInstance {
+  id       String @id @default(cuid())
+  playerId String
+  player   Player @relation(fields: [playerId], references: [id])
+
+  leagueId String
+  league   League @relation(fields: [leagueId], references: [id])
+
+  clubId String?
+  club   Club?   @relation(fields: [clubId], references: [id])
+
+  morale  Int @default(70)
+  form    Int @default(70)
+  fitness Int @default(90)
+
+  injured         Boolean @default(false)
+  injuryDaysLeft  Int     @default(0)
+  trainedPosition String?
+
+  wage Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  performances MatchPerformance[]
+
+  @@unique([playerId, leagueId])
+}
+
+// ─── MATCHES ──────────────────────────────────────────────────────────────────
+
+model Match {
+  id       String      @id @default(cuid())
+  matchday Int
+  status   MatchStatus @default(SCHEDULED)
+
+  leagueId String
+  league   League @relation(fields: [leagueId], references: [id])
+
+  homeClubId String
+  homeClub   Club   @relation("HomeClub", fields: [homeClubId], references: [id])
+
+  awayClubId String
+  awayClub   Club   @relation("AwayClub", fields: [awayClubId], references: [id])
+
+  homeScore Int?
+  awayScore Int?
+
+  // Snapshot of what was used — immutable audit record
+  homeLineup Json?
+  awayLineup Json?
+  homeTactic Json?
+  awayTactic Json?
+  stats      Json?   // { home: TeamMatchStats, away: TeamMatchStats }
+
+  simulatedAt DateTime?
+
+  events       MatchEvent[]
+  performances MatchPerformance[]
+}
+
+enum MatchStatus {
+  SCHEDULED
+  SIMULATED
+}
+
+model MatchEvent {
+  id      String    @id @default(cuid())
+  matchId String
+  match   Match     @relation(fields: [matchId], references: [id])
+
+  minute Int
+  type   EventType
+  detail Json?
+}
+
+enum EventType {
+  GOAL
+  OWN_GOAL
+  YELLOW_CARD
+  RED_CARD
+  SUBSTITUTION
+  PENALTY_MISS
+}
+
+model MatchPerformance {
+  id         String         @id @default(cuid())
+  matchId    String
+  match      Match          @relation(fields: [matchId], references: [id])
+  instanceId String
+  instance   PlayerInstance @relation(fields: [instanceId], references: [id])
+
+  rating        Float
+  goals         Int   @default(0)
+  assists       Int   @default(0)
+  minutesPlayed Int   @default(0)
+}
+
+// ─── DRAFT ────────────────────────────────────────────────────────────────────
+
+model DraftSession {
+  id       String      @id @default(cuid())
+  leagueId String      @unique
+  league   League      @relation(fields: [leagueId], references: [id])
+
+  type          DraftType   @default(SNAKE)
+  status        DraftStatus @default(PENDING)
+  currentRound  Int         @default(1)
+  currentPick   Int         @default(0)
+  pickOrder     String[]
+  roundsTotal   Int         @default(25) // players per team
+  pickTimeLimit Int         @default(90)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  picks DraftPick[]
+}
+
+enum DraftType {
+  SNAKE
+  AUCTION
+}
+
+enum DraftStatus {
+  PENDING
+  ACTIVE
+  COMPLETED
+}
+
+model DraftPick {
+  id        String       @id @default(cuid())
+  sessionId String
+  session   DraftSession @relation(fields: [sessionId], references: [id])
+  clubId    String
+  club      Club         @relation(fields: [clubId], references: [id])
+
+  playerId   String
+  round      Int
+  pickNumber Int
+  price      Int
+
+  pickedAt DateTime @default(now())
+}

@@ -311,11 +311,17 @@ function Overview({ league, matches, myClub, onPhysioUpgrade, onRefresh }: { lea
   const [sponsorData, setSponsorData] = useState<{ available: AvailableDeal[]; active: ActiveDeal[]; history: ActiveDeal[] } | null>(null)
   const [signingDeal, setSigningDeal] = useState<number | null>(null)
   const [sponsorMsg, setSponsorMsg] = useState('')
+  const [awards, setAwards] = useState<MatchdayAwards | null>(null)
 
   useEffect(() => {
     if (!myClub || league.status !== 'ACTIVE') return
     api.get(`/leagues/${league.id}/sponsors`).then(r => setSponsorData(r.data)).catch(() => {})
   }, [league.id, league.status, myClub?.id])
+
+  useEffect(() => {
+    if (league.status !== 'ACTIVE' && league.status !== 'FINISHED') return
+    api.get(`/leagues/${league.id}/awards`).then(r => setAwards(r.data)).catch(() => {})
+  }, [league.id, league.status, league.currentDay])
 
   async function handleSignDeal(index: number) {
     setSigningDeal(index)
@@ -490,6 +496,58 @@ function Overview({ league, matches, myClub, onPhysioUpgrade, onRefresh }: { lea
           </div>
         )}
 
+        {/* Matchday awards */}
+        {awards && (
+          <div style={cardStyle}>
+            <div className="card-header">
+              <span className="accent-bar-gold" />
+              <span style={secLabel}>Matchday {awards.matchday} Awards</span>
+            </div>
+            <div style={cardBody}>
+              {/* MOTM + top scorer + top assister row */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 16 }}>
+                {[
+                  { label: '⭐ MOTM', name: awards.motm?.playerName, club: awards.motm?.clubName, logo: awards.motm?.clubLogoConfig ?? null, value: awards.motm?.rating.toFixed(1), unit: 'rating' },
+                  { label: '⚽ Top Scorer', name: awards.topScorer?.playerName, club: awards.topScorer?.clubName, logo: awards.topScorer?.clubLogoConfig ?? null, value: awards.topScorer ? String(awards.topScorer.goals) : null, unit: 'goals' },
+                  { label: '🎯 Top Assist', name: awards.topAssist?.playerName, club: awards.topAssist?.clubName, logo: awards.topAssist?.clubLogoConfig ?? null, value: awards.topAssist ? String(awards.topAssist.assists) : null, unit: 'assists' },
+                ].map(item => item.name ? (
+                  <div key={item.label} style={{ background: 'var(--bg-base)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', border: '1px solid var(--border)' }}>
+                    <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>{item.label}</div>
+                    <ClubBadge name={item.club ?? ''} size={24} logoConfig={item.logo} />
+                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)', marginTop: 6, lineHeight: 1.3 }}>{item.name}</div>
+                    <div style={{ fontSize: 10, color: 'var(--text-2)', marginTop: 2 }}>{item.club}</div>
+                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 800, color: 'var(--gold)', marginTop: 6 }}>{item.value}</div>
+                  </div>
+                ) : null)}
+              </div>
+              {/* Team of the week */}
+              {awards.teamOfTheWeek.length > 0 && (
+                <>
+                  <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Team of the Week</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {awards.teamOfTheWeek.map(p => (
+                      <div key={p.instanceId} style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto auto', alignItems: 'center', gap: 8, padding: '5px 8px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-base)' }}>
+                        <span className={posClass(p.position)} style={{ fontSize: 9 }}>{p.position}</span>
+                        <div>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-1)', lineHeight: 1.2 }}>{p.playerName}</div>
+                          <div style={{ fontSize: 10, color: 'var(--text-3)' }}>{p.clubName}</div>
+                        </div>
+                        {(p.goals > 0 || p.assists > 0) && (
+                          <div style={{ fontSize: 10, color: 'var(--text-2)', whiteSpace: 'nowrap' }}>
+                            {p.goals > 0 && <span style={{ color: 'var(--green)' }}>⚽{p.goals} </span>}
+                            {p.assists > 0 && <span style={{ color: 'var(--blue)' }}>🎯{p.assists}</span>}
+                          </div>
+                        )}
+                        <div style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 800, color: 'var(--gold)', textAlign: 'right' }}>{p.rating.toFixed(1)}</div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Mini standings */}
         <div style={cardStyle}>
           <div className="card-header">
@@ -551,16 +609,37 @@ function Overview({ league, matches, myClub, onPhysioUpgrade, onRefresh }: { lea
               const remaining = league.seasonLength - league.currentDay
               const isLow = mdRunway !== null && mdRunway < remaining
               const runwayColor = mdRunway === null ? 'var(--text-2)' : mdRunway < 5 ? 'var(--red)' : isLow ? 'var(--gold)' : 'var(--green)'
+              const netSpend = league.startingBudget - myClub.budget
+              const topEarners = [...myClub.squad].filter(p => p.wage > 0).sort((a, b) => b.wage - a.wage).slice(0, 5)
               return (
                 <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
-                  <div style={{ fontSize: 11, color: 'var(--text-2)' }}>
-                    Wages: <span style={{ color: 'var(--text-1)', fontWeight: 600 }}>€{(wages / 1000).toFixed(1)}k/md</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ fontSize: 11, color: 'var(--text-2)' }}>
+                      Wage bill: <span style={{ color: 'var(--text-1)', fontWeight: 600 }}>€{(wages / 1000).toFixed(1)}k/md</span>
+                    </div>
+                    <div style={{ fontSize: 11, color: netSpend >= 0 ? 'var(--red)' : 'var(--green)', fontWeight: 600 }}>
+                      Net: {netSpend >= 0 ? '-' : '+'}€{(Math.abs(netSpend) / 1000).toFixed(0)}k
+                    </div>
                   </div>
                   {mdRunway !== null && (
                     <div style={{ fontSize: 11, marginTop: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
                       <span style={{ color: 'var(--text-2)' }}>Funds last</span>
                       <span style={{ color: runwayColor, fontWeight: 700 }}>{mdRunway} matchday{mdRunway !== 1 ? 's' : ''}</span>
                       {isLow && <span style={{ fontSize: 10, background: 'rgba(232,128,106,0.15)', color: 'var(--red)', padding: '1px 6px', borderRadius: 4, fontWeight: 700 }}>LOW</span>}
+                    </div>
+                  )}
+                  {topEarners.length > 0 && (
+                    <div style={{ marginTop: 12 }}>
+                      <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Top Earners</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        {topEarners.map(p => (
+                          <div key={p.id} style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', alignItems: 'center', gap: 8 }}>
+                            <span className={posClass(p.player.position)} style={{ fontSize: 9 }}>{p.player.position}</span>
+                            <div style={{ fontSize: 12, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.player.name}</div>
+                            <div style={{ fontSize: 11, color: 'var(--gold)', fontWeight: 700, whiteSpace: 'nowrap' }}>€{(p.wage / 1000).toFixed(1)}k</div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -948,9 +1027,30 @@ interface StatEntry {
   assists: number
   appearances: number
   avgRating: number
+  cleanSheets: number
 }
 
-type StatCategory = 'goals' | 'assists' | 'rating' | 'appearances'
+interface AwardEntry {
+  instanceId: string
+  playerName: string
+  position: string
+  clubId: string | null
+  clubName: string
+  clubLogoConfig: LogoConfig | null
+  rating: number
+  goals: number
+  assists: number
+}
+
+interface MatchdayAwards {
+  matchday: number
+  teamOfTheWeek: AwardEntry[]
+  motm: AwardEntry | null
+  topScorer: { instanceId: string; playerName: string; goals: number; clubName: string; clubLogoConfig: LogoConfig | null } | null
+  topAssist: { instanceId: string; playerName: string; assists: number; clubName: string; clubLogoConfig: LogoConfig | null } | null
+}
+
+type StatCategory = 'goals' | 'assists' | 'rating' | 'appearances' | 'cleanSheets'
 
 function Stats({ leagueId, status }: { leagueId: string; status: string }) {
   const [entries, setEntries] = useState<StatEntry[]>([])
@@ -965,19 +1065,22 @@ function Stats({ leagueId, status }: { leagueId: string; status: string }) {
   }, [leagueId])
 
   const categories: { key: StatCategory; label: string; icon: string }[] = [
-    { key: 'goals',       label: 'Top Scorers',     icon: '⚽' },
-    { key: 'assists',     label: 'Top Assists',      icon: '🎯' },
-    { key: 'rating',      label: 'Best Rated',       icon: '⭐' },
-    { key: 'appearances', label: 'Most Appearances', icon: '🎽' },
+    { key: 'goals',       label: 'Top Scorers',    icon: '⚽' },
+    { key: 'assists',     label: 'Top Assists',     icon: '🎯' },
+    { key: 'rating',      label: 'Best Rated',      icon: '⭐' },
+    { key: 'cleanSheets', label: 'Clean Sheets',    icon: '🧤' },
+    { key: 'appearances', label: 'Appearances',     icon: '🎽' },
   ]
 
   const sorted = [...entries].sort((a, b) => {
     if (cat === 'goals')       return b.goals       - a.goals       || b.assists - a.assists
     if (cat === 'assists')     return b.assists      - a.assists     || b.goals   - a.goals
     if (cat === 'rating')      return b.avgRating    - a.avgRating   || b.appearances - a.appearances
+    if (cat === 'cleanSheets') return b.cleanSheets  - a.cleanSheets || b.avgRating - a.avgRating
     return b.appearances - a.appearances || b.goals - a.goals
   }).filter(e => {
-    if (cat === 'rating') return e.appearances >= 3
+    if (cat === 'rating')      return e.appearances >= 3
+    if (cat === 'cleanSheets') return e.position === 'GK'
     return true
   }).slice(0, 20)
 
@@ -985,14 +1088,16 @@ function Stats({ leagueId, status }: { leagueId: string; status: string }) {
     if (cat === 'goals')       return String(e.goals)
     if (cat === 'assists')     return String(e.assists)
     if (cat === 'rating')      return e.avgRating.toFixed(1)
+    if (cat === 'cleanSheets') return String(e.cleanSheets)
     return String(e.appearances)
   }
 
-  function statLabel(): string {
-    if (cat === 'goals')       return 'G'
-    if (cat === 'assists')     return 'A'
-    if (cat === 'rating')      return 'Avg'
-    return 'Apps'
+  function secondaryLabel(e: StatEntry): string {
+    if (cat === 'goals')       return e.assists > 0   ? `${e.assists} ast` : `${e.appearances} apps`
+    if (cat === 'assists')     return e.goals > 0     ? `${e.goals} goals` : `${e.appearances} apps`
+    if (cat === 'rating')      return `${e.appearances} apps`
+    if (cat === 'cleanSheets') return `${e.appearances} apps`
+    return `${e.goals}G ${e.assists}A`
   }
 
   if (loading) return <div style={{ padding: '64px 0', textAlign: 'center', color: 'var(--text-2)' }}>Loading…</div>
@@ -1001,7 +1106,7 @@ function Stats({ leagueId, status }: { leagueId: string; status: string }) {
     <div style={{ textAlign: 'center', padding: '64px 0', color: 'var(--text-2)' }}>
       <div style={{ fontSize: 36, marginBottom: 10 }}>📊</div>
       <p style={{ fontWeight: 600, marginBottom: 6 }}>No stats yet</p>
-      <p style={{ fontSize: 13, color: 'var(--text-3)' }}>Top scorers, ratings and assists will appear here after the first matchday.</p>
+      <p style={{ fontSize: 13, color: 'var(--text-3)' }}>Stats appear here after the first matchday.</p>
     </div>
   )
 
@@ -1031,43 +1136,36 @@ function Stats({ leagueId, status }: { leagueId: string; status: string }) {
       {/* Table */}
       {entries.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-2)' }}>No match data yet.</div>
+      ) : sorted.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-2)' }}>
+          {cat === 'cleanSheets' ? 'No clean sheets recorded yet.' : 'No data for this category.'}
+        </div>
       ) : (
         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
-          {/* Header */}
-          <div style={{
-            display: 'grid', gridTemplateColumns: '36px 1fr auto',
-            padding: '10px 16px', borderBottom: '1px solid var(--border)',
-            fontSize: 10, fontWeight: 800, color: 'var(--text-3)',
-            textTransform: 'uppercase', letterSpacing: '0.1em',
-          }}>
-            <span>#</span>
-            <span>Player</span>
-            <span style={{ textAlign: 'right' }}>{statLabel()}{cat === 'rating' ? ' (min 3 apps)' : ''}</span>
-          </div>
-
           {sorted.map((e, i) => {
             const isTop = i === 0
+            const medal = i === 0 ? 'var(--gold)' : i === 1 ? '#a0a8b8' : i === 2 ? '#cd7f32' : 'var(--text-3)'
             return (
               <div
                 key={e.instanceId}
                 style={{
-                  display: 'grid', gridTemplateColumns: '36px 1fr auto',
-                  alignItems: 'center', padding: '10px 16px',
+                  display: 'grid', gridTemplateColumns: '40px 1fr auto',
+                  alignItems: 'center', padding: '11px 16px',
                   borderBottom: i < sorted.length - 1 ? '1px solid var(--border)' : 'none',
-                  background: isTop ? 'rgba(54,226,126,0.04)' : 'transparent',
+                  background: isTop ? 'rgba(255,196,0,0.04)' : 'transparent',
                 }}
               >
                 {/* Rank */}
                 <div style={{
-                  fontFamily: 'var(--font-display)', fontSize: isTop ? 18 : 14,
-                  fontWeight: 800, color: isTop ? 'var(--gold)' : 'var(--text-3)',
+                  fontFamily: 'var(--font-display)', fontSize: isTop ? 20 : 14,
+                  fontWeight: 800, color: medal, textAlign: 'center',
                 }}>
-                  {isTop ? '1' : i + 1}
+                  {i + 1}
                 </div>
 
                 {/* Player info */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-                  <ClubBadge name={e.clubName} size={28} logoConfig={e.clubLogoConfig} />
+                  <ClubBadge name={e.clubName} size={30} logoConfig={e.clubLogoConfig} />
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontWeight: isTop ? 700 : 600, fontSize: 14, color: 'var(--text-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {e.playerName}
@@ -1079,26 +1177,17 @@ function Stats({ leagueId, status }: { leagueId: string; status: string }) {
                   </div>
                 </div>
 
-                {/* Stat value */}
+                {/* Stat value + secondary */}
                 <div style={{ textAlign: 'right' }}>
                   <div style={{
-                    fontFamily: 'var(--font-display)', fontSize: isTop ? 24 : 18,
-                    fontWeight: 800, color: isTop ? 'var(--green)' : 'var(--text-1)',
+                    fontFamily: 'var(--font-display)', fontSize: isTop ? 26 : 20,
+                    fontWeight: 800, color: isTop ? 'var(--gold)' : 'var(--text-1)', lineHeight: 1,
                   }}>
                     {statValue(e)}
                   </div>
-                  {cat === 'goals' && e.assists > 0 && (
-                    <div style={{ fontSize: 10, color: 'var(--text-3)', fontWeight: 600 }}>{e.assists} ast</div>
-                  )}
-                  {cat === 'assists' && e.goals > 0 && (
-                    <div style={{ fontSize: 10, color: 'var(--text-3)', fontWeight: 600 }}>{e.goals} goals</div>
-                  )}
-                  {cat === 'rating' && (
-                    <div style={{ fontSize: 10, color: 'var(--text-3)', fontWeight: 600 }}>{e.appearances} apps</div>
-                  )}
-                  {cat === 'appearances' && (
-                    <div style={{ fontSize: 10, color: 'var(--text-3)', fontWeight: 600 }}>{e.goals}G {e.assists}A</div>
-                  )}
+                  <div style={{ fontSize: 10, color: 'var(--text-3)', fontWeight: 600, marginTop: 2 }}>
+                    {secondaryLabel(e)}
+                  </div>
                 </div>
               </div>
             )

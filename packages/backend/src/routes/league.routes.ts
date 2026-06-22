@@ -452,6 +452,15 @@ router.get('/:id/stats', async (req: AuthRequest, res) => {
   }
 })
 
+router.get('/:id/awards', async (req: AuthRequest, res) => {
+  try {
+    const awards = await leagueService.getMatchdayStars(req.params.id)
+    res.json(awards)
+  } catch (err: any) {
+    res.status(400).json({ error: err.message })
+  }
+})
+
 router.post('/:id/draft/start', async (req: AuthRequest, res) => {
   const draftType: 'SNAKE' | 'AUCTION' = req.body?.type === 'AUCTION' ? 'AUCTION' : 'SNAKE'
   try {

@@ -661,15 +661,38 @@ export async function getMatchDetail(leagueId: string, matchId: string) {
 // ─── Season stats ────────────────────────────────────────────────────────────
 
 export async function getLeagueStats(leagueId: string) {
-  const groups = await prisma.matchPerformance.groupBy({
-    by: ['instanceId'],
-    where: { match: { leagueId } },
-    _sum: { goals: true, assists: true },
-    _avg: { rating: true },
-    _count: { instanceId: true },
-  })
+  const [groups, gkPerfs] = await Promise.all([
+    prisma.matchPerformance.groupBy({
+      by: ['instanceId'],
+      where: { match: { leagueId } },
+      _sum: { goals: true, assists: true },
+      _avg: { rating: true },
+      _count: { instanceId: true },
+    }),
+    // Clean sheets: GK performances where their team conceded 0
+    prisma.matchPerformance.findMany({
+      where: {
+        match: { leagueId },
+        positionPlayed: 'GK',
+      },
+      include: {
+        match: { select: { homeClubId: true, awayClubId: true, homeScore: true, awayScore: true } },
+        instance: { select: { clubId: true } },
+      },
+    }),
+  ])
 
   if (groups.length === 0) return []
+
+  // Count clean sheets per instanceId
+  const cleanSheetMap: Record<string, number> = {}
+  for (const p of gkPerfs) {
+    const m = p.match
+    if (m.homeScore == null || m.awayScore == null) continue
+    const clubId = p.instance.clubId
+    const conceded = clubId === m.homeClubId ? m.awayScore : m.homeScore
+    if (conceded === 0) cleanSheetMap[p.instanceId] = (cleanSheetMap[p.instanceId] ?? 0) + 1
+  }
 
   const instances = await prisma.playerInstance.findMany({
     where: { id: { in: groups.map(g => g.instanceId) } },
@@ -694,8 +717,104 @@ export async function getLeagueStats(leagueId: string) {
       assists: g._sum.assists ?? 0,
       appearances: g._count.instanceId,
       avgRating: g._avg.rating ? Math.round(g._avg.rating * 10) / 10 : 0,
+      cleanSheets: cleanSheetMap[g.instanceId] ?? 0,
     }
   })
+}
+
+export async function getMatchdayStars(leagueId: string) {
+  const league = await prisma.league.findUnique({ where: { id: leagueId }, select: { currentDay: true, status: true } })
+  if (!league || league.currentDay === 0) return null
+
+  const lastMatchday = league.currentDay
+
+  const perfs = await prisma.matchPerformance.findMany({
+    where: { match: { leagueId, matchday: lastMatchday, status: 'SIMULATED' } },
+    orderBy: { rating: 'desc' },
+    include: {
+      instance: {
+        include: {
+          player: { select: { name: true, position: true, overall: true } },
+          club: { select: { id: true, name: true, logoConfig: true } },
+        },
+      },
+      match: { select: { homeClubId: true, awayClubId: true, homeScore: true, awayScore: true } },
+    },
+  })
+
+  if (perfs.length === 0) return null
+
+  // Build best XI: 1 GK, 4 DEF, 3 MID, 3 ATT (by rating, no duplicate clubs max 2)
+  const GK_POS = ['GK']
+  const DEF_POS = ['CB', 'LB', 'RB']
+  const MID_POS = ['CDM', 'CM', 'CAM', 'LM', 'RM']
+  const ATT_POS = ['LW', 'RW', 'CF', 'ST']
+  const posGroup = (p: string) => {
+    if (GK_POS.includes(p)) return 'GK'
+    if (DEF_POS.includes(p)) return 'DEF'
+    if (MID_POS.includes(p)) return 'MID'
+    return 'ATT'
+  }
+  const slots = { GK: 1, DEF: 4, MID: 3, ATT: 3 }
+  const counts: Record<string, number> = { GK: 0, DEF: 0, MID: 0, ATT: 0 }
+  const selected: typeof perfs = []
+  const usedInstances = new Set<string>()
+
+  for (const p of perfs) {
+    const pos = p.positionPlayed ?? p.instance.player.position
+    const grp = posGroup(pos)
+    if (counts[grp] < slots[grp] && !usedInstances.has(p.instanceId)) {
+      selected.push(p)
+      counts[grp]++
+      usedInstances.add(p.instanceId)
+    }
+    if (selected.length === 11) break
+  }
+
+  // Also find top scorer and top assister of the matchday
+  const byGoals = [...perfs].sort((a, b) => b.goals - a.goals || b.rating - a.rating)
+  const byAssists = [...perfs].sort((a, b) => b.assists - a.assists || b.rating - a.rating)
+  const motm = perfs[0]
+
+  return {
+    matchday: lastMatchday,
+    teamOfTheWeek: selected.map(p => ({
+      instanceId: p.instanceId,
+      playerName: p.instance.player.name,
+      position: p.positionPlayed ?? p.instance.player.position,
+      clubId: p.instance.club?.id ?? null,
+      clubName: p.instance.club?.name ?? '—',
+      clubLogoConfig: p.instance.club?.logoConfig ?? null,
+      rating: Math.round(p.rating * 10) / 10,
+      goals: p.goals,
+      assists: p.assists,
+    })),
+    motm: motm ? {
+      instanceId: motm.instanceId,
+      playerName: motm.instance.player.name,
+      position: motm.positionPlayed ?? motm.instance.player.position,
+      clubId: motm.instance.club?.id ?? null,
+      clubName: motm.instance.club?.name ?? '—',
+      clubLogoConfig: motm.instance.club?.logoConfig ?? null,
+      rating: Math.round(motm.rating * 10) / 10,
+      goals: motm.goals,
+      assists: motm.assists,
+    } : null,
+    topScorer: byGoals[0]?.goals > 0 ? {
+      instanceId: byGoals[0].instanceId,
+      playerName: byGoals[0].instance.player.name,
+      goals: byGoals[0].goals,
+      clubName: byGoals[0].instance.club?.name ?? '—',
+      clubLogoConfig: byGoals[0].instance.club?.logoConfig ?? null,
+    } : null,
+    topAssist: byAssists[0]?.assists > 0 ? {
+      instanceId: byAssists[0].instanceId,
+      playerName: byAssists[0].instance.player.name,
+      assists: byAssists[0].assists,
+      clubName: byAssists[0].instance.club?.name ?? '—',
+      clubLogoConfig: byAssists[0].instance.club?.logoConfig ?? null,
+    } : null,
+  }
 }
 
 // ─── Physio ───────────────────────────────────────────────────────────────────

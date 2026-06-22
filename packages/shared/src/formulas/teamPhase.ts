@@ -46,7 +46,10 @@ export function conditionMultiplier(e: LineupEntry): number {
   const formMod    = (e.form    - 70) * 0.0010
   const fitnessMod = e.fitness  < 70  ? (e.fitness  - 70) * 0.0020 : 0
   const staminaMod = e.matchStamina < 60 ? (e.matchStamina - 60) * 0.0025 : 0
-  return Math.max(0.70, 1 + moraleMod + formMod + fitnessMod + staminaMod)
+  const base = Math.max(0.70, 1 + moraleMod + formMod + fitnessMod + staminaMod)
+  // GK playing outfield or outfield playing GK: ~40% reduction in phase contribution
+  const crossRoleMul = (e.naturalPosition === 'GK') !== (e.assignedPosition === 'GK') ? 0.60 : 1.0
+  return base * crossRoleMul
 }
 
 function avg(entries: LineupEntry[], fn: (a: PlayerAttrsForRoles) => number, fallback = 65): number {
@@ -60,6 +63,7 @@ export function calcTeamPhase(
 ): TeamPhaseScores {
   const style    = tactic?.style            ?? 'possession'
   const pressing = (tactic?.pressingIntensity ?? 55) / 100
+  const defLine  = (tactic?.defensiveLine     ?? 50) / 100   // 0–1
   const width    = (tactic?.width             ?? 50) / 100
 
   // ── Group by assigned position ────────────────────────────────────────────
@@ -150,10 +154,14 @@ export function calcTeamPhase(
   const midMul  = style === 'possession' ? 1.08 : style === 'counter'    ? 0.92 : 1.00
   const presMul = style === 'pressing'   ? 1.18 : style === 'lowblock'   ? 0.65 : style === 'counter' ? 0.85 : 1.00
 
+  // Defensive line: high line compresses play → boosts def/mid, low line drops back → slight def drop
+  // Range: 0.90 (line=0) to 1.10 (line=100), centred at 1.00 (line=50)
+  const defLineMul = 1 + (defLine - 0.5) * 0.20
+
   return {
     attackStrength:     clamp(attackRaw * atkMul,  40, 99),
-    midfieldControl:    clamp(midRaw    * midMul,  40, 99),
-    defensiveStrength:  clamp(defRaw    * defMul,  40, 99),
+    midfieldControl:    clamp(midRaw    * midMul  * (1 + (defLine - 0.5) * 0.08), 40, 99),
+    defensiveStrength:  clamp(defRaw    * defMul  * defLineMul, 40, 99),
     pressingStrength:   clamp(pressRaw  * presMul, 20, 99),
     chanceCreation:     clamp(chanceRaw,            40, 99),
     finishingQuality:   clamp(finRaw,               40, 99),

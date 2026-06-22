@@ -32,6 +32,7 @@ model League {
   currentDay     Int          @default(0)
   matchTime      String       @default("20:00") // UTC time for daily match simulation
   squadSize      Int          @default(25)     // players per club drafted
+  history        Json?        // Array of SeasonSnapshot saved at end of each season
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
@@ -56,6 +57,7 @@ model Club {
   budget Int
   isAI   Boolean @default(false)
   tactic      Json?   // TacticConfig
+  logoConfig  Json?   // LogoConfig
   physioLevel Int     @default(0)  // 0=none 1=basic 2=advanced
 
   leagueId String
@@ -74,10 +76,48 @@ model Club {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  squad       PlayerInstance[]
-  homeMatches Match[]          @relation("HomeClub")
-  awayMatches Match[]          @relation("AwayClub")
-  draftPicks  DraftPick[]
+  squad        PlayerInstance[]
+  homeMatches  Match[]          @relation("HomeClub")
+  awayMatches  Match[]          @relation("AwayClub")
+  draftPicks   DraftPick[]
+  sponsorDeals SponsorDeal[]
+}
+
+// ─── SPONSORS ─────────────────────────────────────────────────────────────────
+
+model SponsorDeal {
+  id           String            @id @default(cuid())
+  clubId       String
+  club         Club              @relation(fields: [clubId], references: [id])
+  leagueId     String
+
+  sponsorName  String
+  sponsorEmoji String
+  mission      String
+  type         SponsorMissionType
+  params       Json              // { instanceId?, playerName?, goals?, minRating? }
+
+  cost         Int
+  reward       Int
+
+  status       SponsorDealStatus @default(ACTIVE)
+  targetMatchday Int
+
+  createdAt    DateTime @default(now())
+}
+
+enum SponsorMissionType {
+  PLAY_PLAYER
+  WIN_MATCH
+  CLEAN_SHEET
+  SCORE_GOALS
+  PLAYER_RATING
+}
+
+enum SponsorDealStatus {
+  ACTIVE
+  COMPLETED
+  FAILED
 }
 
 // ─── GLOBAL PLAYER POOL ───────────────────────────────────────────────────────
@@ -256,10 +296,11 @@ model MatchPerformance {
   instanceId String
   instance   PlayerInstance @relation(fields: [instanceId], references: [id])
 
-  rating        Float
-  goals         Int   @default(0)
-  assists       Int   @default(0)
-  minutesPlayed Int   @default(0)
+  rating           Float
+  goals            Int     @default(0)
+  assists          Int     @default(0)
+  minutesPlayed    Int     @default(0)
+  positionPlayed   String?
 }
 
 // ─── DRAFT ────────────────────────────────────────────────────────────────────

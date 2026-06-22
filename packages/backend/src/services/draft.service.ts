@@ -46,9 +46,14 @@ export async function getDraftState(leagueId: string) {
 
 export async function searchPlayers(
   leagueId: string,
-  opts: { q?: string; positions?: string[]; take?: number; skip?: number },
+  opts: { q?: string; positions?: string[]; take?: number; skip?: number; minOvr?: number; maxOvr?: number; maxPrice?: number },
 ) {
-  const { q, positions, take = 100, skip = 0 } = opts
+  const { q, positions, take = 100, skip = 0, minOvr, maxOvr, maxPrice } = opts
+
+  const overallFilter: { gte?: number; lte?: number } = {}
+  if (minOvr !== undefined) overallFilter.gte = minOvr
+  if (maxOvr !== undefined) overallFilter.lte = maxOvr
+
   return prisma.playerInstance.findMany({
     where: {
       leagueId,
@@ -56,6 +61,8 @@ export async function searchPlayers(
       player: {
         ...(positions?.length ? { position: { in: positions as any[] } } : {}),
         ...(q ? { name: { contains: q, mode: 'insensitive' as const } } : {}),
+        ...(Object.keys(overallFilter).length ? { overall: overallFilter } : {}),
+        ...(maxPrice !== undefined ? { baseValue: { lte: maxPrice } } : {}),
       },
     },
     include: { player: true },

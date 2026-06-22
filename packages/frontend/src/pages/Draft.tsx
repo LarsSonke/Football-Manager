@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { io, type Socket } from 'socket.io-client'
 import { useAuth } from '../stores/auth.store'
 import { api } from '../api/client'
@@ -483,12 +483,19 @@ export default function Draft() {
   const { user } = useAuth()
   const navigate = useNavigate()
 
+  const TAKE = 60
+
   const [draft, setDraft] = useState<DraftState | null>(null)
   const [clubs, setClubs] = useState<ClubInfo[]>([])
   const [players, setPlayers] = useState<AvailablePlayer[]>([])
+  const [hasMore, setHasMore] = useState(false)
+  const [page, setPage] = useState(0)
   const [playersLoading, setPlayersLoading] = useState(false)
   const [posFilter, setPosFilter] = useState('ALL')
   const [search, setSearch] = useState('')
+  const [minOvr, setMinOvr] = useState('')
+  const [maxOvr, setMaxOvr] = useState('')
+  const [canAfford, setCanAfford] = useState(false)
   const [picking, setPicking] = useState<string | null>(null)
   const [timeLeft, setTimeLeft] = useState(90)
   const [error, setError] = useState('')
@@ -498,34 +505,91 @@ export default function Draft() {
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const showCompare = compareList.length === 2
-
   const clubMap = Object.fromEntries(clubs.map(c => [c.id, c]))
 
-  const searchRef = useRef(search)
+  // Refs so refresh() can read current filter state without stale closures
+  const searchRef    = useRef(search)
   const posFilterRef = useRef(posFilter)
-  useEffect(() => { searchRef.current = search }, [search])
+  const minOvrRef    = useRef(minOvr)
+  const maxOvrRef    = useRef(maxOvr)
+  const canAffordRef = useRef(canAfford)
+  useEffect(() => { searchRef.current    = search    }, [search])
   useEffect(() => { posFilterRef.current = posFilter }, [posFilter])
+  useEffect(() => { minOvrRef.current    = minOvr    }, [minOvr])
+  useEffect(() => { maxOvrRef.current    = maxOvr    }, [maxOvr])
+  useEffect(() => { canAffordRef.current = canAfford }, [canAfford])
 
-  const fetchPlayers = useCallback(async (q: string, pos: string) => {
+  // Compute positions recommended by squad analysis (used by RECOMMEND filter)
+  function getRecommendedPositions(myPicksArg: PickRecord[], pickedMapArg: Record<string, PickedPlayer>): string[] {
+    const counts: Record<string, number> = {}
+    myPicksArg.forEach(p => {
+      const pl = pickedMapArg[p.playerId]
+      if (pl) counts[pl.position] = (counts[pl.position] ?? 0) + 1
+    })
+    return Object.entries(IDEAL_FORMATION)
+      .filter(([pos, needed]) => (counts[pos] ?? 0) < needed)
+      .map(([pos]) => pos)
+  }
+
+  const fetchPlayers = useCallback(async (opts: {
+    q: string; pos: string; minOvr: string; maxOvr: string
+    canAfford: boolean; pageNum: number; append: boolean
+    myBudget: number | null
+    myPicksForRecommend: PickRecord[]
+    pickedMapForRecommend: Record<string, PickedPlayer>
+  }) => {
     if (!leagueId) return
-    setPlayersLoading(true)
+    if (!opts.append) setPlayersLoading(true)
     try {
       const params = new URLSearchParams()
-      if (q) params.set('q', q)
-      if (pos !== 'ALL') {
-        const positions = POS_GROUPS[pos]
-        if (positions) positions.forEach(p => params.append('pos', p))
+      if (opts.q) params.set('q', opts.q)
+
+      if (opts.pos === 'RECOMMEND') {
+        const needed = getRecommendedPositions(opts.myPicksForRecommend, opts.pickedMapForRecommend)
+        if (needed.length > 0) needed.forEach(p => params.append('pos', p))
+        // RECOMMEND auto-enables can-afford
+        if (opts.myBudget !== null) params.set('maxPrice', String(opts.myBudget))
+      } else {
+        if (opts.pos !== 'ALL') {
+          const positions = POS_GROUPS[opts.pos]
+          if (positions) positions.forEach(p => params.append('pos', p))
+        }
+        if (opts.canAfford && opts.myBudget !== null) params.set('maxPrice', String(opts.myBudget))
       }
-      params.set('take', '200')
+
+      if (opts.minOvr) params.set('minOvr', opts.minOvr)
+      if (opts.maxOvr) params.set('maxOvr', opts.maxOvr)
+      params.set('take', String(TAKE + 1))
+      params.set('skip', String(opts.pageNum * TAKE))
+
       const res = await api.get(`/draft/${leagueId}/players?${params}`)
-      setPlayers(res.data)
+      const data = res.data as AvailablePlayer[]
+      const more = data.length > TAKE
+      if (more) data.pop()
+
+      setHasMore(more)
+      setPlayers(prev => opts.append ? [...prev, ...data] : data)
     } finally {
-      setPlayersLoading(false)
+      if (!opts.append) setPlayersLoading(false)
     }
   }, [leagueId])
 
-  const fetchPlayersRef = useRef(fetchPlayers)
+  const fetchPlayersRef    = useRef(fetchPlayers)
+  const myBudgetRef        = useRef<number | null>(null)
+  const myPicksRef         = useRef<PickRecord[]>([])
+  const pickedMapRef       = useRef<Record<string, PickedPlayer>>({})
   useEffect(() => { fetchPlayersRef.current = fetchPlayers }, [fetchPlayers])
+
+  function doFetch(pageNum: number, append: boolean) {
+    fetchPlayersRef.current({
+      q: searchRef.current, pos: posFilterRef.current,
+      minOvr: minOvrRef.current, maxOvr: maxOvrRef.current,
+      canAfford: canAffordRef.current, pageNum, append,
+      myBudget: myBudgetRef.current,
+      myPicksForRecommend: myPicksRef.current,
+      pickedMapForRecommend: pickedMapRef.current,
+    })
+  }
 
   const refresh = useCallback(async () => {
     if (!leagueId) return
@@ -533,23 +597,33 @@ export default function Draft() {
       api.get(`/draft/${leagueId}`),
       api.get(`/leagues/${leagueId}`),
     ])
-    setDraft(draftRes.data)
-    setClubs(leagueRes.data.clubs)
-    setTimeLeft(draftRes.data.session.pickTimeLimit ?? 90)
-    // Refresh player list with current filter state (via ref — no closure dependency)
-    fetchPlayersRef.current(searchRef.current, posFilterRef.current)
-  }, [leagueId])
+    const draftData: DraftState = draftRes.data
+    const clubsData: ClubInfo[] = leagueRes.data.clubs
+    setDraft(draftData)
+    setClubs(clubsData)
+    setTimeLeft(draftData.session.pickTimeLimit ?? 90)
+    setPage(0)
+    // Update refs before fetching
+    const myClubFresh = clubsData.find(c => c.user?.id === user?.id)
+    myBudgetRef.current  = myClubFresh?.budget ?? null
+    myPicksRef.current   = draftData.session.picks
+    pickedMapRef.current = draftData.pickedPlayerMap
+    doFetch(0, false)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leagueId, user?.id])
 
   useEffect(() => { refresh() }, [refresh])
 
-  // Debounced player search when filter/search changes
+  // Debounced re-fetch when any filter changes (reset to page 0)
   useEffect(() => {
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
     searchTimerRef.current = setTimeout(() => {
-      fetchPlayers(search, posFilter)
+      setPage(0)
+      doFetch(0, false)
     }, search ? 300 : 0)
     return () => { if (searchTimerRef.current) clearTimeout(searchTimerRef.current) }
-  }, [search, posFilter, fetchPlayers])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, posFilter, minOvr, maxOvr, canAfford])
 
   useEffect(() => {
     if (timerRef.current) clearInterval(timerRef.current)
@@ -595,7 +669,7 @@ export default function Draft() {
   if (!draft) {
     return (
       <div>
-        <nav className="nav"><div className="nav-logo"><img src="/logo.png" alt="Football Manager" style={{ height: 32, display: 'block' }} /></div></nav>
+        <nav className="nav"><Link to="/" className="nav-logo"><img src="/logo.png" alt="Football Manager" style={{ height: 32, display: 'block' }} /></Link></nav>
         <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--text-2)' }}>Loading draft...</div>
       </div>
     )
@@ -611,9 +685,6 @@ export default function Draft() {
   const totalPicksInDraft = session.roundsTotal * totalPicks
   const timerPct = (timeLeft / (session.pickTimeLimit || 90)) * 100
 
-  // Players are fetched server-side — no client-side filtering needed
-  const filtered = players
-
   const recentPicks = [...session.picks].reverse().slice(0, 8)
   const nextPicks: string[] = []
   for (let i = 0; i < Math.min(5, totalPicks); i++) {
@@ -626,7 +697,7 @@ export default function Draft() {
       {/* Nav */}
       <nav className="nav">
         <button className="btn btn-outline" style={{ fontSize: 12, padding: '5px 10px' }} onClick={() => navigate(`/league/${leagueId}`)}>← League</button>
-        <div className="nav-logo"><img src="/logo.png" alt="Football Manager" style={{ height: 30, display: 'block' }} /></div>
+        <Link to="/" className="nav-logo"><img src="/logo.png" alt="Football Manager" style={{ height: 30, display: 'block' }} /></Link>
         <div className="nav-spacer" />
         {myClub && <span style={{ fontSize: 12, color: 'var(--text-2)' }}>💰 €{(myClub.budget / 1000).toFixed(0)}M</span>}
         <span className="nav-user">{user?.username}</span>
@@ -677,8 +748,13 @@ export default function Draft() {
           )}
 
           {draftComplete && (
-            <div style={{ padding: '8px 16px', background: 'var(--green-glow)', border: '1px solid var(--green)', borderRadius: 'var(--radius-sm)' }}>
-              <span style={{ color: 'var(--green)', fontWeight: 700, fontSize: 13 }}>🏆 Draft Complete — Season starting...</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ padding: '8px 16px', background: 'var(--green-glow)', border: '1px solid var(--green)', borderRadius: 'var(--radius-sm)' }}>
+                <span style={{ color: 'var(--green)', fontWeight: 700, fontSize: 13 }}>Draft Complete!</span>
+              </div>
+              <button className="btn btn-green" onClick={() => navigate(`/league/${leagueId}`)}>
+                Go to League →
+              </button>
             </div>
           )}
         </div>
@@ -707,7 +783,8 @@ export default function Draft() {
             <span className="accent-bar" />
             <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Available Pool</span>
           </div>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
+          {/* Filter row 1: position tabs + search */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 8, flexWrap: 'wrap', alignItems: 'center' }}>
             <div style={{ display: 'flex', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
               {['ALL', 'GK', 'DEF', 'MID', 'ATT'].map(g => (
                 <button key={g} onClick={() => setPosFilter(g)} style={{
@@ -718,26 +795,75 @@ export default function Draft() {
                   transition: 'all 0.15s',
                 }}>{g}</button>
               ))}
+              <button onClick={() => setPosFilter('RECOMMEND')} style={{
+                padding: '7px 14px', border: 'none', cursor: 'pointer',
+                fontFamily: 'var(--font-body)', fontSize: 12, fontWeight: 700,
+                background: posFilter === 'RECOMMEND' ? 'var(--gold)' : 'transparent',
+                color: posFilter === 'RECOMMEND' ? '#000' : 'var(--gold)',
+                transition: 'all 0.15s',
+              }} title="Show affordable players for positions your squad is missing">⭐ Recommend</button>
             </div>
-            <input placeholder="Search player..." value={search} onChange={e => setSearch(e.target.value)} style={{ flex: 1, minWidth: 160, maxWidth: 260 }} />
-            <span style={{ fontSize: 12, color: 'var(--text-2)', whiteSpace: 'nowrap' }}>
-              {playersLoading ? '...' : `${filtered.length} shown`}
+            <input placeholder="Search player..." value={search} onChange={e => setSearch(e.target.value)} style={{ flex: 1, minWidth: 160, maxWidth: 240 }} />
+          </div>
+
+          {/* Filter row 2: OVR range + can afford + count */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 14, alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <span style={{ fontSize: 11, color: 'var(--text-2)', whiteSpace: 'nowrap' }}>OVR</span>
+              <input
+                type="number" min={40} max={99} placeholder="min"
+                value={minOvr} onChange={e => setMinOvr(e.target.value)}
+                style={{ width: 56, fontSize: 12, padding: '5px 7px' }}
+              />
+              <span style={{ fontSize: 11, color: 'var(--text-3)' }}>–</span>
+              <input
+                type="number" min={40} max={99} placeholder="max"
+                value={maxOvr} onChange={e => setMaxOvr(e.target.value)}
+                style={{ width: 56, fontSize: 12, padding: '5px 7px' }}
+              />
+            </div>
+            <button
+              onClick={() => setCanAfford(v => !v)}
+              style={{
+                padding: '6px 12px', borderRadius: 'var(--radius-sm)', fontSize: 12, fontWeight: 700,
+                cursor: 'pointer', border: `1px solid ${canAfford ? 'var(--green)' : 'var(--border)'}`,
+                background: canAfford ? 'rgba(54,226,126,0.12)' : 'transparent',
+                color: canAfford ? 'var(--green)' : 'var(--text-2)',
+              }}
+              title="Only show players you can afford"
+            >
+              💰 Can Afford
+            </button>
+            {(minOvr || maxOvr || canAfford || posFilter !== 'ALL' || search) && (
+              <button
+                onClick={() => { setMinOvr(''); setMaxOvr(''); setCanAfford(false); setPosFilter('ALL'); setSearch('') }}
+                style={{ padding: '5px 10px', borderRadius: 'var(--radius-sm)', fontSize: 11, cursor: 'pointer', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-3)' }}
+              >✕ Clear</button>
+            )}
+            <span style={{ fontSize: 12, color: 'var(--text-2)', marginLeft: 'auto', whiteSpace: 'nowrap' }}>
+              {playersLoading ? 'Loading...' : `${players.length} shown${hasMore ? '+' : ''}`}
             </span>
           </div>
 
+          {posFilter === 'RECOMMEND' && (
+            <div style={{ padding: '8px 12px', background: 'rgba(233,196,106,0.08)', border: '1px solid rgba(233,196,106,0.2)', borderRadius: 'var(--radius-sm)', marginBottom: 12, fontSize: 12, color: 'var(--gold)' }}>
+              ⭐ Showing affordable players for your missing squad positions
+            </div>
+          )}
+
           {error && <p className="error-text" style={{ marginBottom: 10 }}>{error}</p>}
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 'calc(100vh - 300px)', overflowY: 'auto', paddingRight: 4 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 'calc(100vh - 340px)', overflowY: 'auto', paddingRight: 4 }}>
             {playersLoading && (
               <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-2)', fontSize: 13 }}>Loading players...</div>
             )}
-            {!playersLoading && filtered.length === 0 && (
+            {!playersLoading && players.length === 0 && (
               <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-2)' }}>No players match your filter.</div>
             )}
-            {filtered.map(inst => {
+            {players.map(inst => {
               const p = inst.player
               const flagSrc = flagUrl(p.nationality)
-              const canAfford = !myClub || myClub.budget >= p.baseValue
+              const playerAffordable = !myClub || myClub.budget >= p.baseValue
               const isPicking = picking === p.id
               const inCompare = compareList.some(c => c.id === p.id)
 
@@ -749,11 +875,11 @@ export default function Draft() {
                     alignItems: 'center', gap: 12, padding: '10px 14px',
                     background: inCompare ? 'rgba(233,196,106,0.06)' : 'var(--bg-card)',
                     border: `1px solid ${inCompare ? 'rgba(233,196,106,0.35)' : 'var(--border)'}`,
-                    borderRadius: 'var(--radius-sm)', opacity: canAfford ? 1 : 0.45,
+                    borderRadius: 'var(--radius-sm)', opacity: playerAffordable ? 1 : 0.45,
                     cursor: 'pointer', transition: 'border-color 0.15s, background 0.15s',
                   }}
                   onClick={() => setDetailPlayer(p)}
-                  onMouseEnter={e => { if (!inCompare && canAfford) (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border-md)' }}
+                  onMouseEnter={e => { if (!inCompare && playerAffordable) (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border-md)' }}
                   onMouseLeave={e => { if (!inCompare) (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border)' }}
                 >
                   {/* Face photo */}
@@ -787,12 +913,12 @@ export default function Draft() {
 
                   {/* Price */}
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 700, color: canAfford ? 'var(--text-1)' : 'var(--red)' }}>
+                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 700, color: playerAffordable ? 'var(--text-1)' : 'var(--red)' }}>
                       €{(p.baseValue / 1000).toFixed(1)}M
                     </div>
                     {myClub && (
                       <div style={{ fontSize: 10, color: 'var(--text-2)', marginTop: 2 }}>
-                        {canAfford ? `€${((myClub.budget - p.baseValue) / 1000).toFixed(1)}M left` : "Can't afford"}
+                        {playerAffordable ? `€${((myClub.budget - p.baseValue) / 1000).toFixed(1)}M left` : "Can't afford"}
                       </div>
                     )}
                   </div>
@@ -807,9 +933,9 @@ export default function Draft() {
 
                   {/* Pick button */}
                   <button
-                    className={`btn ${isMyTurn && canAfford ? 'btn-green' : 'btn-ghost'}`}
+                    className={`btn ${isMyTurn && playerAffordable ? 'btn-green' : 'btn-ghost'}`}
                     style={{ fontSize: 12, padding: '7px 14px', minWidth: 60 }}
-                    disabled={!isMyTurn || !canAfford || !!picking}
+                    disabled={!isMyTurn || !playerAffordable || !!picking}
                     onClick={e => { e.stopPropagation(); handlePick(p.id) }}
                   >
                     {isPicking ? '...' : 'Pick'}
@@ -818,6 +944,22 @@ export default function Draft() {
               )
             })}
           </div>
+
+          {/* Load more */}
+          {hasMore && (
+            <button
+              className="btn btn-outline"
+              style={{ width: '100%', marginTop: 10, fontSize: 12 }}
+              disabled={playersLoading}
+              onClick={() => {
+                const nextPage = page + 1
+                setPage(nextPage)
+                doFetch(nextPage, true)
+              }}
+            >
+              {playersLoading ? 'Loading...' : 'Load More'}
+            </button>
+          )}
         </div>
 
         {/* ── Right sidebar ──────────────────────────────────────── */}

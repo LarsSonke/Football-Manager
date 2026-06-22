@@ -6,22 +6,19 @@ export interface EffectiveRatingInput extends PlayerInstanceState {
 
 export function effectiveRating(
   player: EffectiveRatingInput,
-  tacticalFit: number,  // 0.0–1.0
+  tacticalFit: number,  // negative = extreme cross-role (e.g. GK playing outfield)
 ): number {
   const moraleModifier  = (player.morale  - 70) * 0.1
   const formModifier    = (player.form    - 70) * 0.075
   const fitnessModifier = player.fitness >= 70 ? 0 : (player.fitness - 70) * 0.15
-  const tacticModifier  = (tacticalFit - 0.7) * 10
   const injuryModifier  = player.injured ? -20 : 0
 
-  const raw =
-    player.overall +
-    moraleModifier +
-    formModifier +
-    fitnessModifier +
-    tacticModifier +
-    injuryModifier
+  // tacticalFit < 0 signals a severe cross-role mismatch (GK ↔ outfield): apply ~40% reduction
+  const baseRating = tacticalFit < 0
+    ? player.overall * 0.60
+    : player.overall + (tacticalFit - 0.7) * 10
 
+  const raw = baseRating + moraleModifier + formModifier + fitnessModifier + injuryModifier
   return Math.max(40, Math.min(99, raw))
 }
 
@@ -53,7 +50,8 @@ export function tacticFitScore(
   const adjacent = adjacencyMap[playerPosition] ?? []
   if (adjacent.includes(lineupPosition)) return 0.7
 
-  if (playerPosition === 'GK' || lineupPosition === 'GK') return 0.2
+  // GK playing outfield or outfield playing GK: return negative to signal extreme mismatch
+  if (playerPosition === 'GK' || lineupPosition === 'GK') return -1.0
 
   return 0.5
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../stores/auth.store'
 import { api } from '../api/client'
 
@@ -43,8 +43,11 @@ export default function Dashboard() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [leagues, setLeagues] = useState<LeagueEntry[]>([])
-  const [panel, setPanel] = useState<'none' | 'create' | 'join'>('none')
-  const [joinId, setJoinId] = useState('')
+  const [panel, setPanel] = useState<'none' | 'create' | 'join'>(() => {
+    const inv = new URLSearchParams(window.location.search).get('join')
+    return inv ? 'join' : 'none'
+  })
+  const [joinId, setJoinId] = useState(() => new URLSearchParams(window.location.search).get('join') ?? '')
   const [joinName, setJoinName] = useState('')
   const [form, setForm] = useState<CreateForm>({
     name: '',
@@ -79,8 +82,12 @@ export default function Dashboard() {
   async function joinLeague() {
     setError('')
     setLoading(true)
+    const raw = joinId.trim()
+    const leagueId = raw.startsWith('http')
+      ? (new URL(raw).searchParams.get('join') ?? raw.split('/').pop() ?? raw)
+      : raw
     try {
-      await api.post(`/leagues/${joinId}/join`, { clubName: joinName })
+      await api.post(`/leagues/${leagueId}/join`, { clubName: joinName })
       const r = await api.get('/leagues/mine')
       setLeagues(r.data)
       setPanel('none')
@@ -97,9 +104,9 @@ export default function Dashboard() {
     <div>
       {/* Nav */}
       <nav className="nav">
-        <div className="nav-logo">
+        <Link to="/" className="nav-logo">
           <img src="/logo.png" alt="Football Manager" style={{ height: 32, display: 'block' }} />
-        </div>
+        </Link>
         <div className="nav-spacer" />
         <span className="nav-user">{user?.username}</span>
         <button className="btn btn-outline" onClick={logout} style={{ fontSize: 12, padding: '6px 12px' }}>
@@ -228,9 +235,9 @@ export default function Dashboard() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div>
                 <label style={{ fontSize: 11, color: 'var(--text-2)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 6 }}>
-                  League ID
+                  Invite link or League ID
                 </label>
-                <input placeholder="Paste the league ID from your friend" value={joinId} onChange={(e) => setJoinId(e.target.value)} />
+                <input placeholder="Paste the invite link or league ID" value={joinId} onChange={(e) => setJoinId(e.target.value)} />
               </div>
               <div>
                 <label style={{ fontSize: 11, color: 'var(--text-2)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 6 }}>

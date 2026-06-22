@@ -230,3 +230,28 @@ input::placeholder { color: var(--text-3); }
   width: 100%; height: 100%;
   font-size: 1.4em; color: var(--text-3);
 }
+
+/* ── Mobile responsive helpers ───────────────────────────────────────────── */
+@media (max-width: 767px) {
+  /* Ensure tables don't overflow */
+  table { font-size: 12px; }
+
+  /* Tighter card header */
+  .card-header { padding: 10px 14px !important; }
+
+  /* Range input touch target */
+  input[type="range"] { height: 20px; }
+
+  /* Modals */
+  .modal-overlay { padding: 0 !important; align-items: flex-end !important; }
+}
+
+/* ── Countdown ring animations ───────────────────────────────────────────── */
+@keyframes countdown-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.45; }
+}
+@keyframes countdown-glow {
+  0%, 100% { filter: drop-shadow(0 0 4px currentColor); }
+  50%       { filter: drop-shadow(0 0 10px currentColor); }
+}

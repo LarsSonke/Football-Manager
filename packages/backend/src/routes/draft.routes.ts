@@ -17,14 +17,16 @@ router.get('/:leagueId', async (req: AuthRequest, res) => {
 })
 
 router.get('/:leagueId/players', async (req: AuthRequest, res) => {
-  const { q, pos, take, skip } = req.query
-  // pos can be a single string or an array of strings (multiple positions in a group)
+  const { q, pos, take, skip, minOvr, maxOvr, maxPrice } = req.query
   const posArr = Array.isArray(pos) ? pos as string[] : typeof pos === 'string' ? [pos] : undefined
   const players = await draftService.searchPlayers(req.params.leagueId, {
-    q: typeof q === 'string' ? q : undefined,
+    q:         typeof q === 'string' ? q : undefined,
     positions: posArr,
-    take: take ? parseInt(take as string) : 100,
-    skip: skip ? parseInt(skip as string) : 0,
+    take:     take     ? parseInt(take     as string) : 100,
+    skip:     skip     ? parseInt(skip     as string) : 0,
+    minOvr:   minOvr   ? parseInt(minOvr   as string) : undefined,
+    maxOvr:   maxOvr   ? parseInt(maxOvr   as string) : undefined,
+    maxPrice: maxPrice ? parseInt(maxPrice as string) : undefined,
   })
   res.json(players)
 })

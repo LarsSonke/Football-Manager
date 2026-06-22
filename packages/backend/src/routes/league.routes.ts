@@ -124,6 +124,19 @@ const tacticSchema = z.object({
   defensiveLine: z.number().int().min(0).max(100),
   width: z.number().int().min(0).max(100),
   lineup: z.array(z.object({ instanceId: z.string(), position: z.string() })).length(11),
+  subs: z.array(z.object({
+    outInstanceId: z.string(),
+    inInstanceId: z.string(),
+    condition: z.object({
+      type: z.enum(['minute', 'fitness']),
+      value: z.number().int().min(1).max(100),
+    }),
+  })).max(3).optional(),
+  customSlots: z.array(z.object({
+    position: z.string(),
+    x: z.number().min(0).max(100),
+    y: z.number().min(0).max(100),
+  })).max(11).optional(),
 })
 
 router.patch('/:id/tactic', async (req: AuthRequest, res) => {
@@ -143,6 +156,38 @@ router.patch('/:id/tactic', async (req: AuthRequest, res) => {
     const updated = await prisma.club.update({
       where: { id: club.id },
       data: { tactic: parsed.data },
+    })
+    res.json(updated)
+  } catch (err: any) {
+    res.status(400).json({ error: err.message })
+  }
+})
+
+const logoSchema = z.object({
+  shape:  z.enum(['shield', 'circle', 'hexagon', 'rounded']),
+  bg:     z.string().regex(/^#[0-9a-fA-F]{6}$/),
+  accent: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+  emblem: z.enum(['none', 'star', 'bolt', 'crown', 'diamond', 'cross', 'chevron', 'ring']),
+  text:   z.string().min(1).max(3),
+})
+
+router.patch('/:id/logo', async (req: AuthRequest, res) => {
+  const parsed = logoSchema.safeParse(req.body)
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0].message })
+    return
+  }
+  try {
+    const club = await prisma.club.findFirst({
+      where: { leagueId: req.params.id, userId: req.userId! },
+    })
+    if (!club) {
+      res.status(403).json({ error: 'You do not have a club in this league' })
+      return
+    }
+    const updated = await prisma.club.update({
+      where: { id: club.id },
+      data: { logoConfig: parsed.data },
     })
     res.json(updated)
   } catch (err: any) {
@@ -179,6 +224,47 @@ router.post('/:id/train/:instanceId', async (req: AuthRequest, res) => {
   try {
     const result = await leagueService.trainPlayer(req.params.id, req.userId!, req.params.instanceId, parsed.data.position)
     res.json(result)
+  } catch (err: any) {
+    res.status(400).json({ error: err.message })
+  }
+})
+
+router.post('/:id/new-season', async (req: AuthRequest, res) => {
+  try {
+    await leagueService.startNewSeason(req.params.id, req.userId!)
+    res.json({ ok: true })
+  } catch (err: any) {
+    res.status(400).json({ error: err.message })
+  }
+})
+
+router.get('/:id/sponsors', async (req: AuthRequest, res) => {
+  try {
+    const data = await leagueService.getClubSponsorDeals(req.params.id, req.userId!)
+    res.json(data)
+  } catch (err: any) {
+    res.status(400).json({ error: err.message })
+  }
+})
+
+router.post('/:id/sponsors/sign', async (req: AuthRequest, res) => {
+  const parsed = z.object({ dealIndex: z.number().int().min(0) }).safeParse(req.body)
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0].message })
+    return
+  }
+  try {
+    const deal = await leagueService.signSponsorDeal(req.params.id, req.userId!, parsed.data.dealIndex)
+    res.status(201).json(deal)
+  } catch (err: any) {
+    res.status(400).json({ error: err.message })
+  }
+})
+
+router.get('/:id/stats', async (req: AuthRequest, res) => {
+  try {
+    const stats = await leagueService.getLeagueStats(req.params.id)
+    res.json(stats)
   } catch (err: any) {
     res.status(400).json({ error: err.message })
   }

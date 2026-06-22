@@ -303,7 +303,7 @@ interface ActiveDeal {
 
 // ─── Overview ─────────────────────────────────────────────────────────────────
 
-function Overview({ league, matches, myClub, onPhysioUpgrade, onRefresh }: { league: LeagueData; matches: MatchData[]; myClub: ClubData | undefined; onPhysioUpgrade: () => void; onRefresh: () => void }) {
+function Overview({ league, matches, myClub, awards, onPhysioUpgrade, onRefresh }: { league: LeagueData; matches: MatchData[]; myClub: ClubData | undefined; awards: MatchdayAwards | null; onPhysioUpgrade: () => void; onRefresh: () => void }) {
   const isMobile = useIsMobile()
   const clubMap = Object.fromEntries(league.clubs.map(c => [c.id, c]))
   const logoMap = Object.fromEntries(league.clubs.map(c => [c.id, c.logoConfig ?? null]))
@@ -311,17 +311,11 @@ function Overview({ league, matches, myClub, onPhysioUpgrade, onRefresh }: { lea
   const [sponsorData, setSponsorData] = useState<{ available: AvailableDeal[]; active: ActiveDeal[]; history: ActiveDeal[] } | null>(null)
   const [signingDeal, setSigningDeal] = useState<number | null>(null)
   const [sponsorMsg, setSponsorMsg] = useState('')
-  const [awards, setAwards] = useState<MatchdayAwards | null>(null)
 
   useEffect(() => {
     if (!myClub || league.status !== 'ACTIVE') return
     api.get(`/leagues/${league.id}/sponsors`).then(r => setSponsorData(r.data)).catch(() => {})
   }, [league.id, league.status, myClub?.id])
-
-  useEffect(() => {
-    if (league.status !== 'ACTIVE' && league.status !== 'FINISHED') return
-    api.get(`/leagues/${league.id}/awards`).then(r => setAwards(r.data)).catch(() => {})
-  }, [league.id, league.status, league.currentDay])
 
   async function handleSignDeal(index: number) {
     setSigningDeal(index)
@@ -4518,6 +4512,7 @@ export default function League() {
 
   const [league, setLeague] = useState<LeagueData | null>(null)
   const [matches, setMatches] = useState<MatchData[]>([])
+  const [awards, setAwards] = useState<MatchdayAwards | null>(null)
   const [tab, setTab] = useState<Tab>(() => {
     const t = (location.state as any)?.tab as Tab | undefined
     const valid: Tab[] = ['overview','squad','fixtures','standings','stats','tactics','transfers','messages','manage']
@@ -4545,9 +4540,14 @@ export default function League() {
 
   const refresh = useCallback(() => {
     if (!id) return
-    Promise.all([api.get(`/leagues/${id}`), api.get(`/leagues/${id}/matches`)]).then(([lr, mr]) => {
+    Promise.all([
+      api.get(`/leagues/${id}`),
+      api.get(`/leagues/${id}/matches`),
+      api.get(`/leagues/${id}/awards`),
+    ]).then(([lr, mr, ar]) => {
       setLeague(lr.data)
       setMatches(mr.data)
+      setAwards(ar.data)
     })
   }, [id])
 
@@ -4591,7 +4591,7 @@ export default function League() {
     if (!id) return
     const socket: Socket = io()
     socket.emit('join:league', id)
-    socket.on('matchday:complete', (data: { matchday: number; results: Array<{ matchId: string; homeClubId: string; awayClubId: string; homeScore: number; awayScore: number }> }) => {
+    socket.on('matchday:complete', (data: { matchday: number; results: Array<{ matchId: string; homeClubId: string; awayClubId: string; homeScore: number; awayScore: number }>; awards?: MatchdayAwards | null }) => {
       const cid = myClubIdRef.current
       const mine = cid ? data.results.find(r => r.homeClubId === cid || r.awayClubId === cid) : null
       let msg: string
@@ -4606,8 +4606,10 @@ export default function League() {
       } else {
         msg = `Matchday ${data.matchday} results are in!`
       }
+      if (data.awards?.motm) msg += ` · MOTM: ${data.awards.motm.playerName}`
       setNotification(msg)
       setTimeout(() => setNotification(null), 10000)
+      if (data.awards) setAwards(data.awards)
       refresh()
     })
     socket.on('sponsor:resolved', (data: { resolutions: Array<{ clubId: string; sponsorName: string; sponsorEmoji: string; completed: boolean; reward: number }> }) => {
@@ -5024,7 +5026,7 @@ export default function League() {
 
         {/* Page content */}
         <div style={{ padding: isMobile ? '16px 12px' : '24px 28px', flex: 1 }}>
-          {tab === 'overview'  && <Overview league={league} matches={matches} myClub={myClub} onPhysioUpgrade={handlePhysioUpgrade} onRefresh={refresh} />}
+          {tab === 'overview'  && <Overview league={league} matches={matches} myClub={myClub} awards={awards} onPhysioUpgrade={handlePhysioUpgrade} onRefresh={refresh} />}
           {tab === 'squad'     && (myClub ? <Squad squad={myClub.squad} physioLevel={myClub.physioLevel} budget={myClub.budget} nextMatchday={nextMatchday} onHeal={handleHeal} onTrain={handleTrain} /> : <p style={{ color: 'var(--text-2)' }}>You don't have a club in this league.</p>)}
           {tab === 'fixtures'  && (matches.length === 0 ? <div style={{ textAlign: 'center', padding: '64px 0', color: 'var(--text-2)' }}><div style={{ fontSize: 36, marginBottom: 10 }}>📅</div><p>Fixtures will appear after the draft.</p></div> : <Fixtures matches={matches} clubs={league.clubs} myClubId={myClub?.id} currentDay={league.currentDay} leagueId={league.id} />)}
           {tab === 'standings' && <Standings clubs={league.clubs} myClubId={myClub?.id} prevPositions={prevPositions} matches={matches} history={league.history} />}

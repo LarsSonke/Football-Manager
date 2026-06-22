@@ -1,7 +1,7 @@
 import cron from 'node-cron'
 import { prisma } from '../prisma'
 import { simulateMatch, adaptTacticForOpponent, buildOpponentProfile } from '../simulation/engine'
-import { applyMatchIncome, checkSponsorMissions } from '../services/league.service'
+import { applyMatchIncome, checkSponsorMissions, applyMatchdayAwards } from '../services/league.service'
 import { getIO } from '../websocket'
 
 export function initScheduler(): void {
@@ -150,11 +150,14 @@ async function simulateLeagueMatchday(leagueId: string): Promise<void> {
   await applyAchievementMorale(leagueId, results.map(r => r.matchId))
   await deductMatchdayWages(leagueId)
 
+  // TOTW awards: apply morale/form boosts and capture data for broadcast
+  const awards = await applyMatchdayAwards(leagueId, nextDay)
+
   // Broadcast live event replay before the final result
   await broadcastMatchesLive(leagueId, results.map(r => r.matchId))
 
   try {
-    getIO().to(`league:${leagueId}`).emit('matchday:complete', { matchday: nextDay, results })
+    getIO().to(`league:${leagueId}`).emit('matchday:complete', { matchday: nextDay, results, awards })
     if (sponsorResolutions.length > 0) {
       getIO().to(`league:${leagueId}`).emit('sponsor:resolved', { resolutions: sponsorResolutions })
     }
@@ -256,23 +259,6 @@ async function applyAchievementMorale(leagueId: string, matchIds: string[]): Pro
       updates.push(prisma.playerInstance.update({
         where: { id: topScorer.instanceId },
         data: { morale: Math.min(100, inst.morale + 4) },
-      }))
-    }
-  }
-
-  // ── Matchday MOTM boost ──────────────────────────────────────────────────────
-  if (matchIds.length > 0) {
-    const dayPerfs = await prisma.matchPerformance.findMany({
-      where: { matchId: { in: matchIds } },
-      orderBy: { rating: 'desc' },
-      take: 1,
-      select: { instanceId: true, instance: { select: { morale: true } } },
-    })
-    const motm = dayPerfs[0]
-    if (motm) {
-      updates.push(prisma.playerInstance.update({
-        where: { id: motm.instanceId },
-        data: { morale: Math.min(100, motm.instance.morale + 3) },
       }))
     }
   }

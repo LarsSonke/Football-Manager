@@ -722,14 +722,13 @@ export async function getLeagueStats(leagueId: string) {
   })
 }
 
-export async function getMatchdayStars(leagueId: string) {
-  const league = await prisma.league.findUnique({ where: { id: leagueId }, select: { currentDay: true, status: true } })
-  if (!league || league.currentDay === 0) return null
+// ─── TOTW shared helpers ──────────────────────────────────────────────────────
 
-  const lastMatchday = league.currentDay
+type TOTWPerf = Awaited<ReturnType<typeof fetchMatchdayPerfs>>[number]
 
-  const perfs = await prisma.matchPerformance.findMany({
-    where: { match: { leagueId, matchday: lastMatchday, status: 'SIMULATED' } },
+async function fetchMatchdayPerfs(leagueId: string, matchday: number) {
+  return prisma.matchPerformance.findMany({
+    where: { match: { leagueId, matchday, status: 'SIMULATED' } },
     orderBy: { rating: 'desc' },
     include: {
       instance: {
@@ -741,65 +740,51 @@ export async function getMatchdayStars(leagueId: string) {
       match: { select: { homeClubId: true, awayClubId: true, homeScore: true, awayScore: true } },
     },
   })
+}
 
-  if (perfs.length === 0) return null
-
-  // Build best XI: 1 GK, 4 DEF, 3 MID, 3 ATT (by rating, no duplicate clubs max 2)
-  const GK_POS = ['GK']
-  const DEF_POS = ['CB', 'LB', 'RB']
-  const MID_POS = ['CDM', 'CM', 'CAM', 'LM', 'RM']
-  const ATT_POS = ['LW', 'RW', 'CF', 'ST']
+function buildTOTW(perfs: TOTWPerf[]) {
   const posGroup = (p: string) => {
-    if (GK_POS.includes(p)) return 'GK'
-    if (DEF_POS.includes(p)) return 'DEF'
-    if (MID_POS.includes(p)) return 'MID'
+    if (p === 'GK') return 'GK'
+    if (['CB', 'LB', 'RB'].includes(p)) return 'DEF'
+    if (['CDM', 'CM', 'CAM', 'LM', 'RM'].includes(p)) return 'MID'
     return 'ATT'
   }
   const slots = { GK: 1, DEF: 4, MID: 3, ATT: 3 }
   const counts: Record<string, number> = { GK: 0, DEF: 0, MID: 0, ATT: 0 }
-  const selected: typeof perfs = []
-  const usedInstances = new Set<string>()
+  const selected: TOTWPerf[] = []
+  const used = new Set<string>()
 
   for (const p of perfs) {
-    const pos = p.positionPlayed ?? p.instance.player.position
-    const grp = posGroup(pos)
-    if (counts[grp] < slots[grp] && !usedInstances.has(p.instanceId)) {
-      selected.push(p)
-      counts[grp]++
-      usedInstances.add(p.instanceId)
+    const grp = posGroup(p.positionPlayed ?? p.instance.player.position)
+    if (counts[grp] < slots[grp] && !used.has(p.instanceId)) {
+      selected.push(p); counts[grp]++; used.add(p.instanceId)
     }
     if (selected.length === 11) break
   }
+  return selected
+}
 
-  // Also find top scorer and top assister of the matchday
+function serializeAwards(matchday: number, perfs: TOTWPerf[], selected: TOTWPerf[]) {
+  const motm = perfs[0]
   const byGoals = [...perfs].sort((a, b) => b.goals - a.goals || b.rating - a.rating)
   const byAssists = [...perfs].sort((a, b) => b.assists - a.assists || b.rating - a.rating)
-  const motm = perfs[0]
+
+  const fmt = (p: TOTWPerf) => ({
+    instanceId: p.instanceId,
+    playerName: p.instance.player.name,
+    position: p.positionPlayed ?? p.instance.player.position,
+    clubId: p.instance.club?.id ?? null,
+    clubName: p.instance.club?.name ?? '—',
+    clubLogoConfig: p.instance.club?.logoConfig ?? null,
+    rating: Math.round(p.rating * 10) / 10,
+    goals: p.goals,
+    assists: p.assists,
+  })
 
   return {
-    matchday: lastMatchday,
-    teamOfTheWeek: selected.map(p => ({
-      instanceId: p.instanceId,
-      playerName: p.instance.player.name,
-      position: p.positionPlayed ?? p.instance.player.position,
-      clubId: p.instance.club?.id ?? null,
-      clubName: p.instance.club?.name ?? '—',
-      clubLogoConfig: p.instance.club?.logoConfig ?? null,
-      rating: Math.round(p.rating * 10) / 10,
-      goals: p.goals,
-      assists: p.assists,
-    })),
-    motm: motm ? {
-      instanceId: motm.instanceId,
-      playerName: motm.instance.player.name,
-      position: motm.positionPlayed ?? motm.instance.player.position,
-      clubId: motm.instance.club?.id ?? null,
-      clubName: motm.instance.club?.name ?? '—',
-      clubLogoConfig: motm.instance.club?.logoConfig ?? null,
-      rating: Math.round(motm.rating * 10) / 10,
-      goals: motm.goals,
-      assists: motm.assists,
-    } : null,
+    matchday,
+    teamOfTheWeek: selected.map(fmt),
+    motm: motm ? fmt(motm) : null,
     topScorer: byGoals[0]?.goals > 0 ? {
       instanceId: byGoals[0].instanceId,
       playerName: byGoals[0].instance.player.name,
@@ -815,6 +800,54 @@ export async function getMatchdayStars(leagueId: string) {
       clubLogoConfig: byAssists[0].instance.club?.logoConfig ?? null,
     } : null,
   }
+}
+
+// ─── Called by the scheduler: apply boosts + return award data ────────────────
+
+export async function applyMatchdayAwards(leagueId: string, matchday: number) {
+  const perfs = await fetchMatchdayPerfs(leagueId, matchday)
+  if (perfs.length === 0) return null
+
+  const selected = buildTOTW(perfs)
+  const motm = perfs[0]
+
+  // TOTW players: +5 morale, +5 form
+  // MOTM additionally: +3 morale, +3 form
+  const boosts = new Map<string, { morale: number; form: number }>()
+  for (const p of selected) boosts.set(p.instanceId, { morale: 5, form: 5 })
+  if (motm) {
+    const existing = boosts.get(motm.instanceId) ?? { morale: 0, form: 0 }
+    boosts.set(motm.instanceId, { morale: existing.morale + 3, form: existing.form + 3 })
+  }
+
+  // Fetch current morale/form for the affected instances
+  const instances = await prisma.playerInstance.findMany({
+    where: { id: { in: [...boosts.keys()] } },
+    select: { id: true, morale: true, form: true },
+  })
+
+  await Promise.all(instances.map(inst => {
+    const b = boosts.get(inst.id)!
+    return prisma.playerInstance.update({
+      where: { id: inst.id },
+      data: {
+        morale: Math.min(100, inst.morale + b.morale),
+        form:   Math.min(100, inst.form   + b.form),
+      },
+    })
+  }))
+
+  return serializeAwards(matchday, perfs, selected)
+}
+
+// ─── Called by the REST endpoint (read-only, no side effects) ─────────────────
+
+export async function getMatchdayStars(leagueId: string) {
+  const league = await prisma.league.findUnique({ where: { id: leagueId }, select: { currentDay: true } })
+  if (!league || league.currentDay === 0) return null
+  const perfs = await fetchMatchdayPerfs(leagueId, league.currentDay)
+  if (perfs.length === 0) return null
+  return serializeAwards(league.currentDay, perfs, buildTOTW(perfs))
 }
 
 // ─── Physio ───────────────────────────────────────────────────────────────────

@@ -165,6 +165,7 @@ export async function startNewSeason(leagueId: string, userId: string) {
   })
 
   // Clear match history (delete dependents first — no cascade set in schema)
+  await prisma.transferListing.deleteMany({ where: { leagueId } })
   await prisma.matchPerformance.deleteMany({ where: { match: { leagueId } } })
   await prisma.matchEvent.deleteMany({ where: { match: { leagueId } } })
   await prisma.match.deleteMany({ where: { leagueId } })

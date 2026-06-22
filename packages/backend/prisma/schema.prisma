@@ -76,11 +76,12 @@ model Club {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  squad        PlayerInstance[]
-  homeMatches  Match[]          @relation("HomeClub")
-  awayMatches  Match[]          @relation("AwayClub")
-  draftPicks   DraftPick[]
-  sponsorDeals SponsorDeal[]
+  squad             PlayerInstance[]
+  homeMatches       Match[]           @relation("HomeClub")
+  awayMatches       Match[]           @relation("AwayClub")
+  draftPicks        DraftPick[]
+  sponsorDeals      SponsorDeal[]
+  transferListings  TransferListing[] @relation("SellerListings")
 }
 
 // ─── SPONSORS ─────────────────────────────────────────────────────────────────
@@ -230,9 +231,25 @@ model PlayerInstance {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  performances MatchPerformance[]
+  performances    MatchPerformance[]
+  transferListing TransferListing?
 
   @@unique([playerId, leagueId])
+}
+
+// ─── TRANSFER MARKET ──────────────────────────────────────────────────────────
+
+model TransferListing {
+  id           String   @id @default(cuid())
+  leagueId     String
+  sellerClubId String
+  instanceId   String   @unique
+  askingPrice  Int
+
+  instance   PlayerInstance @relation(fields: [instanceId], references: [id])
+  sellerClub Club           @relation("SellerListings", fields: [sellerClubId], references: [id])
+
+  createdAt  DateTime @default(now())
 }
 
 // ─── MATCHES ──────────────────────────────────────────────────────────────────

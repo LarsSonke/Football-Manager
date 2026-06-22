@@ -150,12 +150,90 @@ async function simulateLeagueMatchday(leagueId: string): Promise<void> {
   await applyAchievementMorale(leagueId, results.map(r => r.matchId))
   await deductMatchdayWages(leagueId)
 
+  // Broadcast live event replay before the final result
+  await broadcastMatchesLive(leagueId, results.map(r => r.matchId))
+
   try {
     getIO().to(`league:${leagueId}`).emit('matchday:complete', { matchday: nextDay, results })
     if (sponsorResolutions.length > 0) {
       getIO().to(`league:${leagueId}`).emit('sponsor:resolved', { resolutions: sponsorResolutions })
     }
   } catch {}
+}
+
+async function broadcastMatchesLive(leagueId: string, matchIds: string[]): Promise<void> {
+  if (matchIds.length === 0) return
+
+  const [matchRows, allEvents] = await Promise.all([
+    prisma.match.findMany({
+      where: { id: { in: matchIds } },
+      select: {
+        id: true,
+        homeClubId: true, awayClubId: true,
+        homeScore: true, awayScore: true,
+        homeClub: { select: { id: true, name: true } },
+        awayClub: { select: { id: true, name: true } },
+      },
+    }),
+    prisma.matchEvent.findMany({
+      where: { matchId: { in: matchIds } },
+      orderBy: [{ minute: 'asc' }],
+    }),
+  ])
+
+  const matchMap = Object.fromEntries(matchRows.map(m => [m.id, m]))
+
+  // Announce all matches are starting
+  for (const m of matchRows) {
+    getIO().to(`league:${leagueId}`).emit('match:live', {
+      type: 'start',
+      matchId: m.id,
+      homeClub: m.homeClub,
+      awayClub: m.awayClub,
+      homeScore: 0, awayScore: 0,
+    })
+  }
+
+  // Track running scores per match
+  const scores: Record<string, { home: number; away: number }> = {}
+  for (const m of matchRows) scores[m.id] = { home: 0, away: 0 }
+
+  // Replay events at ~150ms per gap minute, capped at 800ms
+  let prevMinute = 0
+  for (const evt of allEvents) {
+    const gap = evt.minute - prevMinute
+    if (gap > 0) await new Promise(r => setTimeout(r, Math.min(gap * 150, 800)))
+    prevMinute = evt.minute
+
+    const m = matchMap[evt.matchId]
+    if (!m) continue
+    const d = evt.detail as any
+    if (evt.type === 'GOAL') {
+      if (d?.team === 'home') scores[evt.matchId].home++
+      else if (d?.team === 'away') scores[evt.matchId].away++
+    }
+
+    getIO().to(`league:${leagueId}`).emit('match:live', {
+      type: 'event',
+      matchId: evt.matchId,
+      minute: evt.minute,
+      eventType: evt.type,
+      detail: evt.detail,
+      homeScore: scores[evt.matchId].home,
+      awayScore: scores[evt.matchId].away,
+    })
+  }
+
+  // Small pause then send final confirmed results
+  await new Promise(r => setTimeout(r, 600))
+  for (const m of matchRows) {
+    getIO().to(`league:${leagueId}`).emit('match:live', {
+      type: 'end',
+      matchId: m.id,
+      homeScore: m.homeScore ?? 0,
+      awayScore: m.awayScore ?? 0,
+    })
+  }
 }
 
 // Morale boosts for season top scorer and matchday MOTM

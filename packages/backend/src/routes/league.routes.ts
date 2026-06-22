@@ -453,11 +453,15 @@ router.get('/:id/stats', async (req: AuthRequest, res) => {
 })
 
 router.post('/:id/draft/start', async (req: AuthRequest, res) => {
+  const draftType: 'SNAKE' | 'AUCTION' = req.body?.type === 'AUCTION' ? 'AUCTION' : 'SNAKE'
   try {
-    const result = await leagueService.startDraft(req.params.id, req.userId!)
+    const result = await leagueService.startDraft(req.params.id, req.userId!, draftType)
     res.json(result)
-    // If the first pick belongs to an AI club, trigger auto-pick
-    draftService.kickoffFirstPickIfAI(req.params.id).catch(() => {})
+    if (draftType === 'AUCTION') {
+      draftService.kickoffAuctionIfAIFirst(req.params.id).catch(() => {})
+    } else {
+      draftService.kickoffFirstPickIfAI(req.params.id).catch(() => {})
+    }
   } catch (err: any) {
     res.status(400).json({ error: err.message })
   }

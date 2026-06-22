@@ -43,6 +43,7 @@ export default function Dashboard() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [leagues, setLeagues] = useState<LeagueEntry[]>([])
+  const [copiedId, setCopiedId] = useState<string | null>(null)
   const [panel, setPanel] = useState<'none' | 'create' | 'join'>(() => {
     const inv = new URLSearchParams(window.location.search).get('join')
     return inv ? 'join' : 'none'
@@ -298,7 +299,24 @@ export default function Dashboard() {
                       )}
                     </div>
                   </div>
-                  <span style={{ color: 'var(--text-3)', fontSize: 18 }}>›</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {entry.league.status === 'SETUP' && (
+                      <button
+                        onClick={e => {
+                          e.stopPropagation()
+                          const link = `${window.location.origin}/?join=${entry.league.id}`
+                          navigator.clipboard.writeText(link).then(() => {
+                            setCopiedId(entry.league.id)
+                            setTimeout(() => setCopiedId(null), 2000)
+                          })
+                        }}
+                        style={{ fontSize: 11, padding: '4px 10px', background: 'rgba(39,205,255,0.1)', border: '1px solid rgba(39,205,255,0.3)', borderRadius: 6, color: copiedId === entry.league.id ? 'var(--green)' : 'var(--cyan)', cursor: 'pointer', fontWeight: 700, whiteSpace: 'nowrap' }}
+                      >
+                        {copiedId === entry.league.id ? '✓ Copied!' : 'Copy Invite'}
+                      </button>
+                    )}
+                    <span style={{ color: 'var(--text-3)', fontSize: 18 }}>›</span>
+                  </div>
                 </div>
 
                 {/* Season progress bar */}

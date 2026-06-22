@@ -60,7 +60,7 @@ export async function joinLeague(userId: string, leagueId: string, clubName: str
   })
 }
 
-export async function startDraft(leagueId: string, requestingUserId: string) {
+export async function startDraft(leagueId: string, requestingUserId: string, draftType: 'SNAKE' | 'AUCTION' = 'SNAKE') {
   const league = await prisma.league.findUnique({
     where: { id: leagueId },
     include: { clubs: true },
@@ -106,7 +106,7 @@ export async function startDraft(leagueId: string, requestingUserId: string) {
   const session = await prisma.draftSession.create({
     data: {
       leagueId,
-      type: 'SNAKE',
+      type: draftType,
       status: 'ACTIVE',
       pickOrder: shuffled.map((c) => c.id),
       currentRound: 1,

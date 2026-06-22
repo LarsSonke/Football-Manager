@@ -101,6 +101,16 @@ interface GrowthChange {
   overallWas: number; overallNow: number; ageWas: number
 }
 
+interface LiveMatchState {
+  matchId: string
+  homeClub: { id: string; name: string }
+  awayClub: { id: string; name: string }
+  homeScore: number
+  awayScore: number
+  events: Array<{ minute: number; eventType: string; detail: unknown; homeScore: number; awayScore: number }>
+  status: 'live' | 'ended'
+}
+
 type Tab = 'overview' | 'squad' | 'fixtures' | 'standings' | 'stats' | 'tactics' | 'transfers' | 'messages' | 'manage'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -4320,6 +4330,94 @@ const NAV: { key: Tab; label: string; icon: string }[] = [
   { key: 'stats',      label: 'Stats',      icon: '📊' },
 ]
 
+// ─── Live Ticker Overlay ──────────────────────────────────────────────────────
+
+function LiveTicker({ matches, myClubId, onDismiss }: { matches: Map<string, LiveMatchState>; myClubId: string | undefined; onDismiss: () => void }) {
+  const matchList = [...matches.values()]
+  const myMatch = myClubId
+    ? matchList.find(m => m.homeClub.id === myClubId || m.awayClub.id === myClubId)
+    : null
+  const otherMatches = matchList.filter(m => m !== myMatch)
+  const allEnded = matchList.every(m => m.status === 'ended')
+
+  const EVENT_ICON: Record<string, string> = {
+    GOAL: '⚽', OWN_GOAL: '⚽', YELLOW_CARD: '🟨', RED_CARD: '🟥', SUBSTITUTION: '🔄', PENALTY_MISS: '❌',
+  }
+
+  const renderEvent = (evt: LiveMatchState['events'][number], m: LiveMatchState) => {
+    const d = evt.detail as any
+    const isHome = d?.team === 'home'
+    const name = evt.eventType === 'SUBSTITUTION'
+      ? (d?.outName ?? '?')
+      : (d?.playerName ?? d?.name ?? '?')
+    return (
+      <div key={`${evt.minute}-${evt.eventType}`} style={{ fontSize: 11, color: 'var(--text-2)', display: 'flex', gap: 6, alignItems: 'center' }}>
+        <span style={{ color: 'var(--text-3)', minWidth: 28 }}>{evt.minute}'</span>
+        <span>{EVENT_ICON[evt.eventType] ?? '•'}</span>
+        <span style={{ color: evt.eventType === 'GOAL' ? 'var(--green)' : evt.eventType === 'RED_CARD' ? 'var(--red)' : 'var(--text-1)' }}>{name}</span>
+        <span style={{ color: 'var(--text-3)' }}>({isHome ? m.homeClub.name : m.awayClub.name})</span>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{
+      position: 'fixed', bottom: 16, right: 16, zIndex: 300,
+      display: 'flex', flexDirection: 'column', gap: 8,
+      maxWidth: 360, width: '100%',
+    }}>
+      {/* My match — prominent */}
+      {myMatch && (
+        <div style={{ background: 'var(--bg-card)', border: `1px solid ${myMatch.status === 'live' ? 'rgba(232,128,106,0.5)' : 'var(--border)'}`, borderRadius: 'var(--radius)', overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,0.4)' }}>
+          <div style={{ padding: '8px 14px', background: myMatch.status === 'live' ? 'rgba(232,128,106,0.1)' : 'rgba(54,226,126,0.08)', display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid var(--border)' }}>
+            <span style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1, color: myMatch.status === 'live' ? 'var(--red)' : 'var(--green)' }}>
+              {myMatch.status === 'live' ? '● LIVE' : '✓ FT'}
+            </span>
+            <span style={{ flex: 1 }} />
+            <button onClick={onDismiss} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: 16, lineHeight: 1, padding: 0 }}>×</button>
+          </div>
+          <div style={{ padding: '12px 14px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)' }}>{myMatch.homeClub.name}</div>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 900, color: 'var(--text-1)', textAlign: 'center', minWidth: 60 }}>
+                {myMatch.homeScore} – {myMatch.awayScore}
+              </div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)', textAlign: 'right' }}>{myMatch.awayClub.name}</div>
+            </div>
+            {myMatch.events.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3, maxHeight: 120, overflowY: 'auto' }}>
+                {[...myMatch.events].reverse().slice(0, 8).reverse().map(evt => renderEvent(evt, myMatch))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Other matches — compact */}
+      {otherMatches.length > 0 && (
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,0.4)' }}>
+          <div style={{ padding: '6px 14px', borderBottom: '1px solid var(--border)', fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1, color: 'var(--text-3)' }}>Other Matches</div>
+          <div style={{ padding: '6px 0' }}>
+            {otherMatches.map(m => (
+              <div key={m.matchId} style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 8, padding: '4px 14px' }}>
+                <div style={{ fontSize: 11, color: 'var(--text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.homeClub.name}</div>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 800, color: 'var(--text-1)', minWidth: 40, textAlign: 'center' }}>{m.homeScore}–{m.awayScore}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-2)', textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.awayClub.name}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {allEnded && (
+        <button className="btn btn-ghost" style={{ fontSize: 11, padding: '6px 12px', alignSelf: 'flex-end' }} onClick={onDismiss}>
+          Dismiss
+        </button>
+      )}
+    </div>
+  )
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function League() {
@@ -4338,11 +4436,14 @@ export default function League() {
   })
   const [notification, setNotification] = useState<string | null>(null)
   const [startingDraft, setStartingDraft] = useState(false)
+  const [draftType, setDraftType] = useState<'SNAKE' | 'AUCTION'>('SNAKE')
   const [error, setError] = useState('')
   const [showSeasonEnd, setShowSeasonEnd] = useState(false)
   const [startingNewSeason, setStartingNewSeason] = useState(false)
   const [growthChanges, setGrowthChanges] = useState<GrowthChange[]>([])
   const [showGrowthReport, setShowGrowthReport] = useState(false)
+  const [liveMatches, setLiveMatches] = useState<Map<string, LiveMatchState>>(new Map())
+  const [showLiveTicker, setShowLiveTicker] = useState(false)
   const [prevPositions] = useState<Record<string, number>>(() => {
     try { return JSON.parse(localStorage.getItem(`standings-pos-prev-${id ?? ''}`) ?? '{}') } catch { return {} }
   })
@@ -4429,6 +4530,43 @@ export default function League() {
       ).join(' · ')
       setNotification(prev => prev ? `${prev} · ${sponsorMsg}` : sponsorMsg)
     })
+    socket.on('match:live', (data: { type: string; matchId: string; homeClub?: { id: string; name: string }; awayClub?: { id: string; name: string }; homeScore?: number; awayScore?: number; minute?: number; eventType?: string; detail?: unknown }) => {
+      if (data.type === 'start') {
+        setLiveMatches(prev => {
+          const next = new Map(prev)
+          next.set(data.matchId, {
+            matchId: data.matchId,
+            homeClub: data.homeClub!,
+            awayClub: data.awayClub!,
+            homeScore: 0, awayScore: 0,
+            events: [], status: 'live',
+          })
+          return next
+        })
+        setShowLiveTicker(true)
+      } else if (data.type === 'event') {
+        setLiveMatches(prev => {
+          const next = new Map(prev)
+          const m = next.get(data.matchId)
+          if (m) {
+            next.set(data.matchId, {
+              ...m,
+              homeScore: data.homeScore ?? m.homeScore,
+              awayScore: data.awayScore ?? m.awayScore,
+              events: [...m.events, { minute: data.minute!, eventType: data.eventType!, detail: data.detail, homeScore: data.homeScore ?? m.homeScore, awayScore: data.awayScore ?? m.awayScore }],
+            })
+          }
+          return next
+        })
+      } else if (data.type === 'end') {
+        setLiveMatches(prev => {
+          const next = new Map(prev)
+          const m = next.get(data.matchId)
+          if (m) next.set(data.matchId, { ...m, homeScore: data.homeScore ?? m.homeScore, awayScore: data.awayScore ?? m.awayScore, status: 'ended' })
+          return next
+        })
+      }
+    })
     socket.on('season:finished', () => {
       refresh()
       setShowSeasonEnd(true)
@@ -4461,7 +4599,7 @@ export default function League() {
     setError('')
     setStartingDraft(true)
     try {
-      await api.post(`/leagues/${id}/draft/start`)
+      await api.post(`/leagues/${id}/draft/start`, { type: draftType })
       navigate(`/league/${id}/draft`)
     } catch (err: any) {
       setError(err.response?.data?.error ?? 'Failed to start draft')
@@ -4560,6 +4698,15 @@ export default function League() {
       {/* ── Draft Summary Overlay ────────────────────────────────────────── */}
       {showDraftSummary && league.status === 'ACTIVE' && (
         <DraftSummaryOverlay league={league} onDismiss={() => setShowDraftSummary(false)} />
+      )}
+
+      {/* ── Live Ticker ──────────────────────────────────────────────────── */}
+      {showLiveTicker && liveMatches.size > 0 && (
+        <LiveTicker
+          matches={liveMatches}
+          myClubId={myClub?.id}
+          onDismiss={() => { setShowLiveTicker(false); setLiveMatches(new Map()) }}
+        />
       )}
 
       {/* ── Growth Report Modal ──────────────────────────────────────────── */}
@@ -4741,9 +4888,27 @@ export default function League() {
           )}
 
           {league.status === 'SETUP' && isCreator && (
-            <button className="btn btn-green" onClick={handleStartDraft} disabled={startingDraft}>
-              {startingDraft ? 'Starting...' : 'Start Draft'}
-            </button>
+            <div>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                {(['SNAKE', 'AUCTION'] as const).map(t => (
+                  <button
+                    key={t}
+                    onClick={() => setDraftType(t)}
+                    style={{
+                      padding: '6px 16px', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700,
+                      background: draftType === t ? 'rgba(54,226,126,0.15)' : 'transparent',
+                      border: `1px solid ${draftType === t ? 'rgba(54,226,126,0.4)' : 'var(--border)'}`,
+                      color: draftType === t ? 'var(--green)' : 'var(--text-2)',
+                    }}
+                  >
+                    {t === 'SNAKE' ? '🐍 Snake' : '🏷️ Auction'}
+                  </button>
+                ))}
+              </div>
+              <button className="btn btn-green" onClick={handleStartDraft} disabled={startingDraft}>
+                {startingDraft ? 'Starting...' : 'Start Draft'}
+              </button>
+            </div>
           )}
           {league.status === 'DRAFTING' && (
             <button className="btn btn-gold" onClick={() => navigate(`/league/${id}/draft`)}>

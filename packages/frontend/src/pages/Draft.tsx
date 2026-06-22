@@ -49,12 +49,23 @@ interface PickRecord {
   club: { id: string; name: string }
 }
 
+interface AuctionRound {
+  nominatorIdx: number
+  instanceId: string | null
+  playerId: string | null
+  highBid: number
+  highBidderId: string | null
+  endsAt: string | null
+  budgets: Record<string, number>
+}
+
 interface DraftSession {
-  id: string; status: string
+  id: string; status: string; type: string
   currentRound: number; roundsTotal: number
   currentPick: number; pickOrder: string[]
   pickTimeLimit: number
   picks: PickRecord[]
+  auctionState?: AuctionRound | null
 }
 
 interface PickedPlayer {
@@ -501,6 +512,10 @@ export default function Draft() {
   const [error, setError] = useState('')
   const [detailPlayer, setDetailPlayer] = useState<PlayerData | null>(null)
   const [compareList, setCompareList] = useState<PlayerData[]>([])
+  const [auctionCountdown, setAuctionCountdown] = useState<number>(0)
+  const [bidAmount, setBidAmount] = useState('')
+  const [nominateMode, setNominateMode] = useState(false)
+  const [auctionMsg, setAuctionMsg] = useState('')
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -635,11 +650,27 @@ export default function Draft() {
   }, [draft?.session.currentPick, draft?.session.currentRound, draft?.session.status])
 
   useEffect(() => {
+    const auction = draft?.session.auctionState
+    if (!auction?.endsAt) { setAuctionCountdown(0); return }
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil((new Date(auction.endsAt!).getTime() - Date.now()) / 1000))
+      setAuctionCountdown(remaining)
+    }
+    tick()
+    const t = setInterval(tick, 500)
+    return () => clearInterval(t)
+  }, [draft?.session.auctionState?.endsAt])
+
+  useEffect(() => {
     if (!leagueId) return
     const socket: Socket = io()
     socket.emit('join:draft', leagueId)
     socket.on('draft:pick', (_event: DraftPickEvent) => { refresh() })
     socket.on('season:started', () => { navigate(`/league/${leagueId}`) })
+    socket.on('auction:nomination', () => { refresh() })
+    socket.on('auction:bid', () => { refresh() })
+    socket.on('auction:awarded', () => { refresh() })
+    socket.on('draft:complete', () => { refresh() })
     return () => { socket.disconnect() }
   }, [leagueId, refresh, navigate])
 
@@ -666,6 +697,32 @@ export default function Draft() {
     })
   }
 
+  async function handleNominate(instanceId: string) {
+    if (!leagueId) return
+    setAuctionMsg('')
+    try {
+      await api.post(`/draft/${leagueId}/nominate`, { instanceId })
+      setNominateMode(false)
+      refresh()
+    } catch (err: any) {
+      setAuctionMsg(err.response?.data?.error ?? 'Failed to nominate')
+    }
+  }
+
+  async function handleBid() {
+    if (!leagueId) return
+    const amount = parseInt(bidAmount, 10)
+    if (isNaN(amount) || amount <= 0) return
+    setAuctionMsg('')
+    try {
+      await api.post(`/draft/${leagueId}/bid`, { amount })
+      setBidAmount('')
+      refresh()
+    } catch (err: any) {
+      setAuctionMsg(err.response?.data?.error ?? 'Failed to bid')
+    }
+  }
+
   if (!draft) {
     return (
       <div>
@@ -679,6 +736,9 @@ export default function Draft() {
   const myClub = clubs.find(c => c.user?.id === user?.id)
   const isMyTurn = !!myClub && currentClubId === myClub.id
   const draftComplete = session.status === 'COMPLETED'
+  const isAuction = session.type === 'AUCTION'
+  const auction = session.auctionState ?? null
+  const isMyNominatorTurn = !!(myClub && auction && session.pickOrder[auction.nominatorIdx % session.pickOrder.length] === myClub.id)
 
   const totalPicks = session.pickOrder.length
   const overallPickNumber = (session.currentRound - 1) * totalPicks + session.currentPick + 1
@@ -760,9 +820,16 @@ export default function Draft() {
         </div>
       </div>
 
-      {isMyTurn && (
+      {isMyTurn && !isAuction && (
         <div style={{ background: 'linear-gradient(90deg, rgba(54,226,126,0.18) 0%, transparent 100%)', borderBottom: '1px solid rgba(54,226,126,0.35)', padding: '13px 24px', textAlign: 'center' }}>
           <span style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, color: 'var(--green)', letterSpacing: 1 }}>⚡ YOUR TURN TO PICK — Select a player below</span>
+        </div>
+      )}
+
+      {isAuction && nominateMode && isMyNominatorTurn && !auction?.instanceId && (
+        <div style={{ background: 'linear-gradient(90deg, rgba(54,226,126,0.18) 0%, transparent 100%)', borderBottom: '1px solid rgba(54,226,126,0.35)', padding: '13px 24px', display: 'flex', alignItems: 'center', gap: 16, justifyContent: 'center' }}>
+          <span style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: 'var(--green)', letterSpacing: 1 }}>Click a player below to nominate them for auction</span>
+          <button className="btn btn-outline" style={{ fontSize: 12 }} onClick={() => setNominateMode(false)}>Cancel</button>
         </div>
       )}
 
@@ -878,7 +945,15 @@ export default function Draft() {
                     borderRadius: 'var(--radius-sm)', opacity: playerAffordable ? 1 : 0.45,
                     cursor: 'pointer', transition: 'border-color 0.15s, background 0.15s',
                   }}
-                  onClick={() => setDetailPlayer(p)}
+                  onClick={() => {
+                    if (isAuction && nominateMode) {
+                      handleNominate(inst.id)
+                    } else if (!isAuction) {
+                      setDetailPlayer(p)
+                    } else {
+                      setDetailPlayer(p)
+                    }
+                  }}
                   onMouseEnter={e => { if (!inCompare && playerAffordable) (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border-md)' }}
                   onMouseLeave={e => { if (!inCompare) (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border)' }}
                 >
@@ -931,15 +1006,26 @@ export default function Draft() {
                     title="Compare"
                   >⇄</button>
 
-                  {/* Pick button */}
-                  <button
-                    className={`btn ${isMyTurn && playerAffordable ? 'btn-green' : 'btn-ghost'}`}
-                    style={{ fontSize: 12, padding: '7px 14px', minWidth: 60 }}
-                    disabled={!isMyTurn || !playerAffordable || !!picking}
-                    onClick={e => { e.stopPropagation(); handlePick(p.id) }}
-                  >
-                    {isPicking ? '...' : 'Pick'}
-                  </button>
+                  {/* Pick/Nominate button */}
+                  {isAuction ? (
+                    <button
+                      className={`btn ${nominateMode && isMyNominatorTurn && !auction?.instanceId ? 'btn-green' : 'btn-ghost'}`}
+                      style={{ fontSize: 12, padding: '7px 14px', minWidth: 72 }}
+                      disabled={!isMyNominatorTurn || !!auction?.instanceId}
+                      onClick={e => { e.stopPropagation(); handleNominate(inst.id) }}
+                    >
+                      Nominate
+                    </button>
+                  ) : (
+                    <button
+                      className={`btn ${isMyTurn && playerAffordable ? 'btn-green' : 'btn-ghost'}`}
+                      style={{ fontSize: 12, padding: '7px 14px', minWidth: 60 }}
+                      disabled={!isMyTurn || !playerAffordable || !!picking}
+                      onClick={e => { e.stopPropagation(); handlePick(p.id) }}
+                    >
+                      {isPicking ? '...' : 'Pick'}
+                    </button>
+                  )}
                 </div>
               )
             })}
@@ -964,6 +1050,107 @@ export default function Draft() {
 
         {/* ── Right sidebar ──────────────────────────────────────── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14, position: 'sticky', top: 76 }}>
+
+          {/* Auction panel */}
+          {isAuction && (
+            <div style={{ padding: '16px 20px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', marginBottom: 0 }}>
+              <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1, color: 'var(--text-2)', marginBottom: 12 }}>
+                Auction Draft
+              </div>
+
+              {/* Active auction */}
+              {auction?.instanceId && auction.endsAt ? (
+                <div>
+                  {/* Timer */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 32, fontWeight: 900, color: auctionCountdown <= 5 ? 'var(--red)' : auctionCountdown <= 10 ? 'var(--gold)' : 'var(--text-1)' }}>
+                      {auctionCountdown}s
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, color: 'var(--text-2)' }}>Current bid</div>
+                      <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, color: 'var(--green)' }}>
+                        €{(auction.highBid / 1000).toFixed(1)}k
+                      </div>
+                      {auction.highBidderId && (
+                        <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                          {clubs.find(c => c.id === auction.highBidderId)?.name ?? 'Unknown'}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Nominated player info */}
+                  {(() => {
+                    const nomInst = draft.availablePlayers.find(p => p.id === auction.instanceId)
+                    const nomPlayer = nomInst?.player
+                    return nomPlayer ? (
+                      <div style={{ display: 'flex', gap: 10, padding: '10px 12px', background: 'var(--bg-base)', borderRadius: 8, marginBottom: 12 }}>
+                        <div style={{ width: 44, height: 52, background: 'var(--bg-card-2)', borderRadius: 4, overflow: 'hidden', flexShrink: 0 }}>
+                          {nomPlayer.photoUrl
+                            ? <img src={nomPlayer.photoUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} />
+                            : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>👤</div>
+                          }
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: 14 }}>{nomPlayer.name}</div>
+                          <div style={{ fontSize: 11, color: 'var(--text-2)' }}>{nomPlayer.position} · {nomPlayer.age}y · {nomPlayer.overall} OVR</div>
+                          <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>POT {nomPlayer.potential}</div>
+                        </div>
+                      </div>
+                    ) : null
+                  })()}
+
+                  {/* Bid input */}
+                  {myClub && (
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <input
+                        type="number"
+                        value={bidAmount}
+                        onChange={e => setBidAmount(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && handleBid()}
+                        placeholder={`Min ${auction.highBid + 100}`}
+                        min={auction.highBid + 100}
+                        style={{ flex: 1, padding: '8px 10px', background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-1)', fontSize: 13 }}
+                      />
+                      <button
+                        className="btn btn-primary"
+                        onClick={handleBid}
+                        disabled={!bidAmount || parseInt(bidAmount, 10) <= auction.highBid}
+                        style={{ flexShrink: 0 }}
+                      >
+                        Bid
+                      </button>
+                    </div>
+                  )}
+                  {myClub && auction.budgets[myClub.id] !== undefined && (
+                    <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 6 }}>
+                      Your budget: €{((auction.budgets[myClub.id] ?? 0) / 1000).toFixed(1)}k
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Waiting for nomination */
+                <div>
+                  {isMyNominatorTurn ? (
+                    <div>
+                      <div style={{ fontSize: 13, color: 'var(--green)', fontWeight: 700, marginBottom: 10 }}>
+                        Your turn to nominate a player!
+                      </div>
+                      <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => setNominateMode(true)}>
+                        Choose Player to Nominate
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 13, color: 'var(--text-2)', textAlign: 'center', padding: '20px 0' }}>
+                      Waiting for {clubs.find(c => auction && c.id === session.pickOrder[auction.nominatorIdx % session.pickOrder.length])?.name ?? '…'} to nominate a player
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {auctionMsg && <div style={{ fontSize: 12, color: 'var(--red)', marginTop: 8 }}>{auctionMsg}</div>}
+            </div>
+          )}
 
           {/* Pick order */}
           <div className="card" style={{ padding: 0 }}>

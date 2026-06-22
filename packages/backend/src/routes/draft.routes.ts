@@ -61,4 +61,32 @@ router.post('/:leagueId/pick', async (req: AuthRequest, res) => {
   }
 })
 
+// ─── AUCTION DRAFT ────────────────────────────────────────────────────────────
+
+router.post('/:leagueId/nominate', async (req: AuthRequest, res) => {
+  const { instanceId } = req.body
+  if (!instanceId) { res.status(400).json({ error: 'instanceId required' }); return }
+  try {
+    const club = await prisma.club.findFirst({ where: { leagueId: req.params.leagueId, userId: req.userId! } })
+    if (!club) { res.status(403).json({ error: 'No club in this league' }); return }
+    await draftService.nominatePlayer(req.params.leagueId, club.id, instanceId)
+    res.json({ ok: true })
+  } catch (err: any) {
+    res.status(400).json({ error: err.message })
+  }
+})
+
+router.post('/:leagueId/bid', async (req: AuthRequest, res) => {
+  const { amount } = req.body
+  if (typeof amount !== 'number') { res.status(400).json({ error: 'amount required' }); return }
+  try {
+    const club = await prisma.club.findFirst({ where: { leagueId: req.params.leagueId, userId: req.userId! } })
+    if (!club) { res.status(403).json({ error: 'No club in this league' }); return }
+    await draftService.placeBid(req.params.leagueId, club.id, amount)
+    res.json({ ok: true })
+  } catch (err: any) {
+    res.status(400).json({ error: err.message })
+  }
+})
+
 export default router

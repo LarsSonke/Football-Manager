@@ -377,6 +377,7 @@ model DraftSession {
   pickOrder     String[]
   roundsTotal   Int         @default(25) // players per team
   pickTimeLimit Int         @default(90)
+  auctionState  Json?       // AuctionRound | null — populated when type === AUCTION and status === ACTIVE
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

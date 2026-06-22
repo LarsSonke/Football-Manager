@@ -3,6 +3,24 @@ import { getIO } from '../websocket'
 import { startSeason } from './league.service'
 import type { DraftPickEvent } from '@football/shared'
 
+// ─── Auction types ────────────────────────────────────────────────────────────
+
+export interface AuctionRound {
+  nominatorIdx: number        // index into session.pickOrder
+  instanceId: string | null   // being auctioned (null = waiting for nomination)
+  playerId: string | null
+  highBid: number
+  highBidderId: string | null // club ID
+  endsAt: string | null       // ISO timestamp
+  budgets: Record<string, number>  // clubId → remaining budget
+}
+
+// ─── Auction timer map ────────────────────────────────────────────────────────
+
+const auctionTimers = new Map<string, ReturnType<typeof setTimeout>>()
+
+// ─── Draft state ──────────────────────────────────────────────────────────────
+
 export async function getDraftState(leagueId: string) {
   const session = await prisma.draftSession.findUnique({
     where: { leagueId },
@@ -78,7 +96,9 @@ export async function makePick(
   playerId: string,
 ): Promise<DraftPickEvent> {
   const session = await prisma.draftSession.findUnique({ where: { leagueId } })
-  if (!session || session.status !== 'ACTIVE') throw new Error('Draft not active')
+  if (!session) throw new Error('Draft session not found')
+  if (session.type === 'AUCTION') throw new Error('Use nominate/bid for auction drafts')
+  if (session.status !== 'ACTIVE') throw new Error('Draft not active')
 
   const currentClubId = session.pickOrder[session.currentPick]
   if (currentClubId !== clubId) throw new Error("Not your turn to pick")
@@ -180,6 +200,227 @@ export async function kickoffFirstPickIfAI(leagueId: string): Promise<void> {
     setTimeout(() => aiAutoPick(leagueId, currentClubId), 2000)
   }
 }
+
+export async function kickoffAuctionIfAIFirst(leagueId: string): Promise<void> {
+  const session = await prisma.draftSession.findUnique({ where: { leagueId } })
+  if (!session || session.type !== 'AUCTION') return
+  const state = getAuctionState(session)
+  const nominatorIdx = state?.nominatorIdx ?? 0
+  const nominatorId = session.pickOrder[nominatorIdx % session.pickOrder.length]
+  const club = await prisma.club.findUnique({ where: { id: nominatorId } })
+  if (club?.isAI) {
+    const budgets = state?.budgets ?? await initAuctionBudgets(leagueId, session.pickOrder)
+    setTimeout(() => aiNominate(leagueId, nominatorId, budgets).catch(console.error), 3000)
+  }
+}
+
+// ─── Auction helpers ──────────────────────────────────────────────────────────
+
+function getAuctionState(session: { auctionState: unknown }): AuctionRound | null {
+  if (!session.auctionState || typeof session.auctionState !== 'object') return null
+  return session.auctionState as AuctionRound
+}
+
+async function initAuctionBudgets(leagueId: string, pickOrder: string[]): Promise<Record<string, number>> {
+  const clubs = await prisma.club.findMany({ where: { id: { in: pickOrder } }, select: { id: true, budget: true } })
+  return Object.fromEntries(clubs.map(c => [c.id, c.budget]))
+}
+
+// ─── Auction actions ──────────────────────────────────────────────────────────
+
+export async function nominatePlayer(leagueId: string, clubId: string, instanceId: string): Promise<void> {
+  const session = await prisma.draftSession.findUnique({ where: { leagueId } })
+  if (!session || session.status !== 'ACTIVE' || session.type !== 'AUCTION') throw new Error('Not an active auction draft')
+
+  let state = getAuctionState(session)
+  if (!state) {
+    // First nomination: initialise budgets
+    const budgets = await initAuctionBudgets(leagueId, session.pickOrder)
+    state = { nominatorIdx: 0, instanceId: null, playerId: null, highBid: 0, highBidderId: null, endsAt: null, budgets }
+  }
+
+  const nominatorClubId = session.pickOrder[state.nominatorIdx % session.pickOrder.length]
+  if (nominatorClubId !== clubId) throw new Error("It's not your turn to nominate")
+  if (state.instanceId !== null) throw new Error('An auction is already in progress')
+
+  const inst = await prisma.playerInstance.findUnique({
+    where: { id: instanceId },
+    include: { player: { select: { id: true } } },
+  })
+  if (!inst || inst.leagueId !== leagueId || inst.clubId !== null) throw new Error('Player not available')
+
+  const endsAt = new Date(Date.now() + 40_000).toISOString()
+  const newState: AuctionRound = {
+    ...state,
+    instanceId,
+    playerId: inst.playerId,
+    highBid: 1,
+    highBidderId: null,
+    endsAt,
+  }
+
+  await prisma.draftSession.update({ where: { leagueId }, data: { auctionState: newState as any } })
+
+  getIO().to(`draft:${leagueId}`).emit('auction:nomination', {
+    instanceId, playerId: inst.playerId, highBid: 1, endsAt, nominatorClubId,
+    budgets: newState.budgets,
+  })
+
+  // Schedule auto-award after 40 seconds
+  scheduleAward(leagueId, 40_000)
+}
+
+function scheduleAward(leagueId: string, delay: number): void {
+  const existing = auctionTimers.get(leagueId)
+  if (existing) clearTimeout(existing)
+  const t = setTimeout(() => awardCurrentPlayer(leagueId).catch(console.error), delay)
+  auctionTimers.set(leagueId, t)
+}
+
+async function awardCurrentPlayer(leagueId: string): Promise<void> {
+  auctionTimers.delete(leagueId)
+
+  const session = await prisma.draftSession.findUnique({
+    where: { leagueId },
+    include: { picks: true },
+  })
+  if (!session || session.status !== 'ACTIVE' || session.type !== 'AUCTION') return
+
+  const state = getAuctionState(session)
+  if (!state?.instanceId) return
+
+  const { instanceId, highBid, highBidderId, nominatorIdx, budgets } = state
+
+  // If no one bid, nominator wins at 1
+  const winnerClubId = highBidderId ?? session.pickOrder[nominatorIdx % session.pickOrder.length]
+  const finalBid = highBidderId ? highBid : 1
+
+  // Check budget
+  const winnerBudget = budgets[winnerClubId] ?? 0
+  const actualBid = Math.min(finalBid, winnerBudget)
+
+  // Update budgets
+  const newBudgets = { ...budgets, [winnerClubId]: winnerBudget - actualBid }
+
+  // Get instance player ID
+  const inst = await prisma.playerInstance.findUnique({ where: { id: instanceId }, include: { player: { select: { id: true } } } })
+  if (!inst) return
+
+  const wage = Math.round(actualBid * 0.004)
+
+  await prisma.$transaction([
+    prisma.playerInstance.update({ where: { id: instanceId }, data: { clubId: winnerClubId, wage } }),
+    prisma.draftPick.create({
+      data: {
+        sessionId: session.id,
+        clubId: winnerClubId,
+        playerId: inst.playerId,
+        round: Math.floor(session.picks.length / session.pickOrder.length) + 1,
+        pickNumber: session.picks.length + 1,
+        price: actualBid,
+      },
+    }),
+    prisma.club.update({ where: { id: winnerClubId }, data: { budget: { decrement: actualBid } } }),
+  ])
+
+  // Check if draft is complete
+  const newPickCount = session.picks.length + 1
+  const totalNeeded = session.roundsTotal * session.pickOrder.length
+
+  // Get all clubs' pick counts
+  const allPicks = await prisma.draftPick.findMany({ where: { sessionId: session.id }, select: { clubId: true } })
+  const picksByClub = new Map<string, number>()
+  for (const p of allPicks) picksByClub.set(p.clubId, (picksByClub.get(p.clubId) ?? 0) + 1)
+  const allFull = session.pickOrder.every(cId => (picksByClub.get(cId) ?? 0) >= session.roundsTotal)
+
+  // Next nominator (skip full clubs)
+  let nextIdx = nominatorIdx + 1
+  if (!allFull) {
+    while ((picksByClub.get(session.pickOrder[nextIdx % session.pickOrder.length]) ?? 0) >= session.roundsTotal) {
+      nextIdx++
+    }
+  }
+
+  const nextState: AuctionRound = {
+    nominatorIdx: nextIdx,
+    instanceId: null, playerId: null,
+    highBid: 0, highBidderId: null, endsAt: null,
+    budgets: newBudgets,
+  }
+
+  if (allFull || newPickCount >= totalNeeded) {
+    await prisma.draftSession.update({ where: { leagueId }, data: { status: 'COMPLETED', auctionState: nextState as any } })
+    getIO().to(`draft:${leagueId}`).emit('auction:awarded', { instanceId, playerId: inst.playerId, clubId: winnerClubId, finalBid: actualBid })
+    getIO().to(`draft:${leagueId}`).emit('draft:complete', {})
+    await startSeason(leagueId)
+  } else {
+    await prisma.draftSession.update({ where: { leagueId }, data: { auctionState: nextState as any } })
+    getIO().to(`draft:${leagueId}`).emit('auction:awarded', { instanceId, playerId: inst.playerId, clubId: winnerClubId, finalBid: actualBid })
+
+    // AI nomination if it's an AI club's turn
+    const nextNominatorId = session.pickOrder[nextIdx % session.pickOrder.length]
+    const nextClub = await prisma.club.findUnique({ where: { id: nextNominatorId } })
+    if (nextClub?.isAI) {
+      setTimeout(() => aiNominate(leagueId, nextNominatorId, nextState.budgets).catch(console.error), 2000 + Math.random() * 2000)
+    }
+  }
+}
+
+async function aiNominate(leagueId: string, clubId: string, budgets: Record<string, number>): Promise<void> {
+  // Pick highest-overall available player
+  const best = await prisma.playerInstance.findFirst({
+    where: { leagueId, clubId: null },
+    include: { player: { select: { id: true } } },
+    orderBy: { player: { overall: 'desc' } },
+  })
+  if (best) await nominatePlayer(leagueId, clubId, best.id).catch(() => {})
+}
+
+export async function placeBid(leagueId: string, clubId: string, amount: number): Promise<void> {
+  const session = await prisma.draftSession.findUnique({ where: { leagueId } })
+  if (!session || session.status !== 'ACTIVE' || session.type !== 'AUCTION') throw new Error('Not an active auction draft')
+
+  const state = getAuctionState(session)
+  if (!state?.instanceId || !state.endsAt) throw new Error('No active nomination')
+  if (new Date(state.endsAt) < new Date()) throw new Error('Bidding has closed')
+
+  if (amount <= state.highBid) throw new Error(`Bid must be above current high bid of €${state.highBid}`)
+
+  const budget = state.budgets[clubId] ?? 0
+  if (amount > budget) throw new Error(`Insufficient budget (you have €${budget})`)
+
+  // Extend timer: reset to 10s if less than 10s remain
+  const remaining = new Date(state.endsAt).getTime() - Date.now()
+  const newEndsAt = remaining < 10_000
+    ? new Date(Date.now() + 10_000).toISOString()
+    : state.endsAt
+
+  const newState: AuctionRound = { ...state, highBid: amount, highBidderId: clubId, endsAt: newEndsAt }
+  await prisma.draftSession.update({ where: { leagueId }, data: { auctionState: newState as any } })
+
+  getIO().to(`draft:${leagueId}`).emit('auction:bid', { clubId, amount, newEndsAt })
+
+  // Reschedule award timer
+  const newRemaining = new Date(newEndsAt).getTime() - Date.now()
+  scheduleAward(leagueId, Math.max(newRemaining, 1000))
+
+  // AI counter-bid (other AI clubs that value this player)
+  const inst = await prisma.playerInstance.findUnique({ where: { id: state.instanceId }, include: { player: { select: { overall: true } } } })
+  const playerValue = inst?.player.overall ? inst.player.overall * 500 : 10000
+  const aiClubs = await prisma.club.findMany({ where: { id: { in: session.pickOrder }, isAI: true } })
+  for (const ai of aiClubs) {
+    if (ai.id === clubId) continue
+    const aiMax = Math.min(playerValue, state.budgets[ai.id] ?? 0)
+    if (amount < aiMax * 0.85 && Math.random() > 0.4) {
+      const aiBid = Math.min(Math.round(amount * 1.1), Math.floor(aiMax * 0.9))
+      if (aiBid > amount) {
+        setTimeout(() => placeBid(leagueId, ai.id, aiBid).catch(() => {}), 1500 + Math.random() * 2000)
+      }
+    }
+  }
+}
+
+// ─── Snake draft helpers ──────────────────────────────────────────────────────
 
 // Position → broad category mapping
 const GK_POSITIONS  = new Set(['GK'])

@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard'
 import League from './pages/League'
 import Draft from './pages/Draft'
 import MatchReport from './pages/MatchReport'
+import ClubProfile from './pages/ClubProfile'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { token } = useAuth()
@@ -27,6 +28,7 @@ export default function App() {
         <Route path="/league/:id" element={<RequireAuth><League /></RequireAuth>} />
         <Route path="/league/:id/draft" element={<RequireAuth><Draft /></RequireAuth>} />
         <Route path="/league/:id/match/:matchId" element={<RequireAuth><MatchReport /></RequireAuth>} />
+        <Route path="/league/:id/club/:clubId" element={<RequireAuth><ClubProfile /></RequireAuth>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

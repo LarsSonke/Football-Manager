@@ -555,19 +555,22 @@ function Overview({ league, matches, myClub, awards, onPhysioUpgrade, onRefresh 
               const gd = club.goalsFor - club.goalsAgainst
               const posColor = i === 0 ? 'var(--gold)' : i < 4 ? 'var(--green)' : 'var(--text-2)'
               return (
-                <div key={club.id} style={{
-                  display: 'grid', gridTemplateColumns: '28px auto 1fr auto 36px',
+                <Link key={club.id} to={`/league/${league.id}/club/${club.id}`} style={{ textDecoration: 'none', display: 'grid', gridTemplateColumns: '28px auto 1fr auto 36px',
                   alignItems: 'center', gap: 10, padding: '8px 10px',
                   background: isMe ? 'rgba(54,226,126,0.06)' : 'transparent',
                   borderRadius: 'var(--radius-sm)',
                   borderLeft: isMe ? '2px solid var(--green)' : '2px solid transparent',
-                }}>
+                  transition: 'background 0.12s',
+                }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.background = isMe ? 'rgba(54,226,126,0.1)' : 'rgba(255,255,255,0.03)' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = isMe ? 'rgba(54,226,126,0.06)' : 'transparent' }}
+                >
                   <div style={{ fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 800, color: posColor, textAlign: 'center' }}>{i + 1}</div>
                   <ClubBadge name={club.name} size={22} logoConfig={club.logoConfig} />
                   <div style={{ fontSize: 13, fontWeight: isMe ? 700 : 500, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{club.name}</div>
                   <div style={{ fontSize: 11, color: gd >= 0 ? 'var(--green)' : 'var(--red)', fontWeight: 600 }}>{gd > 0 ? `+${gd}` : gd}</div>
                   <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: isMe ? 'var(--green)' : 'var(--text-1)', textAlign: 'right' }}>{club.points}</div>
-                </div>
+                </Link>
               )
             })}
           </div>
@@ -852,8 +855,9 @@ function Overview({ league, matches, myClub, awards, onPhysioUpgrade, onRefresh 
 
 // ─── Standings ────────────────────────────────────────────────────────────────
 
-function Standings({ clubs, myClubId, prevPositions = {}, matches = [], history }: { clubs: ClubData[]; myClubId: string | undefined; prevPositions?: Record<string, number>; matches?: MatchData[]; history?: SeasonSnapshot[] | null }) {
+function Standings({ clubs, myClubId, leagueId, prevPositions = {}, matches = [], history }: { clubs: ClubData[]; myClubId: string | undefined; leagueId: string; prevPositions?: Record<string, number>; matches?: MatchData[]; history?: SeasonSnapshot[] | null }) {
   const isMobile = useIsMobile()
+  const navigate = useNavigate()
   const [selectedClub, setSelectedClub] = useState<ClubData | null>(null)
   const sorted = [...clubs].sort((a, b) => {
     if (b.points !== a.points) return b.points - a.points
@@ -928,9 +932,9 @@ function Standings({ clubs, myClubId, prevPositions = {}, matches = [], history 
               return myScore > opScore ? 'W' : myScore === opScore ? 'D' : 'L'
             })
             return (
-              <tr key={club.id} onClick={() => setSelectedClub(club)} style={{ borderBottom: '1px solid var(--border)', background: isMe ? 'rgba(54,226,126,0.05)' : 'transparent', borderLeft: isMe ? '3px solid var(--green)' : '3px solid transparent', cursor: 'pointer' }}
-                onMouseEnter={e => { if (!isMe) (e.currentTarget as HTMLTableRowElement).style.background = 'rgba(255,255,255,0.03)' }}
-                onMouseLeave={e => { if (!isMe) (e.currentTarget as HTMLTableRowElement).style.background = 'transparent' }}
+              <tr key={club.id} onClick={() => navigate(`/league/${leagueId}/club/${club.id}`)} style={{ borderBottom: '1px solid var(--border)', background: isMe ? 'rgba(54,226,126,0.05)' : 'transparent', borderLeft: isMe ? '3px solid var(--green)' : '3px solid transparent', cursor: 'pointer' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLTableRowElement).style.background = isMe ? 'rgba(54,226,126,0.08)' : 'rgba(255,255,255,0.03)' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLTableRowElement).style.background = isMe ? 'rgba(54,226,126,0.05)' : 'transparent' }}
               >
                 <td style={{ padding: '12px', textAlign: 'center' }}>
                   <span style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 800, color: posColor }}>{i + 1}</span>
@@ -5029,7 +5033,7 @@ export default function League() {
           {tab === 'overview'  && <Overview league={league} matches={matches} myClub={myClub} awards={awards} onPhysioUpgrade={handlePhysioUpgrade} onRefresh={refresh} />}
           {tab === 'squad'     && (myClub ? <Squad squad={myClub.squad} physioLevel={myClub.physioLevel} budget={myClub.budget} nextMatchday={nextMatchday} onHeal={handleHeal} onTrain={handleTrain} /> : <p style={{ color: 'var(--text-2)' }}>You don't have a club in this league.</p>)}
           {tab === 'fixtures'  && (matches.length === 0 ? <div style={{ textAlign: 'center', padding: '64px 0', color: 'var(--text-2)' }}><div style={{ fontSize: 36, marginBottom: 10 }}>📅</div><p>Fixtures will appear after the draft.</p></div> : <Fixtures matches={matches} clubs={league.clubs} myClubId={myClub?.id} currentDay={league.currentDay} leagueId={league.id} />)}
-          {tab === 'standings' && <Standings clubs={league.clubs} myClubId={myClub?.id} prevPositions={prevPositions} matches={matches} history={league.history} />}
+          {tab === 'standings' && <Standings clubs={league.clubs} myClubId={myClub?.id} leagueId={league.id} prevPositions={prevPositions} matches={matches} history={league.history} />}
           {tab === 'stats'     && <Stats leagueId={league.id} status={league.status} />}
           {tab === 'tactics'   && myClub && (
             myClub.squad.length === 0

@@ -231,6 +231,17 @@ input::placeholder { color: var(--text-3); }
   font-size: 1.4em; color: var(--text-3);
 }
 
+/* ── PWA safe-area ───────────────────────────────────────────────────────── */
+.nav {
+  padding-top: env(safe-area-inset-top, 0px);
+  height: calc(58px + env(safe-area-inset-top, 0px));
+}
+.page {
+  padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px));
+  padding-left:  max(24px, env(safe-area-inset-left, 0px));
+  padding-right: max(24px, env(safe-area-inset-right, 0px));
+}
+
 /* ── Mobile responsive helpers ───────────────────────────────────────────── */
 @media (max-width: 767px) {
   /* Ensure tables don't overflow */
@@ -244,6 +255,16 @@ input::placeholder { color: var(--text-3); }
 
   /* Modals */
   .modal-overlay { padding: 0 !important; align-items: flex-end !important; }
+
+  /* Prevent double-tap zoom on buttons / interactive elements */
+  .btn, .tab, .chip, button { touch-action: manipulation; }
+
+  /* Tighter page padding on small screens */
+  .page { padding: 20px 14px; padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px)); }
+
+  /* Horizontal scroll for tabs on narrow screens */
+  .tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap; }
+  .tab  { white-space: nowrap; flex-shrink: 0; }
 }
 
 /* ── Countdown ring animations ───────────────────────────────────────────── */

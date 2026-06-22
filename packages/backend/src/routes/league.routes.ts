@@ -117,6 +117,114 @@ router.delete('/:id/clubs/:clubId', async (req: AuthRequest, res) => {
   }
 })
 
+router.get('/:id/clubs/:clubId/profile', async (req: AuthRequest, res) => {
+  try {
+    const { id: leagueId, clubId } = req.params
+
+    const [club, matches, perfGroups] = await Promise.all([
+      prisma.club.findUnique({
+        where: { id: clubId },
+        include: {
+          squad: {
+            include: { player: true },
+            orderBy: [{ player: { overall: 'desc' } }],
+          },
+          user: { select: { id: true, username: true } },
+        },
+      }),
+      prisma.match.findMany({
+        where: {
+          leagueId,
+          status: 'SIMULATED',
+          OR: [{ homeClubId: clubId }, { awayClubId: clubId }],
+        },
+        orderBy: { matchday: 'desc' },
+        take: 5,
+        include: {
+          homeClub: { select: { id: true, name: true, logoConfig: true } },
+          awayClub: { select: { id: true, name: true, logoConfig: true } },
+        },
+      }),
+      prisma.matchPerformance.groupBy({
+        by: ['instanceId'],
+        where: { match: { leagueId }, instance: { clubId } },
+        _sum: { goals: true, assists: true },
+        _avg: { rating: true },
+        _count: { instanceId: true },
+        orderBy: { _sum: { goals: 'desc' } },
+        take: 5,
+      }),
+    ])
+
+    if (!club || club.leagueId !== leagueId) {
+      res.status(404).json({ error: 'Club not found' })
+      return
+    }
+
+    // Resolve player names for top performers
+    const perfInstanceIds = perfGroups.map(g => g.instanceId)
+    const perfInstances = perfInstanceIds.length > 0
+      ? await prisma.playerInstance.findMany({
+          where: { id: { in: perfInstanceIds } },
+          include: { player: { select: { name: true, position: true } } },
+        })
+      : []
+    const perfMap = Object.fromEntries(perfInstances.map(i => [i.id, i]))
+
+    res.json({
+      club: {
+        id: club.id,
+        name: club.name,
+        logoConfig: club.logoConfig,
+        budget: club.budget,
+        wins: club.wins,
+        draws: club.draws,
+        losses: club.losses,
+        goalsFor: club.goalsFor,
+        goalsAgainst: club.goalsAgainst,
+        points: club.points,
+        isAI: club.isAI,
+        user: club.user,
+      },
+      squad: club.squad.map(inst => ({
+        id: inst.id,
+        playerId: inst.playerId,
+        name: inst.player.name,
+        nationality: inst.player.nationality,
+        position: inst.player.position,
+        age: inst.player.age,
+        overall: inst.player.overall,
+        potential: inst.player.potential,
+        morale: inst.morale,
+        form: inst.form,
+        fitness: inst.fitness,
+        injured: inst.injured,
+        injuryDaysLeft: inst.injuryDaysLeft,
+        wage: inst.wage,
+      })),
+      recentMatches: matches.map(m => ({
+        id: m.id,
+        matchday: m.matchday,
+        homeClub: { id: m.homeClub.id, name: m.homeClub.name, logoConfig: m.homeClub.logoConfig },
+        awayClub: { id: m.awayClub.id, name: m.awayClub.name, logoConfig: m.awayClub.logoConfig },
+        homeScore: m.homeScore,
+        awayScore: m.awayScore,
+      })),
+      topPerformers: perfGroups.map(g => ({
+        instanceId: g.instanceId,
+        name: perfMap[g.instanceId]?.player.name ?? '—',
+        position: perfMap[g.instanceId]?.player.position ?? '?',
+        goals: g._sum.goals ?? 0,
+        assists: g._sum.assists ?? 0,
+        appearances: g._count.instanceId,
+        avgRating: g._avg.rating ? Math.round(g._avg.rating * 10) / 10 : 0,
+      })),
+    })
+  } catch (err: any) {
+    res.status(400).json({ error: err.message })
+  }
+})
+
 const tacticSchema = z.object({
   formation: z.string(),
   style: z.enum(['possession', 'counter', 'pressing', 'lowblock']),

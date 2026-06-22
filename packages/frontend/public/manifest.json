@@ -1,0 +1,23 @@
+{
+  "name": "Football Manager",
+  "short_name": "FootballMgr",
+  "description": "Multiplayer football manager game — build your squad and dominate the league.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#22c55e",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "any",
+      "type": "image/png"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ]
+}

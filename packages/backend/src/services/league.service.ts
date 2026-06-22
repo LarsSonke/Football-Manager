@@ -138,7 +138,7 @@ export async function startSeason(leagueId: string) {
   await prisma.league.update({ where: { id: leagueId }, data: { status: 'ACTIVE' } })
 }
 
-export async function startNewSeason(leagueId: string, userId: string) {
+export async function startNewSeason(leagueId: string, userId: string): Promise<{ growthChanges: GrowthEntry[] }> {
   const league = await prisma.league.findUnique({ where: { id: leagueId }, include: { clubs: true } })
   if (!league) throw new Error('League not found')
   if (league.status !== 'FINISHED') throw new Error('Season has not finished yet')
@@ -164,6 +164,12 @@ export async function startNewSeason(leagueId: string, userId: string) {
     data: { history: [...existingHistory, snapshot] as any },
   })
 
+  // Fail any active sponsor deals that didn't complete last season
+  await prisma.sponsorDeal.updateMany({
+    where: { leagueId, status: 'ACTIVE' },
+    data: { status: 'FAILED' },
+  })
+
   // Clear match history (delete dependents first — no cascade set in schema)
   await prisma.transferListing.deleteMany({ where: { leagueId } })
   await prisma.matchPerformance.deleteMany({ where: { match: { leagueId } } })
@@ -177,7 +183,7 @@ export async function startNewSeason(leagueId: string, userId: string) {
   })
 
   // Age players and apply potential-based growth/decline
-  await applySeasonGrowth(leagueId)
+  const growthChanges = await applySeasonGrowth(leagueId)
 
   // Reset all player instances to fresh condition
   await prisma.playerInstance.updateMany({
@@ -187,6 +193,7 @@ export async function startNewSeason(leagueId: string, userId: string) {
 
   // Generate new fixtures and re-derive AI tactics with fresh squad analysis
   await startSeason(leagueId)
+  return { growthChanges }
 }
 
 // ─── Player growth ────────────────────────────────────────────────────────────
@@ -277,14 +284,20 @@ function buildPlayerGrowthUpdate(player: {
   return updates
 }
 
-export async function applySeasonGrowth(leagueId: string): Promise<void> {
+export async function applySeasonGrowth(leagueId: string): Promise<GrowthEntry[]> {
   const instances = await prisma.playerInstance.findMany({
     where: { leagueId },
     include: { player: true },
   })
 
   const playerMap = new Map<string, typeof instances[number]['player']>()
-  for (const inst of instances) playerMap.set(inst.playerId, inst.player)
+  const clubMap = new Map<string, string | null>()
+  for (const inst of instances) {
+    playerMap.set(inst.playerId, inst.player)
+    clubMap.set(inst.playerId, inst.clubId)
+  }
+
+  const growthEntries: GrowthEntry[] = []
 
   const updates = [...playerMap.values()].map(player => {
     const delta = calcGrowthDelta(player.age, player.potential, player.overall)
@@ -293,10 +306,20 @@ export async function applySeasonGrowth(leagueId: string): Promise<void> {
       delta,
     )
     if (Object.keys(changes).length === 0) return null
+    growthEntries.push({
+      playerId: player.id,
+      playerName: player.name,
+      position: player.position,
+      clubId: clubMap.get(player.id) ?? null,
+      overallWas: player.overall,
+      overallNow: (changes.overall ?? player.overall) as number,
+      ageWas: player.age,
+    })
     return prisma.player.update({ where: { id: player.id }, data: changes })
   }).filter(Boolean) as Promise<unknown>[]
 
   await Promise.all(updates)
+  return growthEntries
 }
 
 // ─── AI tactic assignment ─────────────────────────────────────────────────────
@@ -779,6 +802,16 @@ export async function applyMatchIncome(
 }
 
 // ─── SPONSOR DEALS ────────────────────────────────────────────────────────────
+
+export type GrowthEntry = {
+  playerId: string
+  playerName: string
+  position: string
+  clubId: string | null
+  overallWas: number
+  overallNow: number
+  ageWas: number
+}
 
 const SPONSOR_POOL = [
   { name: 'Apex Energy',     emoji: '⚡' },

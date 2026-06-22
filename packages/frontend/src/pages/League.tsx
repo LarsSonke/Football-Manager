@@ -96,6 +96,11 @@ interface SeasonSnapshot {
   }>
 }
 
+interface GrowthChange {
+  playerId: string; playerName: string; position: string; clubId: string | null
+  overallWas: number; overallNow: number; ageWas: number
+}
+
 type Tab = 'overview' | 'squad' | 'fixtures' | 'standings' | 'stats' | 'tactics' | 'transfers' | 'messages' | 'manage'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -1194,6 +1199,12 @@ function Squad({ squad, physioLevel, budget, nextMatchday, onHeal, onTrain }: {
                         +{inst.trainedPosition}
                       </span>
                     )}
+                    {inst.player.age <= 22 && inst.player.potential - inst.player.overall >= 6 && (
+                      <span style={{ fontSize: 9, padding: '2px 5px', background: 'rgba(54,226,126,0.12)', color: 'var(--green)', borderRadius: 4, fontWeight: 700, border: '1px solid rgba(54,226,126,0.3)' }}>PROSPECT</span>
+                    )}
+                    {inst.player.age >= 32 && (
+                      <span style={{ fontSize: 9, padding: '2px 5px', background: 'rgba(232,128,106,0.1)', color: 'var(--red)', borderRadius: 4, fontWeight: 700, border: '1px solid rgba(232,128,106,0.3)' }}>VETERAN</span>
+                    )}
                   </div>
                   <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{inst.player.name}</div>
                   <div style={{ fontSize: 11, color: 'var(--text-2)', marginTop: 2 }}>{flagSrc && <img src={flagSrc} alt="" style={{ width: 16, height: 12, verticalAlign: 'middle', borderRadius: 1, marginRight: 3 }} />}{inst.player.nationality} · {inst.player.age}y</div>
@@ -1450,8 +1461,9 @@ function DraftSummaryOverlay({ league, onDismiss }: { league: LeagueData; onDism
 
 // ─── Season End Overlay ───────────────────────────────────────────────────────
 
-function SeasonEndOverlay({ league, isCreator, startingNewSeason, onNewSeason, onDismiss }: {
+function SeasonEndOverlay({ league, myClub, isCreator, startingNewSeason, onNewSeason, onDismiss }: {
   league: LeagueData
+  myClub?: ClubData
   isCreator: boolean
   startingNewSeason: boolean
   onNewSeason: () => void
@@ -1465,6 +1477,18 @@ function SeasonEndOverlay({ league, isCreator, startingNewSeason, onNewSeason, o
     return b.goalsFor - a.goalsFor
   })
   const champion = sorted[0]
+  const prospects = myClub
+    ? [...myClub.squad]
+        .filter(p => p.player.age <= 24 && p.player.potential - p.player.overall >= 5)
+        .sort((a, b) => (b.player.potential - b.player.overall) - (a.player.potential - a.player.overall))
+        .slice(0, 4)
+    : []
+  const veterans = myClub
+    ? [...myClub.squad]
+        .filter(p => p.player.age >= 31)
+        .sort((a, b) => b.player.age - a.player.age)
+        .slice(0, 3)
+    : []
 
   return (
     <div style={{
@@ -1528,6 +1552,46 @@ function SeasonEndOverlay({ league, isCreator, startingNewSeason, onNewSeason, o
             })}
           </div>
         </div>
+
+        {/* Development outlook */}
+        {(prospects.length > 0 || veterans.length > 0) && (
+          <div style={{ padding: '12px 32px', borderTop: '1px solid var(--border)' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--text-2)', marginBottom: 10 }}>
+              Development Outlook
+            </div>
+            {prospects.length > 0 && (
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ fontSize: 10, color: 'var(--green)', fontWeight: 700, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>Rising Talent</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {prospects.map(p => (
+                    <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+                      <span className={posClass(p.player.position)} style={{ fontSize: 9 }}>{p.player.position}</span>
+                      <span style={{ flex: 1, color: 'var(--text-1)' }}>{p.player.name}</span>
+                      <span style={{ color: 'var(--text-3)' }}>Age {p.player.age}</span>
+                      <span style={{ color: 'var(--text-2)' }}>{p.player.overall} OVR</span>
+                      <span style={{ color: 'var(--green)', fontWeight: 700 }}>→ {p.player.potential} POT</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {veterans.length > 0 && (
+              <div>
+                <div style={{ fontSize: 10, color: 'var(--gold)', fontWeight: 700, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>Aging Players</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {veterans.map(p => (
+                    <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+                      <span className={posClass(p.player.position)} style={{ fontSize: 9 }}>{p.player.position}</span>
+                      <span style={{ flex: 1, color: 'var(--text-1)' }}>{p.player.name}</span>
+                      <span style={{ color: 'var(--gold)' }}>Age {p.player.age}</span>
+                      <span style={{ color: 'var(--text-2)' }}>{p.player.overall} OVR</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Player development note */}
         {isCreator && (
@@ -4160,6 +4224,8 @@ export default function League() {
   const [error, setError] = useState('')
   const [showSeasonEnd, setShowSeasonEnd] = useState(false)
   const [startingNewSeason, setStartingNewSeason] = useState(false)
+  const [growthChanges, setGrowthChanges] = useState<GrowthChange[]>([])
+  const [showGrowthReport, setShowGrowthReport] = useState(false)
   const [prevPositions] = useState<Record<string, number>>(() => {
     try { return JSON.parse(localStorage.getItem(`standings-pos-prev-${id ?? ''}`) ?? '{}') } catch { return {} }
   })
@@ -4256,7 +4322,14 @@ export default function League() {
   async function handleNewSeason() {
     setStartingNewSeason(true)
     try {
-      await api.post(`/leagues/${id}/new-season`)
+      const r = await api.post(`/leagues/${id}/new-season`)
+      const changes: GrowthChange[] = r.data.growthChanges ?? []
+      const myClubId = myClubIdRef.current
+      const myChanges = myClubId ? changes.filter(c => c.clubId === myClubId) : []
+      if (myChanges.length > 0) {
+        setGrowthChanges(myChanges)
+        setShowGrowthReport(true)
+      }
       setShowSeasonEnd(false)
       setTab('overview')
       refresh()
@@ -4372,10 +4445,42 @@ export default function League() {
         <DraftSummaryOverlay league={league} onDismiss={() => setShowDraftSummary(false)} />
       )}
 
+      {/* ── Growth Report Modal ──────────────────────────────────────────── */}
+      {showGrowthReport && growthChanges.length > 0 && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 210, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', maxWidth: 500, width: '100%', maxHeight: '80vh', overflowY: 'auto' }}>
+            <div style={{ padding: '24px 28px 16px', borderBottom: '1px solid var(--border)' }}>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 800, color: 'var(--text-1)', marginBottom: 4 }}>Player Development</div>
+              <div style={{ fontSize: 12, color: 'var(--text-2)' }}>Changes after the off-season</div>
+            </div>
+            <div style={{ padding: '16px 28px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {[...growthChanges].sort((a, b) => (b.overallNow - b.overallWas) - (a.overallNow - a.overallWas)).map(c => {
+                const delta = c.overallNow - c.overallWas
+                const color = delta > 0 ? 'var(--green)' : delta < 0 ? 'var(--red)' : 'var(--text-3)'
+                return (
+                  <div key={c.playerId} style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto auto', alignItems: 'center', gap: 8, padding: '7px 10px', background: 'var(--bg-card-2)', borderRadius: 'var(--radius-xs)' }}>
+                    <span className={posClass(c.position)} style={{ fontSize: 9 }}>{c.position}</span>
+                    <span style={{ fontSize: 13, color: 'var(--text-1)' }}>{c.playerName}</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Age {c.ageWas + 1}</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color, minWidth: 48, textAlign: 'right' }}>
+                      {delta > 0 ? `+${delta}` : delta === 0 ? '±0' : delta} ({c.overallNow})
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+            <div style={{ padding: '14px 28px 20px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end' }}>
+              <button className="btn btn-primary" onClick={() => setShowGrowthReport(false)}>Got It</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Season End Overlay ───────────────────────────────────────────── */}
       {showSeasonEnd && league.status === 'FINISHED' && (
         <SeasonEndOverlay
           league={league}
+          myClub={myClub}
           isCreator={isCreator}
           startingNewSeason={startingNewSeason}
           onNewSeason={handleNewSeason}

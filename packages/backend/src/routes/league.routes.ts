@@ -231,8 +231,8 @@ router.post('/:id/train/:instanceId', async (req: AuthRequest, res) => {
 
 router.post('/:id/new-season', async (req: AuthRequest, res) => {
   try {
-    await leagueService.startNewSeason(req.params.id, req.userId!)
-    res.json({ ok: true })
+    const result = await leagueService.startNewSeason(req.params.id, req.userId!)
+    res.json({ ok: true, growthChanges: result.growthChanges })
   } catch (err: any) {
     res.status(400).json({ error: err.message })
   }

@@ -222,6 +222,7 @@ model PlayerInstance {
   injured           Boolean @default(false)
   injuryDaysLeft    Int     @default(0)
   suspendedMatchday Int?
+  yellowCards       Int     @default(0)
   trainedPosition   String?
 
   wage Int @default(0)

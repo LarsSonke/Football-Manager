@@ -37,7 +37,7 @@ interface PlayerData {
 interface SquadPlayer {
   id: string; playerId: string; player: PlayerData
   morale: number; form: number; fitness: number; injured: boolean; injuryDaysLeft: number
-  suspendedMatchday: number | null; trainedPosition: string | null; wage: number
+  suspendedMatchday: number | null; yellowCards: number; trainedPosition: string | null; wage: number
 }
 
 interface LineupSlot { instanceId: string; position: string; role?: string }
@@ -1225,6 +1225,19 @@ function Squad({ squad, physioLevel, budget, nextMatchday, onHeal, onTrain }: {
               <div style={{ display: 'flex', alignItems: 'center', padding: '7px 10px', background: 'rgba(255,165,0,0.1)', border: '1px solid rgba(255,165,0,0.3)', borderRadius: 'var(--radius-xs)', marginBottom: 8 }}>
                 <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--gold)' }}>SUSPENDED</span>
                 <span style={{ fontSize: 11, color: 'var(--text-2)', marginLeft: 6 }}>Misses next match</span>
+              </div>
+            )}
+
+            {/* Yellow card accumulation row */}
+            {inst.yellowCards > 0 && inst.suspendedMatchday !== nextMatchday && (
+              <div style={{ display: 'flex', alignItems: 'center', padding: '5px 10px', background: inst.yellowCards % 5 === 4 ? 'rgba(255,214,0,0.08)' : 'transparent', border: inst.yellowCards % 5 === 4 ? '1px solid rgba(255,214,0,0.25)' : '1px solid transparent', borderRadius: 'var(--radius-xs)', marginBottom: 6 }}>
+                <span style={{ fontSize: 12 }}>🟨</span>
+                <span style={{ fontSize: 11, color: inst.yellowCards % 5 === 4 ? '#ffd600' : 'var(--text-2)', fontWeight: inst.yellowCards % 5 === 4 ? 700 : 400, marginLeft: 5 }}>
+                  {inst.yellowCards % 5} / 5 yellows
+                </span>
+                {inst.yellowCards % 5 === 4 && (
+                  <span style={{ fontSize: 10, color: '#ffd600', fontWeight: 700, marginLeft: 6 }}>— 1 more = ban</span>
+                )}
               </div>
             )}
 

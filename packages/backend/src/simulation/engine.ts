@@ -353,9 +353,10 @@ export async function simulateMatch(
   const cardEvents: CardEvent[] = []
 
   // Goals scored by each player for MatchPerformance
-  const goalsByInstance: Record<string, number>   = {}
-  const assistsByInstance: Record<string, number> = {}
+  const goalsByInstance: Record<string, number>    = {}
+  const assistsByInstance: Record<string, number>  = {}
   const redCardsByInstance: Record<string, boolean> = {}
+  const yellowCardsByInstance: Record<string, number> = {}
 
   // ── 90-minute loop ──────────────────────────────────────────────────────
   for (let minute = 1; minute <= 90; minute++) {
@@ -443,6 +444,7 @@ export async function simulateMatch(
       stats[cardTeam].yellowCards++
       cardEvents.push({ minute, team: cardTeam, instanceId: victim.instanceId, type: 'yellow' })
       nudgeMorale(defLineup, victim.instanceId, -5)
+      yellowCardsByInstance[victim.instanceId] = (yellowCardsByInstance[victim.instanceId] ?? 0) + 1
     }
 
     // ── Red card (rare — ~0.08/game → 0.0009/min) ─────────────────────
@@ -469,7 +471,7 @@ export async function simulateMatch(
   )
   await updatePlayerConditions(
     match, homeLineup, awayLineup, homeGoals, awayGoals,
-    goalsByInstance, assistsByInstance, redCardsByInstance,
+    goalsByInstance, assistsByInstance, redCardsByInstance, yellowCardsByInstance,
   )
 
   return {
@@ -917,6 +919,7 @@ async function updatePlayerConditions(
   goalsByInstance: Record<string, number>,
   assistsByInstance: Record<string, number>,
   redCardsByInstance: Record<string, boolean>,
+  yellowCardsByInstance: Record<string, number>,
 ): Promise<void> {
   const homeWon = homeGoals > awayGoals
   const awayWon = awayGoals > homeGoals
@@ -929,6 +932,10 @@ async function updatePlayerConditions(
   const awayTacticStyle = (match.awayClub.tactic as any)?.style ?? 'possession'
 
   const CLEAN_SHEET_POSITIONS = new Set(['GK','CB','LB','RB','CDM'])
+
+  const instanceMap = Object.fromEntries(
+    [...match.homeClub.squad, ...match.awayClub.squad].map(s => [s.id, s])
+  )
 
   const updates: Promise<unknown>[] = []
 
@@ -947,13 +954,20 @@ async function updatePlayerConditions(
       if (goalsConceded === 0 && CLEAN_SHEET_POSITIONS.has(entry.assignedPosition)) indivMorale += 4
       if (redCardsByInstance[entry.instanceId]) indivMorale -= 8
 
+      const yellowsThisMatch = yellowCardsByInstance[entry.instanceId] ?? 0
+      const currentYellows   = instanceMap[entry.instanceId]?.yellowCards ?? 0
+      const newYellows       = currentYellows + yellowsThisMatch
+      const crossedThreshold = yellowsThisMatch > 0 && Math.floor(newYellows / 5) > Math.floor(currentYellows / 5)
+      const isSuspended = redCardsByInstance[entry.instanceId] || crossedThreshold
+
       updates.push(prisma.playerInstance.update({
         where: { id: entry.instanceId },
         data: {
           fitness: clamp(entry.fitness - fitnessDrain, 10, 100),
           morale:  clamp(entry.morale  + indivMorale,  20, 100),
           form:    clamp(entry.form    + formDelta,     20, 100),
-          ...(redCardsByInstance[entry.instanceId] ? { suspendedMatchday: match.matchday + 1 } : {}),
+          ...(isSuspended ? { suspendedMatchday: match.matchday + 1 } : {}),
+          ...(yellowsThisMatch > 0 ? { yellowCards: newYellows } : {}),
         },
       }))
     }

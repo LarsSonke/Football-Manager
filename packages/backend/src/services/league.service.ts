@@ -181,7 +181,7 @@ export async function startNewSeason(leagueId: string, userId: string) {
   // Reset all player instances to fresh condition
   await prisma.playerInstance.updateMany({
     where: { leagueId },
-    data: { morale: 70, form: 70, fitness: 90, injured: false, injuryDaysLeft: 0 },
+    data: { morale: 70, form: 70, fitness: 90, injured: false, injuryDaysLeft: 0, yellowCards: 0, suspendedMatchday: null },
   })
 
   // Generate new fixtures and re-derive AI tactics with fresh squad analysis

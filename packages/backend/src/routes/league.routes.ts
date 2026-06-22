@@ -302,9 +302,17 @@ router.post('/:id/pickup', async (req: AuthRequest, res) => {
     })
     if (!instance) { res.status(400).json({ error: 'Player not available' }); return }
 
+    const instanceWithPlayer = await prisma.playerInstance.findUnique({
+      where: { id: instanceId },
+      include: { player: { select: { overall: true } } },
+    })
+    const wage = instanceWithPlayer?.player
+      ? Math.round(instanceWithPlayer.player.overall * league.startingBudget / 25_000)
+      : 0
+
     await prisma.playerInstance.update({
       where: { id: instanceId },
-      data: { clubId: club.id },
+      data: { clubId: club.id, wage },
     })
     res.json({ ok: true })
   } catch (err: any) {

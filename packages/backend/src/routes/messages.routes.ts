@@ -241,4 +241,49 @@ router.post('/:leagueId/messages/:messageId/reject', async (req: AuthRequest, re
   }
 })
 
+// ─── GET /:leagueId/league-chat ───────────────────────────────────────────────
+// Returns last 50 league-wide chat messages, oldest first
+
+router.get('/:leagueId/league-chat', async (req: AuthRequest, res) => {
+  const { leagueId } = req.params
+  try {
+    const messages = await prisma.leagueMessage.findMany({
+      where: { leagueId },
+      orderBy: { createdAt: 'asc' },
+      take: 50,
+      include: {
+        fromUser: { select: { id: true, username: true } },
+      },
+    })
+    res.json(messages)
+  } catch (err: any) {
+    res.status(400).json({ error: err.message })
+  }
+})
+
+// ─── POST /:leagueId/league-chat ──────────────────────────────────────────────
+// Post a message to the league-wide chat
+
+router.post('/:leagueId/league-chat', async (req: AuthRequest, res) => {
+  const { leagueId } = req.params
+  const fromUserId = req.userId!
+  const { text } = req.body
+  if (!text || typeof text !== 'string' || text.trim().length === 0) {
+    res.status(400).json({ error: 'text is required' })
+    return
+  }
+  try {
+    const message = await prisma.leagueMessage.create({
+      data: { leagueId, fromUserId, text: text.trim() },
+      include: {
+        fromUser: { select: { id: true, username: true } },
+      },
+    })
+    getIO().to(`league:${leagueId}`).emit('league:message', message)
+    res.status(201).json(message)
+  } catch (err: any) {
+    res.status(400).json({ error: err.message })
+  }
+})
+
 export default router

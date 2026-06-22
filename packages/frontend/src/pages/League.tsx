@@ -1638,6 +1638,12 @@ interface InboxEntry {
   lastMessage: MessageData | null
 }
 
+interface LeagueChatMessage {
+  id: string; leagueId: string
+  fromUserId: string; text: string; createdAt: string
+  fromUser: { id: string; username: string }
+}
+
 // ─── Transfers ────────────────────────────────────────────────────────────────
 
 interface FreeAgent {
@@ -3836,6 +3842,11 @@ function Messages({ leagueId, myClub, league, currentUserId, onRefresh }: {
   const [showOfferPicker, setShowOfferPicker] = useState(false)
   const threadEndRef = useRef<HTMLDivElement>(null)
   const isMobile = useIsMobile()
+  const [view, setView] = useState<'dm' | 'league'>('league')
+  const [leagueChat, setLeagueChat] = useState<LeagueChatMessage[]>([])
+  const [leagueChatText, setLeagueChatText] = useState('')
+  const [sendingLeague, setSendingLeague] = useState(false)
+  const leagueChatEndRef = useRef<HTMLDivElement>(null)
 
   const loadInbox = useCallback(() => {
     api.get(`/leagues/${leagueId}/messages`).then(r => setInbox(r.data)).catch(() => {})
@@ -3848,15 +3859,25 @@ function Messages({ leagueId, myClub, league, currentUserId, onRefresh }: {
     }).catch(() => {})
   }, [leagueId])
 
+  const loadLeagueChat = useCallback(() => {
+    api.get(`/leagues/${leagueId}/league-chat`).then(r => setLeagueChat(r.data)).catch(() => {})
+  }, [leagueId])
+
   useEffect(() => { loadInbox() }, [loadInbox])
+  useEffect(() => { loadLeagueChat() }, [loadLeagueChat])
 
   useEffect(() => {
     threadEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [thread])
 
   useEffect(() => {
+    leagueChatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [leagueChat])
+
+  useEffect(() => {
     const sock = io()
     sock.emit('join:user', currentUserId)
+    sock.emit('join:league', leagueId)
     sock.on('dm:message', (msg: MessageData) => {
       if (
         selectedUserId === msg.fromUserId ||
@@ -3875,8 +3896,16 @@ function Messages({ leagueId, myClub, league, currentUserId, onRefresh }: {
       }
       loadInbox()
     })
+    sock.on('league:message', (msg: LeagueChatMessage) => {
+      if (msg.leagueId === leagueId) {
+        setLeagueChat(prev => {
+          if (prev.some(m => m.id === msg.id)) return prev
+          return [...prev, msg]
+        })
+      }
+    })
     return () => { sock.disconnect() }
-  }, [currentUserId, selectedUserId, loadInbox])
+  }, [currentUserId, selectedUserId, loadInbox, leagueId])
 
   async function handleSend() {
     if (!selectedUserId) return
@@ -3917,6 +3946,17 @@ function Messages({ leagueId, myClub, league, currentUserId, onRefresh }: {
     } catch { /* ignore */ }
   }
 
+  async function handleSendLeague() {
+    if (!leagueChatText.trim()) return
+    setSendingLeague(true)
+    try {
+      const r = await api.post(`/leagues/${leagueId}/league-chat`, { text: leagueChatText.trim() })
+      setLeagueChat(prev => [...prev, r.data])
+      setLeagueChatText('')
+    } catch { /* ignore */ }
+    finally { setSendingLeague(false) }
+  }
+
   const otherHumanClubs = league.clubs.filter(c => !c.isAI && c.id !== myClub.id)
   const ovrColor = (v: number) => v >= 85 ? 'var(--gold)' : v >= 75 ? 'var(--green)' : v >= 65 ? 'var(--text-2)' : 'var(--text-3)'
   const fmtPrice = (n: number) => n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1_000 ? `${(n / 1_000).toFixed(0)}K` : `${n}`
@@ -3934,10 +3974,34 @@ function Messages({ leagueId, myClub, league, currentUserId, onRefresh }: {
       overflow: 'hidden',
     }}>
       {/* Left sidebar – conversation list */}
-      {(!isMobile || !selectedUserId) && (
+      {(!isMobile || (!selectedUserId && view !== 'league')) && (
         <div style={{ borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column' }}>
           <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)', fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 800, color: 'var(--text-1)' }}>
             Inbox
+          </div>
+          {/* League Chat entry */}
+          <div
+            onClick={() => { setView('league'); setSelectedUserId(null) }}
+            style={{
+              padding: '10px 14px',
+              borderBottom: '1px solid var(--border)',
+              cursor: 'pointer',
+              background: view === 'league' ? 'rgba(39,205,255,0.08)' : 'transparent',
+              display: 'flex', alignItems: 'center', gap: 10,
+            }}
+          >
+            <div style={{
+              width: 34, height: 34, borderRadius: '50%', flexShrink: 0,
+              background: 'rgba(39,205,255,0.2)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 16,
+            }}>
+              💬
+            </div>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: view === 'league' ? 'var(--cyan)' : 'var(--text-1)' }}>League Chat</div>
+              <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Everyone can see this</div>
+            </div>
           </div>
           {otherHumanClubs.length === 0 && (
             <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>No other human clubs yet.</div>
@@ -3949,7 +4013,7 @@ function Messages({ leagueId, myClub, league, currentUserId, onRefresh }: {
             return (
               <div
                 key={club.id}
-                onClick={() => club.user && loadThread(club.user.id)}
+                onClick={() => { if (club.user) { setView('dm'); loadThread(club.user.id) } }}
                 style={{
                   padding: '10px 14px',
                   borderBottom: '1px solid var(--border)',
@@ -3983,10 +4047,63 @@ function Messages({ leagueId, myClub, league, currentUserId, onRefresh }: {
         </div>
       )}
 
-      {/* Right panel – thread */}
-      {(!isMobile || selectedUserId) && (
+      {/* Right panel – thread or league chat */}
+      {(!isMobile || selectedUserId || view === 'league') && (
         <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-          {!selectedUserId ? (
+          {view === 'league' ? (
+            <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+              {/* Header */}
+              <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 18 }}>💬</span>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-1)' }}>League Chat</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{league.name} · visible to everyone</div>
+                </div>
+                {isMobile && (
+                  <button onClick={() => setView('dm')} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-2)', fontSize: 20 }}>←</button>
+                )}
+              </div>
+              {/* Messages */}
+              <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {leagueChat.length === 0 && (
+                  <div style={{ textAlign: 'center', color: 'var(--text-3)', fontSize: 12, padding: '40px 0' }}>Be the first to say something!</div>
+                )}
+                {leagueChat.map(msg => {
+                  const isMe = msg.fromUserId === currentUserId
+                  return (
+                    <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
+                      <div style={{ fontSize: 10, color: 'var(--text-3)', marginBottom: 3 }}>
+                        {msg.fromUser.username} · {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                      <div style={{
+                        maxWidth: '75%', padding: '8px 12px',
+                        background: isMe ? 'rgba(39,205,255,0.15)' : 'var(--bg-base)',
+                        border: `1px solid ${isMe ? 'rgba(39,205,255,0.3)' : 'var(--border)'}`,
+                        borderRadius: isMe ? '12px 12px 4px 12px' : '12px 12px 12px 4px',
+                        fontSize: 13, color: 'var(--text-1)',
+                      }}>
+                        {msg.text}
+                      </div>
+                    </div>
+                  )
+                })}
+                <div ref={leagueChatEndRef} />
+              </div>
+              {/* Input */}
+              <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', display: 'flex', gap: 8 }}>
+                <input
+                  value={leagueChatText}
+                  onChange={e => setLeagueChatText(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendLeague() } }}
+                  placeholder="Message everyone..."
+                  style={{ flex: 1, background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '8px 12px', color: 'var(--text-1)', fontSize: 13, outline: 'none' }}
+                />
+                <button className="btn btn-primary" style={{ flexShrink: 0 }} onClick={handleSendLeague} disabled={sendingLeague || !leagueChatText.trim()}>
+                  Send
+                </button>
+              </div>
+            </div>
+          ) : !selectedUserId ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)', fontSize: 14 }}>
               Select a conversation to start messaging
             </div>

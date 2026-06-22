@@ -20,6 +20,7 @@ model User {
   clubs            Club[]
   sentMessages     Message[] @relation("SentMessages")
   receivedMessages Message[] @relation("ReceivedMessages")
+  leagueMessages   LeagueMessage[] @relation("LeagueMessages")
 }
 
 enum MessageType {
@@ -48,6 +49,16 @@ model Message {
   toUser   User @relation("ReceivedMessages", fields: [toUserId],   references: [id])
 
   createdAt DateTime @default(now())
+}
+
+model LeagueMessage {
+  id         String   @id @default(cuid())
+  leagueId   String
+  fromUserId String
+  text       String
+  createdAt  DateTime @default(now())
+
+  fromUser   User     @relation("LeagueMessages", fields: [fromUserId], references: [id])
 }
 
 // ─── LEAGUE ───────────────────────────────────────────────────────────────────

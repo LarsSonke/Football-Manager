@@ -96,7 +96,7 @@ interface SeasonSnapshot {
   }>
 }
 
-type Tab = 'overview' | 'squad' | 'fixtures' | 'standings' | 'stats' | 'tactics' | 'manage'
+type Tab = 'overview' | 'squad' | 'fixtures' | 'standings' | 'stats' | 'tactics' | 'transfers' | 'manage'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -1529,6 +1529,235 @@ function SeasonEndOverlay({ league, isCreator, startingNewSeason, onNewSeason, o
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+// ─── Transfers ────────────────────────────────────────────────────────────────
+
+interface FreeAgent {
+  id: string; playerId: string; player: PlayerData
+  morale: number; form: number; fitness: number
+  injured: boolean; injuryDaysLeft: number
+  trainedPosition: string | null; wage: number
+}
+
+function Transfers({ leagueId, myClub, squadSize, onRefresh }: {
+  leagueId: string
+  myClub: ClubData
+  squadSize: number
+  onRefresh: () => void
+}) {
+  const [freeAgents, setFreeAgents] = useState<FreeAgent[]>([])
+  const [loading, setLoading] = useState(true)
+  const [posFilter, setPosFilter] = useState('ALL')
+  const [search, setSearch] = useState('')
+  const [actionId, setActionId] = useState<string | null>(null)
+  const [msg, setMsg] = useState('')
+  const [confirmRelease, setConfirmRelease] = useState<SquadPlayer | null>(null)
+  const isMobile = useIsMobile()
+
+  const load = useCallback(() => {
+    setLoading(true)
+    api.get(`/leagues/${leagueId}/free-agents`)
+      .then(r => setFreeAgents(r.data))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [leagueId])
+
+  useEffect(() => { load() }, [load])
+
+  async function handlePickup(instanceId: string) {
+    setActionId(instanceId)
+    setMsg('')
+    try {
+      await api.post(`/leagues/${leagueId}/pickup`, { instanceId })
+      setMsg('Player signed!')
+      load()
+      onRefresh()
+    } catch (err: any) {
+      setMsg(err.response?.data?.error ?? 'Failed to sign player')
+    } finally { setActionId(null) }
+  }
+
+  async function handleRelease(instanceId: string) {
+    setActionId(instanceId)
+    setMsg('')
+    setConfirmRelease(null)
+    try {
+      await api.post(`/leagues/${leagueId}/release`, { instanceId })
+      setMsg('Player released.')
+      onRefresh()
+    } catch (err: any) {
+      setMsg(err.response?.data?.error ?? 'Failed to release player')
+    } finally { setActionId(null) }
+  }
+
+  const positions = ['ALL', 'GK', 'CB', 'LB', 'RB', 'CDM', 'CM', 'CAM', 'LM', 'RM', 'LW', 'RW', 'ST']
+  const ovrColor = (v: number) => v >= 85 ? 'var(--gold)' : v >= 75 ? 'var(--green)' : v >= 65 ? 'var(--text-2)' : 'var(--text-3)'
+
+  const filtered = freeAgents.filter(p =>
+    (posFilter === 'ALL' || p.player.position === posFilter) &&
+    (!search || p.player.name.toLowerCase().includes(search.toLowerCase()))
+  )
+
+  const squadFull = myClub.squad.length >= squadSize
+  const squadTooSmall = myClub.squad.length <= 11
+
+  function PlayerRow({ p, action }: { p: FreeAgent | SquadPlayer; action: React.ReactNode }) {
+    const pl = p.player
+    return (
+      <div style={{
+        display: 'grid', gridTemplateColumns: isMobile ? '28px 1fr 36px auto' : '28px 1fr 36px 36px 36px 36px auto',
+        alignItems: 'center', gap: 8,
+        padding: '9px 14px', borderBottom: '1px solid var(--border)',
+      }}>
+        {pl.photoUrl
+          ? <img src={pl.photoUrl} alt="" style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover' }} />
+          : <div style={{ width: 28, height: 28, borderRadius: '50%', background: getBadgeColor(pl.name), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 900, color: '#000' }}>
+              {pl.name.split(' ').map((w: string) => w[0]).slice(0, 2).join('')}
+            </div>
+        }
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pl.name}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span className={posClass(pl.position)} style={{ fontSize: 9 }}>{pl.position}</span>
+            <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Age {pl.age}</span>
+            {p.injured && <span style={{ fontSize: 10, color: 'var(--red)', fontWeight: 700 }}>INJ</span>}
+          </div>
+        </div>
+        <span style={{ fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 800, color: ovrColor(pl.overall), textAlign: 'center' }}>{pl.overall}</span>
+        {!isMobile && <>
+          <span style={{ fontSize: 11, color: p.fitness >= 75 ? 'var(--green)' : p.fitness >= 50 ? 'var(--gold)' : 'var(--red)', textAlign: 'center' }}>{p.fitness}</span>
+          <span style={{ fontSize: 11, color: p.morale >= 70 ? 'var(--green)' : p.morale >= 50 ? 'var(--gold)' : 'var(--red)', textAlign: 'center' }}>{p.morale}</span>
+          <span style={{ fontSize: 11, color: p.form >= 70 ? 'var(--green)' : p.form >= 50 ? 'var(--gold)' : 'var(--red)', textAlign: 'center' }}>{p.form}</span>
+        </>}
+        {action}
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 20, alignItems: 'start' }}>
+
+      {/* Free agents */}
+      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
+        <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)' }}>Free Agents</div>
+            <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{freeAgents.length} available</span>
+            {squadFull && <span style={{ fontSize: 11, color: 'var(--red)', marginLeft: 'auto' }}>Squad full</span>}
+          </div>
+          <input
+            value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="Search by name…"
+            style={{ width: '100%', padding: '6px 10px', background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-1)', fontSize: 12, marginBottom: 8 }}
+          />
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+            {positions.map(p => (
+              <button key={p} onClick={() => setPosFilter(p)} style={{
+                padding: '2px 8px', borderRadius: 10, fontSize: 10, fontWeight: 700,
+                border: 'none', cursor: 'pointer',
+                background: posFilter === p ? 'var(--green)' : 'rgba(255,255,255,0.07)',
+                color: posFilter === p ? '#000' : 'var(--text-2)',
+              }}>{p}</button>
+            ))}
+          </div>
+        </div>
+        {!isMobile && (
+          <div style={{ display: 'grid', gridTemplateColumns: '28px 1fr 36px 36px 36px 36px auto', gap: 8, padding: '6px 14px', borderBottom: '1px solid var(--border)' }}>
+            {['', 'Player', 'OVR', 'FIT', 'MOR', 'FRM', ''].map((h, i) => (
+              <span key={i} style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5, textAlign: i >= 2 ? 'center' : 'left' }}>{h}</span>
+            ))}
+          </div>
+        )}
+        {loading ? (
+          <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>Loading…</div>
+        ) : filtered.length === 0 ? (
+          <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>No free agents match your filter.</div>
+        ) : (
+          filtered.map(p => (
+            <PlayerRow key={p.id} p={p} action={
+              <button
+                onClick={() => handlePickup(p.id)}
+                disabled={!!actionId || squadFull}
+                style={{
+                  padding: '4px 12px', borderRadius: 5, fontSize: 11, fontWeight: 700,
+                  border: 'none', cursor: squadFull ? 'not-allowed' : 'pointer',
+                  background: squadFull ? 'rgba(255,255,255,0.06)' : 'var(--green)',
+                  color: squadFull ? 'var(--text-3)' : '#000',
+                  opacity: actionId === p.id ? 0.5 : 1,
+                  whiteSpace: 'nowrap',
+                }}
+              >{actionId === p.id ? '…' : 'Sign'}</button>
+            } />
+          ))
+        )}
+      </div>
+
+      {/* Your squad — release panel */}
+      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
+        <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)' }}>Your Squad</div>
+          <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{myClub.squad.length}/{squadSize}</span>
+          {squadTooSmall && <span style={{ fontSize: 11, color: 'var(--red)', marginLeft: 'auto' }}>Min 11 — can't release</span>}
+        </div>
+        {!isMobile && (
+          <div style={{ display: 'grid', gridTemplateColumns: '28px 1fr 36px 36px 36px 36px auto', gap: 8, padding: '6px 14px', borderBottom: '1px solid var(--border)' }}>
+            {['', 'Player', 'OVR', 'FIT', 'MOR', 'FRM', ''].map((h, i) => (
+              <span key={i} style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5, textAlign: i >= 2 ? 'center' : 'left' }}>{h}</span>
+            ))}
+          </div>
+        )}
+        {[...myClub.squad].sort((a, b) => b.player.overall - a.player.overall).map(p => (
+          <PlayerRow key={p.id} p={p} action={
+            <button
+              onClick={() => setConfirmRelease(p)}
+              disabled={!!actionId || squadTooSmall}
+              style={{
+                padding: '4px 10px', borderRadius: 5, fontSize: 11, fontWeight: 700,
+                border: '1px solid var(--red)', cursor: squadTooSmall ? 'not-allowed' : 'pointer',
+                background: 'transparent', color: squadTooSmall ? 'var(--text-3)' : 'var(--red)',
+                opacity: actionId === p.id ? 0.5 : 1,
+                whiteSpace: 'nowrap',
+              }}
+            >{actionId === p.id ? '…' : 'Release'}</button>
+          } />
+        ))}
+      </div>
+
+      {/* Feedback banner */}
+      {msg && (
+        <div style={{
+          gridColumn: '1 / -1', padding: '10px 16px', borderRadius: 8,
+          background: msg.includes('!') ? 'rgba(54,226,126,0.1)' : 'rgba(255,60,60,0.1)',
+          border: `1px solid ${msg.includes('!') ? 'var(--green)' : 'var(--red)'}`,
+          color: msg.includes('!') ? 'var(--green)' : 'var(--red)',
+          fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          {msg}
+          <button onClick={() => setMsg('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontSize: 16 }}>×</button>
+        </div>
+      )}
+
+      {/* Release confirmation dialog */}
+      {confirmRelease && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '24px 28px', maxWidth: 360, width: '100%' }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)', marginBottom: 8 }}>Release {confirmRelease.player.name}?</div>
+            <div style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 20, lineHeight: 1.6 }}>
+              They will become a free agent and any other club in the league can sign them. This cannot be undone.
+            </div>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button className="btn btn-ghost" onClick={() => setConfirmRelease(null)}>Cancel</button>
+              <button
+                onClick={() => handleRelease(confirmRelease.id)}
+                style={{ padding: '7px 18px', borderRadius: 7, background: 'var(--red)', border: 'none', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}
+              >Release</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -3491,6 +3720,7 @@ export default function League() {
   const navItems = [
     ...NAV,
     ...(myClub ? [{ key: 'tactics' as Tab, label: 'Tactics', icon: '⊞' }] : []),
+    ...(myClub && league.status === 'ACTIVE' ? [{ key: 'transfers' as Tab, label: 'Transfers', icon: '⇄' }] : []),
     ...(isCreator ? [{ key: 'manage' as Tab, label: 'Manage', icon: '⊛' }] : []),
   ]
 
@@ -3501,6 +3731,7 @@ export default function League() {
     standings: 'League Table',
     stats: 'Season Stats',
     tactics: 'Tactics & Lineup',
+    transfers: 'Transfer Market',
     manage: 'Manage League',
   }
 
@@ -3717,6 +3948,7 @@ export default function League() {
                   return { ...prev, clubs: prev.clubs.map(c => c.id === myClub.id ? { ...c, tactic } : c) }
                 })} />
           )}
+          {tab === 'transfers' && myClub && <Transfers leagueId={league.id} myClub={myClub} squadSize={league.squadSize} onRefresh={refresh} />}
           {tab === 'manage'    && isCreator && <Manage league={league} onUpdate={updated => setLeague(prev => prev ? { ...prev, ...updated } : prev)} onDelete={() => navigate('/')} />}
         </div>
       </main>

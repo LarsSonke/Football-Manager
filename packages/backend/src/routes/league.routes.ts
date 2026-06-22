@@ -238,6 +238,79 @@ router.post('/:id/new-season', async (req: AuthRequest, res) => {
   }
 })
 
+// ─── Transfer market ─────────────────────────────────────────────────────────
+
+router.get('/:id/free-agents', async (req: AuthRequest, res) => {
+  try {
+    const league = await prisma.league.findUnique({ where: { id: req.params.id } })
+    if (!league) { res.status(404).json({ error: 'League not found' }); return }
+    if (league.status !== 'ACTIVE') { res.status(400).json({ error: 'League is not active' }); return }
+
+    const agents = await prisma.playerInstance.findMany({
+      where: { leagueId: req.params.id, clubId: null },
+      include: { player: true },
+      orderBy: [{ player: { overall: 'desc' } }],
+    })
+    res.json(agents)
+  } catch (err: any) {
+    res.status(400).json({ error: err.message })
+  }
+})
+
+router.post('/:id/release', async (req: AuthRequest, res) => {
+  const { instanceId } = req.body
+  if (!instanceId) { res.status(400).json({ error: 'instanceId required' }); return }
+  try {
+    const club = await prisma.club.findFirst({
+      where: { leagueId: req.params.id, userId: req.userId! },
+      include: { squad: true },
+    })
+    if (!club) { res.status(403).json({ error: 'No club in this league' }); return }
+    const league = await prisma.league.findUnique({ where: { id: req.params.id } })
+    if (league?.status !== 'ACTIVE') { res.status(400).json({ error: 'Can only release players during an active season' }); return }
+    if (!club.squad.some(p => p.id === instanceId)) { res.status(403).json({ error: 'Player not in your squad' }); return }
+    if (club.squad.length <= 11) { res.status(400).json({ error: 'Squad too small to release — need at least 11 players' }); return }
+
+    await prisma.playerInstance.update({
+      where: { id: instanceId },
+      data: { clubId: null, morale: 50, form: 50 },
+    })
+    res.json({ ok: true })
+  } catch (err: any) {
+    res.status(400).json({ error: err.message })
+  }
+})
+
+router.post('/:id/pickup', async (req: AuthRequest, res) => {
+  const { instanceId } = req.body
+  if (!instanceId) { res.status(400).json({ error: 'instanceId required' }); return }
+  try {
+    const league = await prisma.league.findUnique({ where: { id: req.params.id } })
+    if (!league) { res.status(404).json({ error: 'League not found' }); return }
+    if (league.status !== 'ACTIVE') { res.status(400).json({ error: 'Can only sign players during an active season' }); return }
+
+    const club = await prisma.club.findFirst({
+      where: { leagueId: req.params.id, userId: req.userId! },
+      include: { squad: true },
+    })
+    if (!club) { res.status(403).json({ error: 'No club in this league' }); return }
+    if (club.squad.length >= league.squadSize) { res.status(400).json({ error: `Squad full (max ${league.squadSize})` }); return }
+
+    const instance = await prisma.playerInstance.findFirst({
+      where: { id: instanceId, leagueId: req.params.id, clubId: null },
+    })
+    if (!instance) { res.status(400).json({ error: 'Player not available' }); return }
+
+    await prisma.playerInstance.update({
+      where: { id: instanceId },
+      data: { clubId: club.id },
+    })
+    res.json({ ok: true })
+  } catch (err: any) {
+    res.status(400).json({ error: err.message })
+  }
+})
+
 router.get('/:id/sponsors', async (req: AuthRequest, res) => {
   try {
     const data = await leagueService.getClubSponsorDeals(req.params.id, req.userId!)

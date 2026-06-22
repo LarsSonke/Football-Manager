@@ -17,7 +17,37 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  clubs Club[]
+  clubs            Club[]
+  sentMessages     Message[] @relation("SentMessages")
+  receivedMessages Message[] @relation("ReceivedMessages")
+}
+
+enum MessageType {
+  TEXT
+  TRANSFER_OFFER
+}
+
+enum OfferStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+model Message {
+  id          String       @id @default(cuid())
+  leagueId    String
+  fromUserId  String
+  toUserId    String
+  text        String?
+  type        MessageType  @default(TEXT)
+  instanceId  String?
+  offerPrice  Int?
+  offerStatus OfferStatus?
+
+  fromUser User @relation("SentMessages",    fields: [fromUserId], references: [id])
+  toUser   User @relation("ReceivedMessages", fields: [toUserId],   references: [id])
+
+  createdAt DateTime @default(now())
 }
 
 // ─── LEAGUE ───────────────────────────────────────────────────────────────────

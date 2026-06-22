@@ -23,6 +23,10 @@ export function initWebSocket(httpServer: HttpServer): Server {
       socket.join(`draft:${leagueId}`)
     })
 
+    socket.on('join:user', (userId: string) => {
+      socket.join(`user:${userId}`)
+    })
+
     socket.on('leave:draft', (leagueId: string) => {
       socket.leave(`draft:${leagueId}`)
     })

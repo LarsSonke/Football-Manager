@@ -70,17 +70,18 @@ function toAttrs(p: Player): PlayerAttrsForRoles {
 
 // ─── Lineup construction ──────────────────────────────────────────────────────
 
-function buildLineup(club: FullClub): LineupEntry[] {
+function buildLineup(club: FullClub, matchday: number): LineupEntry[] {
   const tactic = club.tactic as { lineup?: { instanceId: string; position: string }[] } | null
   const instanceMap = Object.fromEntries(club.squad.map(s => [s.id, s]))
-  const healthy = club.squad.filter(s => !s.injured)
+  const available = (inst: typeof club.squad[number]) => !inst.injured && inst.suspendedMatchday !== matchday
+  const healthy = club.squad.filter(available)
 
   let slots: { instanceId: string; position: string }[] = []
 
   if (tactic?.lineup?.length === 11) {
     slots = tactic.lineup.filter(s => {
       const inst = instanceMap[s.instanceId]
-      return inst && !inst.injured
+      return inst && available(inst)
     })
 
     // Replace injured starters with best available bench players
@@ -211,12 +212,12 @@ interface SubConfig {
   condition: { type: 'minute' | 'fitness'; value: number }
 }
 
-function buildBench(club: FullClub): LineupEntry[] {
+function buildBench(club: FullClub, matchday: number): LineupEntry[] {
   const tactic = club.tactic as { lineup?: { instanceId: string; position: string }[]; subs?: SubConfig[] } | null
   const instanceMap = Object.fromEntries(club.squad.map(s => [s.id, s]))
   const startingIds = new Set((tactic?.lineup ?? []).map(s => s.instanceId))
   return club.squad
-    .filter(s => !s.injured && !startingIds.has(s.id))
+    .filter(s => !s.injured && s.suspendedMatchday !== matchday && !startingIds.has(s.id))
     .sort((a, b) => b.player.overall - a.player.overall)
     .map(s => ({
       instanceId: s.id,
@@ -320,10 +321,10 @@ export async function simulateMatch(
   homeTacticOverride: NormalisedTactic | null = null,
   awayTacticOverride: NormalisedTactic | null = null,
 ): Promise<SimResult> {
-  const homeLineup = buildLineup(match.homeClub)
-  const awayLineup = buildLineup(match.awayClub)
-  const homeBench  = buildBench(match.homeClub)
-  const awayBench  = buildBench(match.awayClub)
+  const homeLineup = buildLineup(match.homeClub, match.matchday)
+  const awayLineup = buildLineup(match.awayClub, match.matchday)
+  const homeBench  = buildBench(match.homeClub, match.matchday)
+  const awayBench  = buildBench(match.awayClub, match.matchday)
   const homeSubConfigs = getSubConfigs(match.homeClub)
   const awaySubConfigs = getSubConfigs(match.awayClub)
   const homeUsedSubs = new Set<string>()
@@ -952,6 +953,7 @@ async function updatePlayerConditions(
           fitness: clamp(entry.fitness - fitnessDrain, 10, 100),
           morale:  clamp(entry.morale  + indivMorale,  20, 100),
           form:    clamp(entry.form    + formDelta,     20, 100),
+          ...(redCardsByInstance[entry.instanceId] ? { suspendedMatchday: match.matchday + 1 } : {}),
         },
       }))
     }

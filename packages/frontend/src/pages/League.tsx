@@ -37,7 +37,7 @@ interface PlayerData {
 interface SquadPlayer {
   id: string; playerId: string; player: PlayerData
   morale: number; form: number; fitness: number; injured: boolean; injuryDaysLeft: number
-  trainedPosition: string | null; wage: number
+  suspendedMatchday: number | null; trainedPosition: string | null; wage: number
 }
 
 interface LineupSlot { instanceId: string; position: string; role?: string }
@@ -1120,10 +1120,11 @@ function calcHealCost(daysLeft: number, physioLevel: number): number {
 
 // ─── Squad ────────────────────────────────────────────────────────────────────
 
-function Squad({ squad, physioLevel, budget, onHeal, onTrain }: {
+function Squad({ squad, physioLevel, budget, nextMatchday, onHeal, onTrain }: {
   squad: SquadPlayer[]
   physioLevel: number
   budget: number
+  nextMatchday: number
   onHeal: (instanceId: string) => void
   onTrain: (instanceId: string, position: string) => void
 }) {
@@ -1218,6 +1219,14 @@ function Squad({ squad, physioLevel, budget, onHeal, onTrain }: {
               <StatBar label="Form"     value={inst.form} />
               <StatBar label="Fitness"  value={inst.fitness} />
             </div>
+
+            {/* Suspension row */}
+            {!inst.injured && inst.suspendedMatchday === nextMatchday && (
+              <div style={{ display: 'flex', alignItems: 'center', padding: '7px 10px', background: 'rgba(255,165,0,0.1)', border: '1px solid rgba(255,165,0,0.3)', borderRadius: 'var(--radius-xs)', marginBottom: 8 }}>
+                <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--gold)' }}>SUSPENDED</span>
+                <span style={{ fontSize: 11, color: 'var(--text-2)', marginLeft: 6 }}>Misses next match</span>
+              </div>
+            )}
 
             {/* Injury row */}
             {inst.injured && (
@@ -2079,10 +2088,11 @@ function resolvePosition(x: number, y: number, slots: { position: string }[], ex
 function autoAssign(
   formation: string,
   squad: SquadPlayer[],
+  nextMatchday: number,
 ): LineupSlot[] {
   const slots = FORMATION_SLOTS[formation]
   if (!slots) return []
-  const healthy = [...squad.filter(p => !p.injured)].sort(
+  const healthy = [...squad.filter(p => !p.injured && p.suspendedMatchday !== nextMatchday)].sort(
     (a, b) => b.player.overall - a.player.overall,
   )
   const used = new Set<string>()
@@ -2432,10 +2442,11 @@ interface TacticPreset {
   tactic: { formation: string; style: string; pressing: number; defLine: number; width: number; lineup: LineupSlot[] }
 }
 
-function Tactics({ leagueId, myClub, onSaved }: {
+function Tactics({ leagueId, myClub, onSaved, nextMatchday }: {
   leagueId: string
   myClub: ClubData
   onSaved: (tactic: TacticData) => void
+  nextMatchday: number
 }) {
   const isMobile = useIsMobile()
   const saved = myClub.tactic
@@ -2445,7 +2456,7 @@ function Tactics({ leagueId, myClub, onSaved }: {
   const [defLine, setDefLine] = useState(snapToStage(saved?.defensiveLine ?? 55, DEFLINE_STAGES))
   const [width, setWidth] = useState(snapToStage(saved?.width ?? 55, WIDTH_STAGES))
   const [lineup, setLineup] = useState<LineupSlot[]>(() =>
-    saved?.lineup?.length === 11 ? saved.lineup : autoAssign(saved?.formation ?? '4-3-3', myClub.squad)
+    saved?.lineup?.length === 11 ? saved.lineup : autoAssign(saved?.formation ?? '4-3-3', myClub.squad, nextMatchday)
   )
   const [subs, setSubs] = useState<SubSlot[]>(saved?.subs ?? [])
   const [customSlots, setCustomSlots] = useState<CustomSlot[]>(() => {
@@ -2539,7 +2550,7 @@ function Tactics({ leagueId, myClub, onSaved }: {
       return
     }
     setFormation(f)
-    setLineup(autoAssign(f, myClub.squad))
+    setLineup(autoAssign(f, myClub.squad, nextMatchday))
   }
 
   function addCustomSlotAt(position: string, x: number, y: number) {
@@ -2783,7 +2794,7 @@ function Tactics({ leagueId, myClub, onSaved }: {
             color: formation === 'custom' ? 'var(--green)' : 'var(--text-2)',
             transition: 'all 0.15s',
           }}>✏ Custom</button>
-          <button onClick={() => setLineup(autoAssign(formation === 'custom' ? '4-3-3' : formation, myClub.squad))} style={{ padding: '5px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: '1.5px solid var(--green)', background: 'rgba(54,226,126,0.08)', color: 'var(--green)', marginLeft: 'auto' }}>↺ Best XI</button>
+          <button onClick={() => setLineup(autoAssign(formation === 'custom' ? '4-3-3' : formation, myClub.squad, nextMatchday))} style={{ padding: '5px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: '1.5px solid var(--green)', background: 'rgba(54,226,126,0.08)', color: 'var(--green)', marginLeft: 'auto' }}>↺ Best XI</button>
         </div>
         {formation === 'custom' ? (
           <div style={{ fontSize: 11, color: 'var(--text-2)', marginBottom: 12, padding: '8px 10px', background: 'rgba(255,255,255,0.04)', borderRadius: 6, lineHeight: 1.6 }}>
@@ -2949,7 +2960,7 @@ function Tactics({ leagueId, myClub, onSaved }: {
                     : isActiveSrc
                     ? 'rgba(255,255,255,0.05)'
                     : player ? 'rgba(0,0,0,0.82)' : 'rgba(0,0,0,0.4)',
-                  border: `2px solid ${isCustomDragging ? 'rgba(255,255,255,0.6)' : isActiveTarget ? 'var(--green)' : isActiveSrc ? 'rgba(255,255,255,0.4)' : player?.injured ? 'var(--red)' : player ? fitColor : 'rgba(255,255,255,0.2)'}`,
+                  border: `2px solid ${isCustomDragging ? 'rgba(255,255,255,0.6)' : isActiveTarget ? 'var(--green)' : isActiveSrc ? 'rgba(255,255,255,0.4)' : player?.injured ? 'var(--red)' : player?.suspendedMatchday === nextMatchday ? 'var(--gold)' : player ? fitColor : 'rgba(255,255,255,0.2)'}`,
                   borderRadius: 10,
                   cursor: isCustomMode ? 'move' : player ? 'grab' : 'default',
                   padding: isMobile ? '3px 4px' : `${Math.round(pitchScale * 0.07)}px ${Math.round(pitchScale * 0.08)}px`,
@@ -3019,33 +3030,51 @@ function Tactics({ leagueId, myClub, onSaved }: {
 
                 {player ? (
                   <>
-                    {/* Photo with injury badge */}
-                    <div style={{ position: 'relative', flexShrink: 0 }}>
-                      {player.player.photoUrl ? (
-                        <img src={player.player.photoUrl} alt="" style={{ width: photoSz, height: photoSz, borderRadius: '50%', objectFit: 'cover', border: `2px solid ${player.injured ? 'var(--red)' : fitColor}`, opacity: player.injured ? 0.65 : 1 }} />
-                      ) : (
-                        <div style={{ width: photoSz, height: photoSz, borderRadius: '50%', background: getBadgeColor(player.player.name), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: Math.round(photoSz * 0.35), fontWeight: 900, color: '#000', flexShrink: 0, border: `2px solid ${player.injured ? 'var(--red)' : fitColor}`, opacity: player.injured ? 0.65 : 1 }}>
-                          {player.player.name.split(' ').map(w => w[0]).slice(0, 2).join('')}
+                    {/* Photo with injury/suspension badge */}
+                    {(() => {
+                      const isSusp = player.suspendedMatchday === nextMatchday
+                      const alertColor = player.injured ? 'var(--red)' : isSusp ? 'var(--gold)' : null
+                      const dimmed = player.injured || isSusp
+                      return (
+                        <div style={{ position: 'relative', flexShrink: 0 }}>
+                          {player.player.photoUrl ? (
+                            <img src={player.player.photoUrl} alt="" style={{ width: photoSz, height: photoSz, borderRadius: '50%', objectFit: 'cover', border: `2px solid ${alertColor ?? fitColor}`, opacity: dimmed ? 0.65 : 1 }} />
+                          ) : (
+                            <div style={{ width: photoSz, height: photoSz, borderRadius: '50%', background: getBadgeColor(player.player.name), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: Math.round(photoSz * 0.35), fontWeight: 900, color: '#000', flexShrink: 0, border: `2px solid ${alertColor ?? fitColor}`, opacity: dimmed ? 0.65 : 1 }}>
+                              {player.player.name.split(' ').map(w => w[0]).slice(0, 2).join('')}
+                            </div>
+                          )}
+                          {player.injured && (
+                            <div style={{
+                              position: 'absolute', bottom: -2, right: -2, zIndex: 2,
+                              width: Math.max(9, Math.round(photoSz * 0.42)), height: Math.max(9, Math.round(photoSz * 0.42)),
+                              borderRadius: '50%', background: 'var(--red)',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              fontSize: Math.max(5, Math.round(photoSz * 0.24)), fontWeight: 900, color: '#fff', lineHeight: 1,
+                              border: '1.5px solid rgba(0,0,0,0.9)',
+                            }}>✚</div>
+                          )}
+                          {!player.injured && isSusp && (
+                            <div style={{
+                              position: 'absolute', bottom: -2, right: -2, zIndex: 2,
+                              width: Math.max(9, Math.round(photoSz * 0.42)), height: Math.max(9, Math.round(photoSz * 0.42)),
+                              borderRadius: '50%', background: 'var(--gold)',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              fontSize: Math.max(5, Math.round(photoSz * 0.22)), fontWeight: 900, color: '#000', lineHeight: 1,
+                              border: '1.5px solid rgba(0,0,0,0.9)',
+                            }}>S</div>
+                          )}
                         </div>
-                      )}
-                      {player.injured && (
-                        <div style={{
-                          position: 'absolute', bottom: -2, right: -2, zIndex: 2,
-                          width: Math.max(9, Math.round(photoSz * 0.42)), height: Math.max(9, Math.round(photoSz * 0.42)),
-                          borderRadius: '50%', background: 'var(--red)',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: Math.max(5, Math.round(photoSz * 0.24)), fontWeight: 900, color: '#fff', lineHeight: 1,
-                          border: '1.5px solid rgba(0,0,0,0.9)',
-                        }}>✚</div>
-                      )}
-                    </div>
-                    <span style={{ fontSize: nameFz, fontWeight: 700, color: player.injured ? 'rgba(255,255,255,0.55)' : '#fff', textAlign: 'center', lineHeight: 1.2, width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      )
+                    })()}
+                    <span style={{ fontSize: nameFz, fontWeight: 700, color: (player.injured || player.suspendedMatchday === nextMatchday) ? 'rgba(255,255,255,0.55)' : '#fff', textAlign: 'center', lineHeight: 1.2, width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {player.player.name.split(' ').slice(-1)[0]}
                     </span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <span style={{ fontFamily: 'var(--font-display)', fontSize: ovrFz, fontWeight: 900, color: player.injured ? 'var(--red)' : fitColor, lineHeight: 1 }}>{player.player.overall}</span>
-                      {!player.injured && fit < 1 && <span style={{ fontSize: Math.max(6, posFz - 1), color: fitColor, fontWeight: 800 }}>{fit >= 0.7 ? '~' : '!'}</span>}
+                      <span style={{ fontFamily: 'var(--font-display)', fontSize: ovrFz, fontWeight: 900, color: player.injured ? 'var(--red)' : player.suspendedMatchday === nextMatchday ? 'var(--gold)' : fitColor, lineHeight: 1 }}>{player.player.overall}</span>
+                      {!player.injured && player.suspendedMatchday !== nextMatchday && fit < 1 && <span style={{ fontSize: Math.max(6, posFz - 1), color: fitColor, fontWeight: 800 }}>{fit >= 0.7 ? '~' : '!'}</span>}
                       {player.injured && <span style={{ fontSize: Math.max(6, posFz - 1), color: 'var(--red)', fontWeight: 800 }}>!</span>}
+                      {!player.injured && player.suspendedMatchday === nextMatchday && <span style={{ fontSize: Math.max(6, posFz - 1), color: 'var(--gold)', fontWeight: 800 }}>S</span>}
                     </div>
                     {/* Fitness / Morale / Form dots */}
                     <div style={{ display: 'flex', gap: Math.max(2, Math.round(pitchScale * 0.025)), alignItems: 'center' }}>
@@ -3714,9 +3743,11 @@ export default function League() {
   myClubWagesRef.current = myClub?.squad.reduce((s, p) => s + p.wage, 0) ?? 0
   const isCreator = league.clubs.filter(c => !c.isAI)[0]?.user?.id === user?.id
   const starterIds = new Set(myClub?.tactic?.lineup?.map(s => s.instanceId) ?? [])
+  const nextMatchday = league.currentDay + 1
   const injuredStarters = myClub?.squad.filter(p => starterIds.has(p.id) && p.injured) ?? []
-  const lowFitnessStarters = myClub?.squad.filter(p => starterIds.has(p.id) && !p.injured && p.fitness < 35) ?? []
-  const hasLineupWarnings = (injuredStarters.length + lowFitnessStarters.length) > 0
+  const suspendedStarters = myClub?.squad.filter(p => starterIds.has(p.id) && p.suspendedMatchday === nextMatchday) ?? []
+  const lowFitnessStarters = myClub?.squad.filter(p => starterIds.has(p.id) && !p.injured && p.suspendedMatchday !== nextMatchday && p.fitness < 35) ?? []
+  const hasLineupWarnings = (injuredStarters.length + suspendedStarters.length + lowFitnessStarters.length) > 0
   const navItems = [
     ...NAV,
     ...(myClub ? [{ key: 'tactics' as Tab, label: 'Tactics', icon: '⊞' }] : []),
@@ -3928,6 +3959,7 @@ export default function League() {
           <div style={{ background: 'rgba(255,60,60,0.08)', borderBottom: '1px solid rgba(255,60,60,0.25)', padding: '10px 28px', display: 'flex', alignItems: 'center', gap: 12, fontSize: 12, flexWrap: 'wrap' }}>
             <span style={{ color: 'var(--red)', fontWeight: 700 }}>⚠ Lineup alert:</span>
             {injuredStarters.map(p => <span key={p.id} style={{ color: 'var(--red)' }}>{p.player.name} (injured)</span>)}
+            {suspendedStarters.map(p => <span key={p.id} style={{ color: 'var(--red)' }}>{p.player.name} (suspended)</span>)}
             {lowFitnessStarters.map(p => <span key={p.id} style={{ color: 'var(--gold)' }}>{p.player.name} (low fitness)</span>)}
             <button onClick={() => setBannerDismissed(true)} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-2)', fontSize: 16 }}>✕</button>
           </div>
@@ -3936,14 +3968,14 @@ export default function League() {
         {/* Page content */}
         <div style={{ padding: isMobile ? '16px 12px' : '24px 28px', flex: 1 }}>
           {tab === 'overview'  && <Overview league={league} matches={matches} myClub={myClub} onPhysioUpgrade={handlePhysioUpgrade} onRefresh={refresh} />}
-          {tab === 'squad'     && (myClub ? <Squad squad={myClub.squad} physioLevel={myClub.physioLevel} budget={myClub.budget} onHeal={handleHeal} onTrain={handleTrain} /> : <p style={{ color: 'var(--text-2)' }}>You don't have a club in this league.</p>)}
+          {tab === 'squad'     && (myClub ? <Squad squad={myClub.squad} physioLevel={myClub.physioLevel} budget={myClub.budget} nextMatchday={nextMatchday} onHeal={handleHeal} onTrain={handleTrain} /> : <p style={{ color: 'var(--text-2)' }}>You don't have a club in this league.</p>)}
           {tab === 'fixtures'  && (matches.length === 0 ? <div style={{ textAlign: 'center', padding: '64px 0', color: 'var(--text-2)' }}><div style={{ fontSize: 36, marginBottom: 10 }}>📅</div><p>Fixtures will appear after the draft.</p></div> : <Fixtures matches={matches} clubs={league.clubs} myClubId={myClub?.id} currentDay={league.currentDay} leagueId={league.id} />)}
           {tab === 'standings' && <Standings clubs={league.clubs} myClubId={myClub?.id} prevPositions={prevPositions} matches={matches} history={league.history} />}
           {tab === 'stats'     && <Stats leagueId={league.id} status={league.status} />}
           {tab === 'tactics'   && myClub && (
             myClub.squad.length === 0
               ? <div style={{ textAlign: 'center', padding: '64px 0', color: 'var(--text-2)' }}><div style={{ fontSize: 36, marginBottom: 10 }}>⊞</div><p>Set your tactics after the draft.</p></div>
-              : <Tactics leagueId={id!} myClub={myClub} onSaved={tactic => setLeague(prev => {
+              : <Tactics leagueId={id!} myClub={myClub} nextMatchday={league.currentDay + 1} onSaved={tactic => setLeague(prev => {
                   if (!prev) return prev
                   return { ...prev, clubs: prev.clubs.map(c => c.id === myClub.id ? { ...c, tactic } : c) }
                 })} />

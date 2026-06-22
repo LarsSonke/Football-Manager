@@ -219,9 +219,10 @@ model PlayerInstance {
   form    Int @default(70)
   fitness Int @default(90)
 
-  injured         Boolean @default(false)
-  injuryDaysLeft  Int     @default(0)
-  trainedPosition String?
+  injured           Boolean @default(false)
+  injuryDaysLeft    Int     @default(0)
+  suspendedMatchday Int?
+  trainedPosition   String?
 
   wage Int @default(0)
 

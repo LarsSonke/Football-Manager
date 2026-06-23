@@ -108,7 +108,7 @@ export default function Dashboard() {
       {/* Nav */}
       <nav className="nav">
         <Link to="/" className="nav-logo">
-          <img src="/logo.png" alt="Football Manager" style={{ height: 32, display: 'block' }} />
+          <img src="/tactixlogo.png" alt="Football Manager" style={{ height: 32, display: 'block' }} />
         </Link>
         <div className="nav-spacer" />
         <span className="nav-user">{user?.username}</span>

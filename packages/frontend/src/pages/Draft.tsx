@@ -757,7 +757,7 @@ export default function Draft() {
       {/* Nav */}
       <nav className="nav">
         <button className="btn btn-outline" style={{ fontSize: 12, padding: '5px 10px' }} onClick={() => navigate(`/league/${leagueId}`)}>← League</button>
-        <Link to="/" className="nav-logo"><img src="/logo.png" alt="Football Manager" style={{ height: 30, display: 'block' }} /></Link>
+        <Link to="/" className="nav-logo"><img src="/tactixlogo.png" alt="Football Manager" style={{ height: 30, display: 'block' }} /></Link>
         <div className="nav-spacer" />
         {myClub && <span style={{ fontSize: 12, color: 'var(--text-2)' }}>💰 €{(myClub.budget / 1000).toFixed(0)}M</span>}
         <span className="nav-user">{user?.username}</span>

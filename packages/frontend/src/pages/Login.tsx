@@ -23,7 +23,7 @@ export default function Login() {
       } else {
         await register(email, username, password)
       }
-      navigate('/')
+      navigate('/dashboard')
     } catch (err: any) {
       setError(err.response?.data?.error ?? 'Something went wrong')
     } finally {

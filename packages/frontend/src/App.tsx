@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './stores/auth.store'
+import Home from './pages/Home'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import League from './pages/League'
@@ -23,8 +24,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/" element={<RequireAuth><Dashboard /></RequireAuth>} />
+        <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
         <Route path="/league/:id" element={<RequireAuth><League /></RequireAuth>} />
         <Route path="/league/:id/draft" element={<RequireAuth><Draft /></RequireAuth>} />
         <Route path="/league/:id/match/:matchId" element={<RequireAuth><MatchReport /></RequireAuth>} />

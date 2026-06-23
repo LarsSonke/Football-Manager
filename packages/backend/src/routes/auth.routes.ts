@@ -11,8 +11,12 @@ const registerSchema = z.object({
 })
 
 const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string(),
+  identifier: z.string().min(1).optional(),
+  email: z.string().email().optional(),
+  password: z.string().min(1, 'Password is required'),
+}).refine((data) => Boolean(data.identifier || data.email), {
+  message: 'Email or username is required',
+  path: ['identifier'],
 })
 
 router.post('/register', async (req, res) => {
@@ -40,7 +44,8 @@ router.post('/login', async (req, res) => {
     return
   }
   try {
-    const result = await authService.login(parsed.data.email, parsed.data.password)
+    const credential = parsed.data.identifier ?? parsed.data.email ?? ''
+    const result = await authService.login(credential, parsed.data.password)
     res.json(result)
   } catch (err: any) {
     res.status(401).json({ error: err.message })

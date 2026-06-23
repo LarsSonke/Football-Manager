@@ -19,8 +19,12 @@ export async function register(email: string, username: string, password: string
   return { user, token: signToken(user.id, user.username) }
 }
 
-export async function login(email: string, password: string) {
-  const user = await prisma.user.findUnique({ where: { email } })
+export async function login(identifier: string, password: string) {
+  const user = await prisma.user.findFirst({
+    where: {
+      OR: [{ email: identifier }, { username: identifier }],
+    },
+  })
   if (!user) throw new Error('Invalid credentials')
 
   const valid = await bcrypt.compare(password, user.password)

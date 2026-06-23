@@ -4,6 +4,7 @@ import { useAuth } from '../stores/auth.store'
 
 export default function Login() {
   const [mode, setMode] = useState<'login' | 'register'>('login')
+  const [identifier, setIdentifier] = useState('')
   const [email, setEmail] = useState('')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -19,7 +20,7 @@ export default function Login() {
     setLoading(true)
     try {
       if (mode === 'login') {
-        await login(email, password)
+        await login(identifier, password)
       } else {
         await register(email, username, password)
       }
@@ -71,6 +72,7 @@ export default function Login() {
             {(['login', 'register'] as const).map((m) => (
               <button
                 key={m}
+                type="button"
                 onClick={() => { setMode(m); setError('') }}
                 style={{
                   flex: 1, padding: '8px', border: 'none', borderRadius: 4,
@@ -87,14 +89,25 @@ export default function Login() {
           </div>
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <input
-              type="email"
-              placeholder="Email address"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-            />
+            {mode === 'login' ? (
+              <input
+                type="text"
+                placeholder="Email address or username"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
+                required
+                autoComplete="username"
+              />
+            ) : (
+              <input
+                type="email"
+                placeholder="Email address"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoComplete="email"
+              />
+            )}
 
             {mode === 'register' && (
               <input

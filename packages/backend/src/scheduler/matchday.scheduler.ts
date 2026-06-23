@@ -2,6 +2,7 @@ import cron from 'node-cron'
 import { prisma } from '../prisma'
 import { simulateMatch, adaptTacticForOpponent, buildOpponentProfile } from '../simulation/engine'
 import { applyMatchIncome, checkSponsorMissions, applyMatchdayAwards } from '../services/league.service'
+import { checkAndAdvanceCup } from '../simulation/cup'
 import { getIO } from '../websocket'
 
 export function initScheduler(): void {
@@ -48,8 +49,9 @@ async function simulateLeagueMatchday(leagueId: string): Promise<void> {
     return
   }
 
+  // Only check LEAGUE matches to avoid cup matches blocking progression
   const alreadySimulated = await prisma.match.count({
-    where: { leagueId, matchday: nextDay, status: 'SIMULATED' },
+    where: { leagueId, matchday: nextDay, status: 'SIMULATED', competition: 'LEAGUE' },
   })
   if (alreadySimulated > 0) return
 
@@ -102,7 +104,7 @@ async function simulateLeagueMatchday(leagueId: string): Promise<void> {
 
   const clubs = await prisma.club.findMany({
     where: { leagueId },
-    select: { id: true, physioLevel: true },
+    select: { id: true, physioLevel: true, trainingLevel: true, kitLevel: true },
   })
 
   for (const club of clubs) {
@@ -113,8 +115,9 @@ async function simulateLeagueMatchday(leagueId: string): Promise<void> {
       data: { injuryDaysLeft: { decrement: injuryRecovery } },
     })
 
-    // Fitness recovery: base +8/day; physio L1 +9, L2 +11
-    const fitnessRecovery = club.physioLevel >= 2 ? 11 : club.physioLevel === 1 ? 9 : 8
+    // Fitness recovery: base +8/day; physio L1 +9, L2 +11; training facility adds on top
+    const trainingBonus = club.trainingLevel >= 3 ? 7 : club.trainingLevel === 2 ? 4 : club.trainingLevel === 1 ? 2 : 0
+    const fitnessRecovery = (club.physioLevel >= 2 ? 11 : club.physioLevel === 1 ? 9 : 8) + trainingBonus
     // Use raw SQL so we can LEAST-clamp in one query per club
     await prisma.$executeRaw`
       UPDATE "PlayerInstance"
@@ -134,6 +137,16 @@ async function simulateLeagueMatchday(leagueId: string): Promise<void> {
       END
       WHERE "leagueId" = ${leagueId} AND "clubId" = ${club.id}
     `
+
+    // Kit quality gives a daily morale boost to all squad players
+    if (club.kitLevel > 0) {
+      const kitBonus = club.kitLevel * 2  // +2 / +4 / +6 morale per matchday
+      await prisma.$executeRaw`
+        UPDATE "PlayerInstance"
+        SET morale = LEAST(100, morale + ${kitBonus})
+        WHERE "leagueId" = ${leagueId} AND "clubId" = ${club.id}
+      `
+    }
   }
 
   // Clear players who have fully recovered from injury
@@ -142,16 +155,27 @@ async function simulateLeagueMatchday(leagueId: string): Promise<void> {
     data: { injured: false, injuryDaysLeft: 0 },
   })
 
+  // Decrement active stat boosts and delete expired ones
+  await prisma.playerBoost.updateMany({
+    where: { leagueId, matchdaysLeft: { gt: 0 } },
+    data: { matchdaysLeft: { decrement: 1 } },
+  })
+  await prisma.playerBoost.deleteMany({ where: { leagueId, matchdaysLeft: { lte: 0 } } })
+
   await prisma.league.update({ where: { id: leagueId }, data: { currentDay: nextDay } })
 
-  // Apply match-day income and resolve sponsor missions
-  await applyMatchIncome(leagueId, results)
+  // Apply match-day income (only LEAGUE matches count for income/sponsors)
+  const leagueResults = results.filter(r => r.competition === 'LEAGUE')
+  await applyMatchIncome(leagueId, leagueResults)
   const sponsorResolutions = await checkSponsorMissions(leagueId, nextDay)
-  await applyAchievementMorale(leagueId, results.map(r => r.matchId))
+  await applyAchievementMorale(leagueId, leagueResults.map(r => r.matchId))
   await deductMatchdayWages(leagueId)
 
   // TOTW awards: apply morale/form boosts and capture data for broadcast
   const awards = await applyMatchdayAwards(leagueId, nextDay)
+
+  // Advance cup bracket if a cup round was played today
+  await checkAndAdvanceCup(leagueId, nextDay)
 
   // Broadcast live event replay before the final result
   await broadcastMatchesLive(leagueId, results.map(r => r.matchId))

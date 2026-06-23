@@ -14,6 +14,7 @@ interface SimResult {
   awayClubId: string
   homeScore: number
   awayScore: number
+  competition: string
   stats: { home: TeamStats; away: TeamStats }
 }
 
@@ -316,23 +317,66 @@ function executeAutoSubs(
 
 // ─── Main simulation ──────────────────────────────────────────────────────────
 
+// ─── Boost helpers ────────────────────────────────────────────────────────────
+
+const BOOST_ATTRS: Record<string, string[]> = {
+  pace:      ['movSprintSpeed', 'movAcceleration'],
+  shooting:  ['atkFinishing', 'powShotPower', 'powLongShots'],
+  passing:   ['atkShortPassing', 'sklLongPassing', 'menVision'],
+  defending: ['defMarkingAware', 'defStandingTackle', 'defSlidingTackle'],
+  physical:  ['powStrength', 'powStamina', 'powJumping'],
+}
+
+function applyBoostsToPlayer(player: Player, boosts: { stat: string; amount: number }[]): Player {
+  if (boosts.length === 0) return player
+  const p = { ...player }
+  for (const boost of boosts) {
+    const attrs = BOOST_ATTRS[boost.stat] ?? []
+    for (const attr of attrs) {
+      (p as any)[attr] = Math.min(99, ((p as any)[attr] ?? 50) + boost.amount)
+    }
+    // Also bump the summary stat
+    if (boost.stat in p) (p as any)[boost.stat] = Math.min(99, ((p as any)[boost.stat] ?? 50) + boost.amount)
+  }
+  return p
+}
+
 export async function simulateMatch(
   match: FullMatch,
   homeTacticOverride: NormalisedTactic | null = null,
   awayTacticOverride: NormalisedTactic | null = null,
 ): Promise<SimResult> {
-  const homeLineup = buildLineup(match.homeClub, match.matchday)
-  const awayLineup = buildLineup(match.awayClub, match.matchday)
-  const homeBench  = buildBench(match.homeClub, match.matchday)
-  const awayBench  = buildBench(match.awayClub, match.matchday)
-  const homeSubConfigs = getSubConfigs(match.homeClub)
-  const awaySubConfigs = getSubConfigs(match.awayClub)
+  // Apply active stat boosts to player attributes (in-memory only, does not write to DB)
+  const allInstanceIds = [...match.homeClub.squad, ...match.awayClub.squad].map(s => s.id)
+  const activeBoosts = await prisma.playerBoost.findMany({
+    where: { instanceId: { in: allInstanceIds }, matchdaysLeft: { gt: 0 } },
+    select: { instanceId: true, stat: true, amount: true },
+  })
+  const boostMap: Record<string, { stat: string; amount: number }[]> = {}
+  for (const b of activeBoosts) {
+    if (!boostMap[b.instanceId]) boostMap[b.instanceId] = []
+    boostMap[b.instanceId].push({ stat: b.stat, amount: b.amount })
+  }
+  const patchSquad = (squad: (PlayerInstance & { player: Player })[]) =>
+    squad.map(inst => {
+      const boosts = boostMap[inst.id]
+      return boosts ? { ...inst, player: applyBoostsToPlayer(inst.player, boosts) } : inst
+    })
+  const homeClub: FullClub = { ...match.homeClub, squad: patchSquad(match.homeClub.squad) }
+  const awayClub: FullClub = { ...match.awayClub, squad: patchSquad(match.awayClub.squad) }
+
+  const homeLineup = buildLineup(homeClub, match.matchday)
+  const awayLineup = buildLineup(awayClub, match.matchday)
+  const homeBench  = buildBench(homeClub, match.matchday)
+  const awayBench  = buildBench(awayClub, match.matchday)
+  const homeSubConfigs = getSubConfigs(homeClub)
+  const awaySubConfigs = getSubConfigs(awayClub)
   const homeUsedSubs = new Set<string>()
   const awayUsedSubs = new Set<string>()
   const subEvents: SubEvent[] = []
 
-  const homeTacticRaw = match.homeClub.tactic as { style?: string; pressingIntensity?: number; defensiveLine?: number; width?: number } | null
-  const awayTacticRaw = match.awayClub.tactic as typeof homeTacticRaw
+  const homeTacticRaw = homeClub.tactic as { style?: string; pressingIntensity?: number; defensiveLine?: number; width?: number } | null
+  const awayTacticRaw = awayClub.tactic as typeof homeTacticRaw
 
   const homeTactic = homeTacticOverride ?? normaliseTactic(homeTacticRaw)
   const awayTactic = awayTacticOverride ?? normaliseTactic(awayTacticRaw)
@@ -370,12 +414,12 @@ export async function simulateMatch(
     if (minute % 5 === 0) {
       if (homeSubConfigs.length > 0) {
         executeSubstitutions(homeLineup, homeBench, homeSubConfigs, minute, 'home', homeUsedSubs, subEvents)
-      } else if (match.homeClub.isAI) {
+      } else if (homeClub.isAI) {
         executeAutoSubs(homeLineup, homeBench, minute, 'home', 3, homeUsedSubs, subEvents)
       }
       if (awaySubConfigs.length > 0) {
         executeSubstitutions(awayLineup, awayBench, awaySubConfigs, minute, 'away', awayUsedSubs, subEvents)
-      } else if (match.awayClub.isAI) {
+      } else if (awayClub.isAI) {
         executeAutoSubs(awayLineup, awayBench, minute, 'away', 3, awayUsedSubs, subEvents)
       }
     }
@@ -480,6 +524,7 @@ export async function simulateMatch(
     awayClubId: match.awayClubId,
     homeScore: homeGoals,
     awayScore: awayGoals,
+    competition: match.competition ?? 'LEAGUE',
     stats,
   }
 }

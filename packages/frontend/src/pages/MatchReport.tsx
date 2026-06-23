@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, Link, useLocation, useNavigate } from 'react-router-dom'
 import { api } from '../api/client'
 import { ClubBadge, type LogoConfig } from '../components/ClubBadge'
@@ -93,6 +93,149 @@ function StatRow({ label, home, away, format = (n: number) => String(n) }: {
   )
 }
 
+// ─── Replay Ticker ────────────────────────────────────────────────────────────
+
+const REPLAY_SPEEDS = [
+  { label: '1×', ms: 1200 },
+  { label: '2×', ms: 600 },
+  { label: '4×', ms: 300 },
+]
+
+function ReplayTicker({ match, onClose }: { match: MatchDetail; onClose: () => void }) {
+  const allEvents = [...match.events].sort((a, b) => a.minute - b.minute)
+  const [shown, setShown] = useState<number>(0)  // index of next event to reveal
+  const [running, setRunning] = useState(true)
+  const [speedIdx, setSpeedIdx] = useState(0)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const visibleEvents = allEvents.slice(0, shown)
+  const goals = visibleEvents.filter(e => e.type === 'GOAL')
+  const homeScore = goals.filter(e => e.team === 'home').length
+  const awayScore = goals.filter(e => e.team === 'away').length
+
+  const currentMinute = shown === 0 ? 0 : shown >= allEvents.length ? 90 : allEvents[shown - 1]?.minute ?? 0
+
+  useEffect(() => {
+    if (!running || shown >= allEvents.length) return
+    timerRef.current = setTimeout(() => setShown(n => n + 1), REPLAY_SPEEDS[speedIdx].ms)
+    return () => { if (timerRef.current) clearTimeout(timerRef.current) }
+  }, [running, shown, speedIdx, allEvents.length])
+
+  const done = shown >= allEvents.length
+
+  function eventIcon(type: string) {
+    if (type === 'GOAL') return '⚽'
+    if (type === 'YELLOW_CARD') return '🟨'
+    if (type === 'RED_CARD') return '🟥'
+    if (type === 'SUBSTITUTION') return '↕'
+    if (type === 'OWN_GOAL') return '⚽'
+    if (type === 'PENALTY_MISS') return '✗'
+    return '•'
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, width: '100%', maxWidth: 520, maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {/* Header */}
+        <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0, background: 'var(--bg-base)' }}>
+          <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-2)', flex: 1 }}>Match Replay</span>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-2)', fontSize: 18, lineHeight: 1, padding: '2px 6px' }}>✕</button>
+        </div>
+        {/* Score */}
+        <div style={{ padding: '20px 24px 16px', textAlign: 'center', flexShrink: 0, borderBottom: '1px solid var(--border)' }}>
+          <div style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
+            {done ? 'Full Time' : `${currentMinute}'`}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 16 }}>
+            <div style={{ textAlign: 'right', fontWeight: 700, fontSize: 14, color: 'var(--text-1)' }}>{match.homeClub.name}</div>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 42, fontWeight: 900, color: 'var(--text-1)', letterSpacing: 4, lineHeight: 1 }}>
+              {homeScore}<span style={{ color: 'var(--text-3)', margin: '0 4px' }}>–</span>{awayScore}
+            </div>
+            <div style={{ textAlign: 'left', fontWeight: 700, fontSize: 14, color: 'var(--text-1)' }}>{match.awayClub.name}</div>
+          </div>
+        </div>
+        {/* Events feed */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '12px 20px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {shown === 0 && (
+            <div style={{ textAlign: 'center', color: 'var(--text-3)', fontSize: 13, padding: '24px 0' }}>
+              Kick off!
+            </div>
+          )}
+          {[...visibleEvents].reverse().map((e, i) => {
+            const isHome = e.team === 'home'
+            const isSub = e.type === 'SUBSTITUTION'
+            const isGoal = e.type === 'GOAL' || e.type === 'OWN_GOAL'
+            return (
+              <div key={e.id} style={{
+                display: 'grid', gridTemplateColumns: '1fr 48px 1fr',
+                alignItems: 'center', gap: 8, fontSize: 12,
+                padding: '6px 8px', borderRadius: 6,
+                background: i === 0 ? (isGoal ? 'rgba(54,226,126,0.1)' : 'rgba(255,255,255,0.04)') : 'transparent',
+                border: i === 0 ? `1px solid ${isGoal ? 'rgba(54,226,126,0.25)' : 'rgba(255,255,255,0.08)'}` : '1px solid transparent',
+                transition: 'all 0.3s',
+              }}>
+                {isHome ? (
+                  <div style={{ textAlign: 'right', fontWeight: isGoal ? 700 : 400, color: isGoal ? 'var(--text-1)' : 'var(--text-2)' }}>
+                    <span>{e.playerName ?? '?'}</span>
+                    {isSub && <span style={{ color: 'var(--text-3)', margin: '0 3px' }}>▶</span>}
+                    {isSub && <span style={{ color: 'var(--green)', fontWeight: 600 }}>{e.assistName ?? '?'}</span>}
+                  </div>
+                ) : <div />}
+                <div style={{ textAlign: 'center', fontWeight: 700, color: 'var(--text-3)', fontSize: 11, lineHeight: 1.3 }}>
+                  <div>{eventIcon(e.type)}</div>
+                  <div>{e.minute}'</div>
+                </div>
+                {!isHome ? (
+                  <div style={{ textAlign: 'left', fontWeight: isGoal ? 700 : 400, color: isGoal ? 'var(--text-1)' : 'var(--text-2)' }}>
+                    {isSub && <span style={{ color: 'var(--green)', fontWeight: 600 }}>{e.assistName ?? '?'}</span>}
+                    {isSub && <span style={{ color: 'var(--text-3)', margin: '0 3px' }}>▶</span>}
+                    <span>{e.playerName ?? '?'}</span>
+                  </div>
+                ) : <div />}
+              </div>
+            )
+          })}
+          {done && allEvents.length === 0 && (
+            <div style={{ textAlign: 'center', color: 'var(--text-3)', fontSize: 13, padding: '16px 0' }}>No events recorded.</div>
+          )}
+        </div>
+        {/* Controls */}
+        <div style={{ padding: '12px 20px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+          {!done ? (
+            <button
+              onClick={() => setRunning(r => !r)}
+              style={{ background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: 'var(--text-1)', minWidth: 48 }}
+            >
+              {running ? '⏸' : '▶'}
+            </button>
+          ) : (
+            <button
+              onClick={() => { setShown(0); setRunning(true) }}
+              style={{ background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: 'var(--green)' }}
+            >
+              ↺ Replay
+            </button>
+          )}
+          <div style={{ display: 'flex', gap: 4 }}>
+            {REPLAY_SPEEDS.map((s, i) => (
+              <button key={s.label} onClick={() => setSpeedIdx(i)} style={{
+                background: speedIdx === i ? 'rgba(54,226,126,0.15)' : 'var(--bg-base)',
+                border: `1px solid ${speedIdx === i ? 'rgba(54,226,126,0.4)' : 'var(--border)'}`,
+                borderRadius: 6, padding: '4px 10px', cursor: 'pointer',
+                fontSize: 11, fontWeight: 700,
+                color: speedIdx === i ? 'var(--green)' : 'var(--text-2)',
+              }}>{s.label}</button>
+            ))}
+          </div>
+          <span style={{ flex: 1 }} />
+          {done && <span style={{ fontSize: 11, color: 'var(--green)', fontWeight: 700 }}>Full Time</span>}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function MatchReport() {
@@ -104,6 +247,7 @@ export default function MatchReport() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [siblingIds, setSiblingIds] = useState<string[]>([])
+  const [showReplay, setShowReplay] = useState(false)
 
   useEffect(() => {
     if (!leagueId || !matchId) return
@@ -177,6 +321,7 @@ export default function MatchReport() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', padding: '24px 16px' }}>
+      {showReplay && <ReplayTicker match={match} onClose={() => setShowReplay(false)} />}
       <div style={{ maxWidth: 860, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
         {/* Back + prev/next */}
@@ -184,17 +329,25 @@ export default function MatchReport() {
           <Link to={`/league/${leagueId}`} state={{ tab: backTab }} style={{ color: 'var(--text-2)', fontSize: 13, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             ← Back to league
           </Link>
-          {siblingIds.length > 1 && (() => {
-            const idx = siblingIds.indexOf(matchId ?? '')
-            const prevId = idx > 0 ? siblingIds[idx - 1] : null
-            const nextId = idx < siblingIds.length - 1 ? siblingIds[idx + 1] : null
-            return (
-              <div style={{ display: 'flex', gap: 6 }}>
-                <button onClick={() => prevId && navigate(`/league/${leagueId}/match/${prevId}`, { state: { tab: backTab } })} disabled={!prevId} style={{ background: 'var(--bg-card-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-xs)', padding: '5px 10px', cursor: prevId ? 'pointer' : 'not-allowed', color: prevId ? 'var(--text-1)' : 'var(--text-3)', fontSize: 13 }}>‹ Prev</button>
-                <button onClick={() => nextId && navigate(`/league/${leagueId}/match/${nextId}`, { state: { tab: backTab } })} disabled={!nextId} style={{ background: 'var(--bg-card-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-xs)', padding: '5px 10px', cursor: nextId ? 'pointer' : 'not-allowed', color: nextId ? 'var(--text-1)' : 'var(--text-3)', fontSize: 13 }}>Next ›</button>
-              </div>
-            )
-          })()}
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <button
+              onClick={() => setShowReplay(true)}
+              style={{ background: 'rgba(54,226,126,0.1)', border: '1px solid rgba(54,226,126,0.3)', borderRadius: 'var(--radius-xs)', padding: '5px 12px', cursor: 'pointer', color: 'var(--green)', fontSize: 12, fontWeight: 700 }}
+            >
+              ▶ Replay
+            </button>
+            {siblingIds.length > 1 && (() => {
+              const idx = siblingIds.indexOf(matchId ?? '')
+              const prevId = idx > 0 ? siblingIds[idx - 1] : null
+              const nextId = idx < siblingIds.length - 1 ? siblingIds[idx + 1] : null
+              return (
+                <>
+                  <button onClick={() => prevId && navigate(`/league/${leagueId}/match/${prevId}`, { state: { tab: backTab } })} disabled={!prevId} style={{ background: 'var(--bg-card-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-xs)', padding: '5px 10px', cursor: prevId ? 'pointer' : 'not-allowed', color: prevId ? 'var(--text-1)' : 'var(--text-3)', fontSize: 13 }}>‹ Prev</button>
+                  <button onClick={() => nextId && navigate(`/league/${leagueId}/match/${nextId}`, { state: { tab: backTab } })} disabled={!nextId} style={{ background: 'var(--bg-card-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-xs)', padding: '5px 10px', cursor: nextId ? 'pointer' : 'not-allowed', color: nextId ? 'var(--text-1)' : 'var(--text-3)', fontSize: 13 }}>Next ›</button>
+                </>
+              )
+            })()}
+          </div>
         </div>
 
         {/* ── Score header ──────────────────────────────── */}

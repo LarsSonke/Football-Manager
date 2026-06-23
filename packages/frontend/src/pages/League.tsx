@@ -6,6 +6,8 @@ import { useAuth } from '../stores/auth.store'
 import { api } from '../api/client'
 import { flagUrl } from '../utils/flagCodes'
 import { ClubBadge, LogoMaker, type LogoConfig } from '../components/ClubBadge'
+import { KitSvg, type KitConfig } from '../components/KitSvg'
+import { KitDesigner } from '../components/KitDesigner'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -38,6 +40,7 @@ interface SquadPlayer {
   id: string; playerId: string; player: PlayerData
   morale: number; form: number; fitness: number; injured: boolean; injuryDaysLeft: number
   suspendedMatchday: number | null; yellowCards: number; trainedPosition: string | null; wage: number
+  boosts?: Array<{ stat: string }>
 }
 
 interface LineupSlot { instanceId: string; position: string; role?: string }
@@ -64,7 +67,10 @@ interface ClubData {
   wins: number; draws: number; losses: number
   goalsFor: number; goalsAgainst: number; points: number
   physioLevel: number
+  scoutLevel: number; coachLevel: number; trainerLevel: number; marketingLevel: number
+  stadiumLevel: number; trainingLevel: number; kitLevel: number; vipLevel: number
   logoConfig: LogoConfig | null
+  kitConfig: unknown | null
   user: { id: string; username: string } | null
   squad: SquadPlayer[]
   tactic: TacticData | null
@@ -77,6 +83,10 @@ interface LeagueData {
   clubs: ClubData[]
   draftSession: { id: string; status: string; currentRound: number; roundsTotal: number; pickOrder: string[]; currentPick: number } | null
   history?: SeasonSnapshot[] | null
+  hasCup?: boolean
+  transferWindowOpen?: boolean
+  cupBracket?: unknown
+  competitionType?: string
 }
 
 interface MatchData {
@@ -111,7 +121,7 @@ interface LiveMatchState {
   status: 'live' | 'ended'
 }
 
-type Tab = 'overview' | 'squad' | 'fixtures' | 'standings' | 'stats' | 'tactics' | 'transfers' | 'messages' | 'manage'
+type Tab = 'overview' | 'squad' | 'fixtures' | 'standings' | 'stats' | 'tactics' | 'transfers' | 'messages' | 'manage' | 'management' | 'cup'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -299,6 +309,100 @@ interface ActiveDeal {
   id: string; sponsorName: string; sponsorEmoji: string
   mission: string; type: string; cost: number; reward: number
   status: string; targetMatchday: number
+}
+
+// ─── TOTW Pitch ───────────────────────────────────────────────────────────────
+
+function TOTWPitch({ players }: { players: AwardEntry[] }) {
+  // Group players by position row
+  const posY: Record<string, number> = {
+    GK: 82, CB: 65, LB: 65, RB: 65, LWB: 65, RWB: 65,
+    CDM: 52, CM: 42, LM: 42, RM: 42,
+    CAM: 30, LW: 20, RW: 20, CF: 20, SS: 20, ST: 14,
+  }
+  const getY = (pos: string) => posY[pos] ?? 42
+
+  // Group by Y position and spread X
+  const rowMap: Record<number, AwardEntry[]> = {}
+  for (const p of players) {
+    const y = getY(p.position)
+    if (!rowMap[y]) rowMap[y] = []
+    rowMap[y].push(p)
+  }
+
+  // Assign X positions spread evenly across the pitch
+  const positionedPlayers: Array<{ player: AwardEntry; x: number; y: number }> = []
+  for (const [yStr, row] of Object.entries(rowMap)) {
+    const y = Number(yStr)
+    const count = row.length
+    row.forEach((p, i) => {
+      const x = count === 1 ? 50 : 10 + (i / (count - 1)) * 80
+      positionedPlayers.push({ player: p, x, y })
+    })
+  }
+
+  return (
+    <div style={{ position: 'relative', width: '100%', paddingBottom: '62%', borderRadius: 10, overflow: 'hidden', background: '#1a5c28' }}>
+      {/* Pitch SVG markings */}
+      <svg viewBox="0 0 100 62" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
+        {/* Pitch stripes */}
+        {[0,1,2,3,4,5].map(i => <rect key={i} x="0" y={i*10.3} width="100" height="5.2" fill="rgba(0,0,0,0.06)" />)}
+        {/* Outer border */}
+        <rect x="2" y="2" width="96" height="58" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="0.5" />
+        {/* Halfway line */}
+        <line x1="2" y1="31" x2="98" y2="31" stroke="rgba(255,255,255,0.3)" strokeWidth="0.5" />
+        {/* Center circle */}
+        <circle cx="50" cy="31" r="8" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="0.5" />
+        <circle cx="50" cy="31" r="0.7" fill="rgba(255,255,255,0.4)" />
+        {/* Top penalty box */}
+        <rect x="28" y="2" width="44" height="14" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="0.5" />
+        <rect x="38" y="2" width="24" height="6" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="0.5" />
+        <circle cx="50" cy="10" r="0.7" fill="rgba(255,255,255,0.3)" />
+        {/* Bottom penalty box */}
+        <rect x="28" y="46" width="44" height="14" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="0.5" />
+        <rect x="38" y="56" width="24" height="6" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="0.5" />
+        <circle cx="50" cy="52" r="0.7" fill="rgba(255,255,255,0.3)" />
+      </svg>
+
+      {/* Players */}
+      {positionedPlayers.map(({ player: p, x, y }) => (
+        <div key={p.instanceId} style={{
+          position: 'absolute',
+          left: `${x}%`, top: `${y}%`,
+          transform: 'translate(-50%, -50%)',
+          display: 'flex', flexDirection: 'column', alignItems: 'center',
+          gap: 2, width: 72,
+        }}>
+          {/* Photo */}
+          {p.photoUrl ? (
+            <img src={p.photoUrl} alt="" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '2.5px solid rgba(255,255,255,0.9)', flexShrink: 0, filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.7))' }} />
+          ) : (
+            <div style={{ width: 44, height: 44, borderRadius: '50%', background: getBadgeColor(p.playerName), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 900, color: '#000', border: '2.5px solid rgba(255,255,255,0.9)', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.7))' }}>
+              {p.playerName.split(' ').map(w => w[0]).slice(0, 2).join('')}
+            </div>
+          )}
+          {/* Kit shirt */}
+          <KitSvg config={p.clubKitConfig as KitConfig | null} size={36} uid={`totw-${p.instanceId}`} />
+          {/* Name + rating */}
+          <div style={{ background: 'rgba(0,0,0,0.72)', borderRadius: 4, padding: '2px 6px', textAlign: 'center', backdropFilter: 'blur(4px)' }}>
+            <div style={{ fontSize: 9, fontWeight: 700, color: '#fff', whiteSpace: 'nowrap', lineHeight: 1.3, maxWidth: 68, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {p.playerName.split(' ').slice(-1)[0]}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+              <span className={posClass(p.position)} style={{ fontSize: 7, padding: '1px 3px' }}>{p.position}</span>
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 900, color: 'var(--gold)', lineHeight: 1 }}>{p.rating.toFixed(1)}</span>
+            </div>
+            {(p.goals > 0 || p.assists > 0) && (
+              <div style={{ fontSize: 8, color: 'rgba(255,255,255,0.8)', lineHeight: 1.2 }}>
+                {p.goals > 0 && <span style={{ color: '#7effa0' }}>⚽{p.goals} </span>}
+                {p.assists > 0 && <span style={{ color: '#7dd3fc' }}>🅰{p.assists}</span>}
+              </div>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
 }
 
 // ─── Overview ─────────────────────────────────────────────────────────────────
@@ -501,41 +605,36 @@ function Overview({ league, matches, myClub, awards, onPhysioUpgrade, onRefresh 
               {/* MOTM + top scorer + top assister row */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 16 }}>
                 {[
-                  { label: '⭐ MOTM', name: awards.motm?.playerName, club: awards.motm?.clubName, logo: awards.motm?.clubLogoConfig ?? null, value: awards.motm?.rating.toFixed(1), unit: 'rating' },
-                  { label: '⚽ Top Scorer', name: awards.topScorer?.playerName, club: awards.topScorer?.clubName, logo: awards.topScorer?.clubLogoConfig ?? null, value: awards.topScorer ? String(awards.topScorer.goals) : null, unit: 'goals' },
-                  { label: '🎯 Top Assist', name: awards.topAssist?.playerName, club: awards.topAssist?.clubName, logo: awards.topAssist?.clubLogoConfig ?? null, value: awards.topAssist ? String(awards.topAssist.assists) : null, unit: 'assists' },
-                ].map(item => item.name ? (
-                  <div key={item.label} style={{ background: 'var(--bg-base)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', border: '1px solid var(--border)' }}>
-                    <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>{item.label}</div>
-                    <ClubBadge name={item.club ?? ''} size={24} logoConfig={item.logo} />
-                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)', marginTop: 6, lineHeight: 1.3 }}>{item.name}</div>
-                    <div style={{ fontSize: 10, color: 'var(--text-2)', marginTop: 2 }}>{item.club}</div>
-                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 800, color: 'var(--gold)', marginTop: 6 }}>{item.value}</div>
+                  { label: '⭐ MOTM', entry: awards.motm, value: awards.motm?.rating.toFixed(1), unit: 'rating' },
+                  { label: '⚽ Top Scorer', entry: awards.topScorer ? { ...awards.topScorer, rating: 0, goals: awards.topScorer.goals, assists: 0, position: '', clubKitConfig: null, photoUrl: null } as AwardEntry : null, value: awards.topScorer ? String(awards.topScorer.goals) : null, unit: 'goals' },
+                  { label: '🎯 Top Assist', entry: awards.topAssist ? { ...awards.topAssist, rating: 0, goals: 0, assists: awards.topAssist.assists, position: '', clubKitConfig: null, photoUrl: null } as AwardEntry : null, value: awards.topAssist ? String(awards.topAssist.assists) : null, unit: 'assists' },
+                ].map(item => item.entry ? (
+                  <div key={item.label} style={{ background: 'var(--bg-base)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start' }}>
+                    <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5 }}>{item.label}</div>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      {item.entry.photoUrl ? (
+                        <img src={item.entry.photoUrl} alt="" style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border)', flexShrink: 0 }} />
+                      ) : (
+                        <div style={{ width: 36, height: 36, borderRadius: '50%', background: getBadgeColor(item.entry.playerName), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 900, color: '#000', flexShrink: 0 }}>
+                          {item.entry.playerName.split(' ').map(w => w[0]).slice(0, 2).join('')}
+                        </div>
+                      )}
+                      <KitSvg config={item.entry.clubKitConfig as KitConfig | null} size={32} uid={`award-${item.label}-kit`} />
+                    </div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)', lineHeight: 1.3 }}>{item.entry.playerName}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <ClubBadge name={item.entry.clubName} size={16} logoConfig={item.entry.clubLogoConfig} />
+                      <span style={{ fontSize: 10, color: 'var(--text-2)' }}>{item.entry.clubName}</span>
+                    </div>
+                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, color: 'var(--gold)' }}>{item.value}</div>
                   </div>
                 ) : null)}
               </div>
-              {/* Team of the week */}
+              {/* Team of the week — full pitch view */}
               {awards.teamOfTheWeek.length > 0 && (
                 <>
-                  <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Team of the Week</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    {awards.teamOfTheWeek.map(p => (
-                      <div key={p.instanceId} style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto auto', alignItems: 'center', gap: 8, padding: '5px 8px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-base)' }}>
-                        <span className={posClass(p.position)} style={{ fontSize: 9 }}>{p.position}</span>
-                        <div>
-                          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-1)', lineHeight: 1.2 }}>{p.playerName}</div>
-                          <div style={{ fontSize: 10, color: 'var(--text-3)' }}>{p.clubName}</div>
-                        </div>
-                        {(p.goals > 0 || p.assists > 0) && (
-                          <div style={{ fontSize: 10, color: 'var(--text-2)', whiteSpace: 'nowrap' }}>
-                            {p.goals > 0 && <span style={{ color: 'var(--green)' }}>⚽{p.goals} </span>}
-                            {p.assists > 0 && <span style={{ color: 'var(--blue)' }}>🎯{p.assists}</span>}
-                          </div>
-                        )}
-                        <div style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 800, color: 'var(--gold)', textAlign: 'right' }}>{p.rating.toFixed(1)}</div>
-                      </div>
-                    ))}
-                  </div>
+                  <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>Team of the Week</div>
+                  <TOTWPitch players={awards.teamOfTheWeek} />
                 </>
               )}
             </div>
@@ -1035,6 +1134,8 @@ interface AwardEntry {
   clubId: string | null
   clubName: string
   clubLogoConfig: LogoConfig | null
+  clubKitConfig: unknown | null
+  photoUrl: string | null
   rating: number
   goals: number
   assists: number
@@ -1763,10 +1864,11 @@ interface TransferListing {
   }
 }
 
-function Transfers({ leagueId, myClub, squadSize, onRefresh }: {
+function Transfers({ leagueId, myClub, squadSize, transferWindowOpen, onRefresh }: {
   leagueId: string
   myClub: ClubData
   squadSize: number
+  transferWindowOpen?: boolean
   onRefresh: () => void
 }) {
   const [freeAgents, setFreeAgents] = useState<FreeAgent[]>([])
@@ -1906,6 +2008,12 @@ function Transfers({ leagueId, myClub, squadSize, onRefresh }: {
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 20, alignItems: 'start' }}>
+
+      {transferWindowOpen === false && (
+        <div style={{ gridColumn: '1 / -1', padding: '10px 14px', background: 'rgba(245,166,35,0.08)', border: '1px solid rgba(245,166,35,0.3)', borderRadius: 'var(--radius-sm)', marginBottom: 16, fontSize: 12, color: 'var(--gold)', fontWeight: 600 }}>
+          Transfer window is currently closed. No transfers can be made.
+        </div>
+      )}
 
       {/* Transfer Market */}
       {otherListings.length > 0 && (
@@ -2272,6 +2380,410 @@ function Manage({ league, onUpdate, onDelete }: { league: LeagueData; onUpdate: 
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// ─── Management ───────────────────────────────────────────────────────────────
+
+type UpgradeType = 'scout' | 'coach' | 'trainer' | 'marketing' | 'stadium' | 'training' | 'kit' | 'vip'
+
+const UPGRADE_COSTS_PCT: Record<UpgradeType, number[]> = {
+  scout:     [0.04, 0.08, 0.15],
+  coach:     [0.04, 0.08, 0.15],
+  trainer:   [0.04, 0.08, 0.15],
+  marketing: [0.04, 0.08, 0.15],
+  stadium:   [0.07, 0.14, 0.24],
+  training:  [0.05, 0.10, 0.18],
+  kit:       [0.02, 0.04, 0.07],
+  vip:       [0.06, 0.12, 0.20],
+}
+const BOOST_COST_PCT = 0.025
+const BOOST_STATS = ['pace', 'shooting', 'passing', 'dribbling', 'defending', 'physical'] as const
+
+const STAFF_UPGRADES: { type: UpgradeType; label: string; icon: string; desc: (lvl: number) => string }[] = [
+  { type: 'scout',     label: 'Scout',             icon: '🔍', desc: l => l === 0 ? 'Unlock scout reports' : l === 1 ? 'Shows opponent results' : l === 2 ? 'Shows formation & stats' : 'Shows likely lineup' },
+  { type: 'coach',     label: 'Asst. Coach',        icon: '📋', desc: l => l === 0 ? 'Unlock coach advice' : l === 1 ? 'Formation suggestion' : l === 2 ? 'Formation + lineup tips' : 'Full tactical breakdown' },
+  { type: 'trainer',   label: 'Trainer',            icon: '🏋️', desc: l => l === 0 ? 'No training boost' : l === 1 ? '+2% dev speed' : l === 2 ? '+5% dev speed' : '+10% dev speed' },
+  { type: 'marketing', label: 'Marketing',          icon: '📣', desc: l => l === 0 ? 'No match bonus' : l === 1 ? '+5% match income' : l === 2 ? '+10% match income' : '+18% match income' },
+]
+
+const FACILITY_UPGRADES: { type: UpgradeType; label: string; icon: string; desc: (lvl: number) => string }[] = [
+  { type: 'stadium',   label: 'Stadium',            icon: '🏟️', desc: l => l === 0 ? 'No home bonus' : l === 1 ? '+8% home income' : l === 2 ? '+15% home income' : '+25% home income' },
+  { type: 'training',  label: 'Training Facility',  icon: '⚽', desc: l => l === 0 ? 'No fitness boost' : l === 1 ? '+2 fitness/day' : l === 2 ? '+4 fitness/day' : '+7 fitness/day' },
+  { type: 'kit',       label: 'Kit Quality',        icon: '👕', desc: l => l === 0 ? 'No morale bonus' : l === 1 ? '+2 morale/day' : l === 2 ? '+4 morale/day' : '+6 morale/day' },
+  { type: 'vip',       label: 'VIP Area',           icon: '🥂', desc: l => l === 0 ? 'No passive income' : l === 1 ? '+0.1% budget/day' : l === 2 ? '+0.2% budget/day' : '+0.4% budget/day' },
+]
+
+const UPGRADE_FIELD_MAP: Record<UpgradeType, string> = {
+  scout: 'scoutLevel', coach: 'coachLevel', trainer: 'trainerLevel', marketing: 'marketingLevel',
+  stadium: 'stadiumLevel', training: 'trainingLevel', kit: 'kitLevel', vip: 'vipLevel',
+}
+
+function UpgradeCard({ label, icon, currentLevel, type, desc, startingBudget, budget, leagueId, onUpgraded }: {
+  label: string; icon: string; currentLevel: number; type: UpgradeType
+  desc: (lvl: number) => string; startingBudget: number; budget: number
+  leagueId: string; onUpgraded: (type: UpgradeType, newLevel: number, newBudget: number) => void
+}) {
+  const [loading, setLoading] = useState(false)
+  const [err, setErr] = useState('')
+  const maxed = currentLevel >= 3
+  const costPct = maxed ? 0 : UPGRADE_COSTS_PCT[type][currentLevel]
+  const cost = Math.round(startingBudget * costPct)
+  const canAfford = budget >= cost
+
+  async function handleUpgrade() {
+    setLoading(true); setErr('')
+    try {
+      const r = await api.post(`/leagues/${leagueId}/upgrade`, { type })
+      onUpgraded(type, r.data[UPGRADE_FIELD_MAP[type]], r.data.budget)
+    } catch (e: any) { setErr(e.response?.data?.error ?? 'Upgrade failed') }
+    finally { setLoading(false) }
+  }
+
+  return (
+    <div style={{ background: 'var(--bg-card)', border: `1px solid ${maxed ? 'rgba(54,226,126,0.25)' : 'var(--border)'}`, borderRadius: 'var(--radius)', padding: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+        <span style={{ fontSize: 24 }}>{icon}</span>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-1)' }}>{label}</div>
+          <div style={{ fontSize: 11, color: 'var(--text-2)', marginTop: 1 }}>{desc(currentLevel)}</div>
+        </div>
+        <div style={{ display: 'flex', gap: 3 }}>
+          {[1,2,3].map(i => (
+            <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: i <= currentLevel ? 'var(--green)' : 'rgba(255,255,255,0.12)' }} />
+          ))}
+        </div>
+      </div>
+      {err && <div style={{ fontSize: 11, color: 'var(--red)', marginBottom: 6 }}>{err}</div>}
+      {!maxed ? (
+        <button
+          className="btn btn-green"
+          style={{ width: '100%', fontSize: 11, padding: '7px 0', opacity: canAfford ? 1 : 0.5 }}
+          onClick={handleUpgrade}
+          disabled={loading || !canAfford}
+        >
+          {loading ? '...' : `Upgrade → L${currentLevel + 1}  (€${(cost / 1000).toFixed(1)}k)`}
+        </button>
+      ) : (
+        <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--green)', fontWeight: 700, padding: '6px 0' }}>MAX LEVEL</div>
+      )}
+    </div>
+  )
+}
+
+function Management({ league, myClub, isCreator, onRefresh }: {
+  league: LeagueData; myClub: ClubData; isCreator: boolean; onRefresh: () => void
+}) {
+  const [upgradeMsg, setUpgradeMsg] = useState('')
+  const [boostMsg, setBoostMsg] = useState('')
+  const [boostLoading, setBoostLoading] = useState<string | null>(null)
+  const [scoutClubId, setScoutClubId] = useState('')
+  const [scoutReport, setScoutReport] = useState<object | null>(null)
+  const [scoutLoading, setScoutLoading] = useState(false)
+  const [coachAdvice, setCoachAdvice] = useState<object | null>(null)
+  const [coachLoading, setCoachLoading] = useState(false)
+  const [windowLoading, setWindowLoading] = useState(false)
+  const [windowMsg, setWindowMsg] = useState('')
+  const [clubLevels, setClubLevels] = useState({
+    scoutLevel: myClub.scoutLevel,
+    coachLevel: myClub.coachLevel,
+    trainerLevel: myClub.trainerLevel,
+    marketingLevel: myClub.marketingLevel,
+    stadiumLevel: myClub.stadiumLevel,
+    trainingLevel: myClub.trainingLevel,
+    kitLevel: myClub.kitLevel,
+    vipLevel: myClub.vipLevel,
+  })
+  const [budget, setBudget] = useState(myClub.budget)
+
+  function handleUpgraded(type: UpgradeType, newLevel: number, newBudget: number) {
+    const field = UPGRADE_FIELD_MAP[type] as keyof typeof clubLevels
+    setClubLevels(prev => ({ ...prev, [field]: newLevel }))
+    setBudget(newBudget)
+    setUpgradeMsg(`${type} upgraded to level ${newLevel}!`)
+    setTimeout(() => setUpgradeMsg(''), 3000)
+    onRefresh()
+  }
+
+  async function handleBoost(instanceId: string, stat: string) {
+    setBoostLoading(instanceId + stat)
+    setBoostMsg('')
+    try {
+      await api.post(`/leagues/${league.id}/boost`, { instanceId, stat })
+      setBoostMsg(`Boost applied!`)
+      setTimeout(() => setBoostMsg(''), 3000)
+      onRefresh()
+    } catch (e: any) {
+      setBoostMsg(e.response?.data?.error ?? 'Boost failed')
+    } finally { setBoostLoading(null) }
+  }
+
+  async function handleScoutReport() {
+    if (!scoutClubId) return
+    setScoutLoading(true); setScoutReport(null)
+    try {
+      const r = await api.get(`/leagues/${league.id}/scout/${scoutClubId}`)
+      setScoutReport(r.data)
+    } catch (e: any) { setScoutReport({ error: e.response?.data?.error ?? 'Failed' }) }
+    finally { setScoutLoading(false) }
+  }
+
+  async function handleCoachAdvice() {
+    setCoachLoading(true); setCoachAdvice(null)
+    try {
+      const r = await api.get(`/leagues/${league.id}/coach-advice`)
+      setCoachAdvice(r.data)
+    } catch (e: any) { setCoachAdvice({ error: e.response?.data?.error ?? 'Failed' }) }
+    finally { setCoachLoading(false) }
+  }
+
+  async function handleToggleWindow() {
+    setWindowLoading(true); setWindowMsg('')
+    try {
+      const newOpen = !(league.transferWindowOpen ?? true)
+      await api.patch(`/leagues/${league.id}/transfer-window`, { open: newOpen })
+      setWindowMsg(newOpen ? 'Transfer window opened' : 'Transfer window closed')
+      setTimeout(() => setWindowMsg(''), 3000)
+      onRefresh()
+    } catch (e: any) { setWindowMsg(e.response?.data?.error ?? 'Failed') }
+    finally { setWindowLoading(false) }
+  }
+
+  const boostCost = Math.round(league.startingBudget * BOOST_COST_PCT)
+  const otherClubs = league.clubs.filter(c => c.id !== myClub.id)
+  const cardStyle: React.CSSProperties = { background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 0, overflow: 'hidden' }
+  const secLabel: React.CSSProperties = { fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase' as const, color: 'var(--text-2)' }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 780 }}>
+      {upgradeMsg && <div style={{ padding: '10px 14px', background: 'rgba(54,226,126,0.08)', border: '1px solid rgba(54,226,126,0.2)', borderRadius: 'var(--radius-sm)', fontSize: 12, color: 'var(--green)' }}>✓ {upgradeMsg}</div>}
+
+      {/* Budget display */}
+      <div style={{ padding: '12px 16px', background: 'var(--bg-card-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', display: 'flex', alignItems: 'center', gap: 16 }}>
+        <div>
+          <div style={{ fontSize: 10, color: 'var(--text-2)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>Available Budget</div>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, color: 'var(--green)' }}>€{(budget / 1000).toFixed(1)}k</div>
+        </div>
+      </div>
+
+      {/* Staff */}
+      <div style={cardStyle}>
+        <div className="card-header"><span className="accent-bar" /><span style={secLabel}>Staff</span></div>
+        <div style={{ padding: 16, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
+          {STAFF_UPGRADES.map(u => (
+            <UpgradeCard key={u.type}
+              label={u.label} icon={u.icon}
+              currentLevel={(clubLevels as any)[u.type === 'scout' ? 'scoutLevel' : u.type === 'coach' ? 'coachLevel' : u.type === 'trainer' ? 'trainerLevel' : 'marketingLevel']}
+              type={u.type} desc={u.desc}
+              startingBudget={league.startingBudget} budget={budget}
+              leagueId={league.id} onUpgraded={handleUpgraded}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Facilities */}
+      <div style={cardStyle}>
+        <div className="card-header"><span className="accent-bar" /><span style={secLabel}>Facilities</span></div>
+        <div style={{ padding: 16, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
+          {FACILITY_UPGRADES.map(u => (
+            <UpgradeCard key={u.type}
+              label={u.label} icon={u.icon}
+              currentLevel={(clubLevels as any)[u.type === 'stadium' ? 'stadiumLevel' : u.type === 'training' ? 'trainingLevel' : u.type === 'kit' ? 'kitLevel' : 'vipLevel']}
+              type={u.type} desc={u.desc}
+              startingBudget={league.startingBudget} budget={budget}
+              leagueId={league.id} onUpgraded={handleUpgraded}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Scout report */}
+      {clubLevels.scoutLevel > 0 && (
+        <div style={cardStyle}>
+          <div className="card-header"><span className="accent-bar" /><span style={secLabel}>Scout Report</span></div>
+          <div style={{ padding: 16 }}>
+            <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
+              <select value={scoutClubId} onChange={e => setScoutClubId(e.target.value)}
+                style={{ flex: 1, padding: '8px 12px', background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text-1)', fontSize: 13 }}>
+                <option value="">Select opponent...</option>
+                {otherClubs.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+              <button className="btn btn-green" onClick={handleScoutReport} disabled={!scoutClubId || scoutLoading} style={{ whiteSpace: 'nowrap' }}>
+                {scoutLoading ? '...' : 'Scout'}
+              </button>
+            </div>
+            {scoutReport && (
+              <div style={{ padding: 12, background: 'var(--bg-base)', borderRadius: 'var(--radius-sm)', fontSize: 12, color: 'var(--text-1)' }}>
+                <pre style={{ margin: 0, fontFamily: 'inherit', whiteSpace: 'pre-wrap' }}>{JSON.stringify(scoutReport, null, 2)}</pre>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Coach advice */}
+      {clubLevels.coachLevel > 0 && (
+        <div style={cardStyle}>
+          <div className="card-header"><span className="accent-bar" /><span style={secLabel}>Coach Advice</span></div>
+          <div style={{ padding: 16 }}>
+            <button className="btn btn-green" onClick={handleCoachAdvice} disabled={coachLoading} style={{ marginBottom: 12 }}>
+              {coachLoading ? '...' : 'Get Advice'}
+            </button>
+            {coachAdvice && (
+              <div style={{ padding: 12, background: 'var(--bg-base)', borderRadius: 'var(--radius-sm)', fontSize: 12, color: 'var(--text-1)' }}>
+                <pre style={{ margin: 0, fontFamily: 'inherit', whiteSpace: 'pre-wrap' }}>{JSON.stringify(coachAdvice, null, 2)}</pre>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Stat boosts */}
+      <div style={cardStyle}>
+        <div className="card-header"><span className="accent-bar" /><span style={secLabel}>Stat Boosts · €{(boostCost / 1000).toFixed(1)}k each · 5 matchdays</span></div>
+        <div style={{ padding: 16 }}>
+          {boostMsg && <div style={{ marginBottom: 10, fontSize: 12, color: boostMsg.startsWith('Boost') ? 'var(--green)' : 'var(--red)' }}>{boostMsg}</div>}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {myClub.squad.slice().sort((a, b) => b.player.overall - a.player.overall).map(p => (
+              <div key={p.id} style={{ padding: '10px 12px', background: 'var(--bg-base)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                  <span className={`pos ${p.player.position === 'GK' ? 'pos-gk' : ['CB','LB','RB'].includes(p.player.position) ? 'pos-def' : ['CDM','CM','CAM','LM','RM'].includes(p.player.position) ? 'pos-mid' : 'pos-att'}`} style={{ fontSize: 9, padding: '2px 5px' }}>{p.player.position}</span>
+                  <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-1)' }}>{p.player.name}</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-2)', marginLeft: 'auto' }}>OVR {p.player.overall}</span>
+                </div>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {BOOST_STATS.map(stat => {
+                    const active = (p.boosts ?? []).some(b => b.stat === stat)
+                    const key = p.id + stat
+                    return (
+                      <button key={stat}
+                        onClick={() => !active && handleBoost(p.id, stat)}
+                        disabled={active || boostLoading === key || budget < boostCost}
+                        style={{
+                          padding: '4px 10px', borderRadius: 4, fontSize: 11, fontWeight: 600,
+                          background: active ? 'rgba(54,226,126,0.15)' : 'rgba(255,255,255,0.06)',
+                          border: `1px solid ${active ? 'rgba(54,226,126,0.4)' : 'var(--border)'}`,
+                          color: active ? 'var(--green)' : 'var(--text-2)',
+                          cursor: active ? 'default' : 'pointer',
+                          opacity: !active && budget < boostCost ? 0.4 : 1,
+                        }}
+                      >
+                        {active ? `✓ ${stat}` : boostLoading === key ? '...' : stat}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Transfer window (creator only) */}
+      {isCreator && (
+        <div style={{ ...cardStyle, border: '1px solid rgba(245,166,35,0.2)' }}>
+          <div className="card-header" style={{ borderColor: 'rgba(245,166,35,0.15)' }}><span className="accent-bar" style={{ background: 'var(--gold)' }} /><span style={{ ...secLabel, color: 'var(--gold)' }}>Transfer Window</span></div>
+          <div style={{ padding: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-1)' }}>
+                Window is currently <span style={{ color: (league.transferWindowOpen ?? true) ? 'var(--green)' : 'var(--red)' }}>{(league.transferWindowOpen ?? true) ? 'OPEN' : 'CLOSED'}</span>
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-2)', marginTop: 2 }}>Controls whether players can be transferred between clubs</div>
+            </div>
+            <button
+              className="btn"
+              style={{ background: (league.transferWindowOpen ?? true) ? 'rgba(232,128,106,0.15)' : 'rgba(54,226,126,0.15)', color: (league.transferWindowOpen ?? true) ? 'var(--red)' : 'var(--green)', border: `1px solid ${(league.transferWindowOpen ?? true) ? 'rgba(232,128,106,0.4)' : 'rgba(54,226,126,0.4)'}`, whiteSpace: 'nowrap' }}
+              onClick={handleToggleWindow} disabled={windowLoading}
+            >
+              {windowLoading ? '...' : (league.transferWindowOpen ?? true) ? 'Close Window' : 'Open Window'}
+            </button>
+          </div>
+          {windowMsg && <div style={{ padding: '0 16px 12px', fontSize: 12, color: 'var(--gold)' }}>✓ {windowMsg}</div>}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Cup ──────────────────────────────────────────────────────────────────────
+
+interface CupBracketMatch {
+  matchId: string | null
+  homeClubId: string | null
+  awayClubId: string | null
+  winnerId: string | null
+  isBye: boolean
+}
+
+interface CupRoundDef {
+  name: string
+  code: string
+  matchday: number
+  matches: CupBracketMatch[]
+}
+
+interface CupBracketData {
+  rounds: CupRoundDef[]
+}
+
+function Cup({ leagueId, league }: { leagueId: string; league: LeagueData }) {
+  const [bracket, setBracket] = useState<CupBracketData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const clubMap = Object.fromEntries(league.clubs.map(c => [c.id, c.name]))
+
+  useEffect(() => {
+    setLoading(true)
+    api.get(`/leagues/${leagueId}/cup`)
+      .then(r => setBracket(r.data))
+      .catch(() => setBracket(null))
+      .finally(() => setLoading(false))
+  }, [leagueId])
+
+  if (loading) return <div style={{ color: 'var(--text-2)', textAlign: 'center', padding: 40 }}>Loading bracket...</div>
+  if (!bracket) return <div style={{ textAlign: 'center', padding: '64px 0', color: 'var(--text-2)' }}><div style={{ fontSize: 36, marginBottom: 10 }}>🏆</div><p>Cup bracket not available yet.</p></div>
+
+  return (
+    <div style={{ overflowX: 'auto' }}>
+      <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', minWidth: 'max-content', padding: '8px 4px' }}>
+        {bracket.rounds.map((round, ri) => (
+          <div key={ri} style={{ minWidth: 180 }}>
+            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-2)', marginBottom: 10, textAlign: 'center' }}>
+              {round.name}
+              <span style={{ display: 'block', fontSize: 9, color: 'var(--text-3)', fontWeight: 500 }}>MD {round.matchday}</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, justifyContent: 'space-around', minHeight: bracket.rounds[0].matches.length * 60 }}>
+              {round.matches.map((m, mi) => {
+                if (m.isBye && m.winnerId) {
+                  return (
+                    <div key={mi} style={{ padding: '8px 12px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', fontSize: 12, color: 'var(--text-2)', textAlign: 'center', opacity: 0.6 }}>
+                      {clubMap[m.winnerId] ?? '—'} <span style={{ color: 'var(--text-3)' }}>(bye)</span>
+                    </div>
+                  )
+                }
+                const homeName = m.homeClubId ? (clubMap[m.homeClubId] ?? m.homeClubId.slice(0, 8)) : '?'
+                const awayName = m.awayClubId ? (clubMap[m.awayClubId] ?? m.awayClubId.slice(0, 8)) : '?'
+                const winnerHome = m.winnerId === m.homeClubId
+                const winnerAway = m.winnerId === m.awayClubId
+                const played = !!m.winnerId
+                return (
+                  <div key={mi} style={{ padding: '8px 12px', background: 'var(--bg-card)', border: `1px solid ${played ? 'rgba(54,226,126,0.2)' : 'var(--border)'}`, borderRadius: 'var(--radius-sm)', fontSize: 12 }}>
+                    <div style={{ marginBottom: 4, color: winnerHome ? 'var(--green)' : played ? 'var(--text-3)' : 'var(--text-1)', fontWeight: winnerHome ? 700 : 500 }}>
+                      {homeName}
+                    </div>
+                    <div style={{ fontSize: 9, color: 'var(--text-3)', marginBottom: 4 }}>vs</div>
+                    <div style={{ color: winnerAway ? 'var(--green)' : played ? 'var(--text-3)' : 'var(--text-1)', fontWeight: winnerAway ? 700 : 500 }}>
+                      {awayName}
+                    </div>
+                    {!played && !m.homeClubId && <div style={{ fontSize: 10, color: 'var(--text-3)', fontStyle: 'italic' }}>TBD</div>}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -3428,6 +3940,7 @@ function Tactics({ leagueId, myClub, onSaved, nextMatchday }: {
                         </div>
                       )
                     })()}
+                    <KitSvg config={myClub.kitConfig as KitConfig | null} size={Math.max(20, Math.round(photoSz * 0.75))} uid={`tac-${player.id}`} />
                     <span style={{ fontSize: nameFz, fontWeight: 700, color: (player.injured || player.suspendedMatchday === nextMatchday) ? 'rgba(255,255,255,0.55)' : '#fff', textAlign: 'center', lineHeight: 1.2, width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {player.player.name.split(' ').slice(-1)[0]}
                     </span>
@@ -4519,7 +5032,7 @@ export default function League() {
   const [awards, setAwards] = useState<MatchdayAwards | null>(null)
   const [tab, setTab] = useState<Tab>(() => {
     const t = (location.state as any)?.tab as Tab | undefined
-    const valid: Tab[] = ['overview','squad','fixtures','standings','stats','tactics','transfers','messages','manage']
+    const valid: Tab[] = ['overview','squad','fixtures','standings','stats','tactics','transfers','messages','manage','management','cup']
     return t && valid.includes(t) ? t : 'overview'
   })
   const [notification, setNotification] = useState<string | null>(null)
@@ -4537,6 +5050,7 @@ export default function League() {
   })
   const [bannerDismissed, setBannerDismissed] = useState(false)
   const [showLogoMaker, setShowLogoMaker] = useState(false)
+  const [showKitDesigner, setShowKitDesigner] = useState(false)
   const [showDraftSummary, setShowDraftSummary] = useState(false)
   const myClubIdRef = useRef<string | undefined>(undefined)
   const myClubWagesRef = useRef<number>(0)
@@ -4756,6 +5270,8 @@ export default function League() {
     ...(myClub && league.status === 'ACTIVE' ? [{ key: 'transfers' as Tab, label: 'Transfers', icon: '⇄' }] : []),
     ...(myClub && league.status === 'ACTIVE' ? [{ key: 'messages' as Tab, label: 'Messages', icon: '✉' }] : []),
     ...(isCreator ? [{ key: 'manage' as Tab, label: 'Manage', icon: '⊛' }] : []),
+    ...(myClub && league.status === 'ACTIVE' ? [{ key: 'management' as Tab, label: 'Club', icon: '⬆' }] : []),
+    ...(league.hasCup ? [{ key: 'cup' as Tab, label: 'Cup', icon: '🏆' }] : []),
   ]
 
   const PAGE_TITLES: Record<Tab, string> = {
@@ -4768,6 +5284,8 @@ export default function League() {
     transfers: 'Transfer Market',
     messages: 'Messages',
     manage: 'Manage League',
+    management: 'Club Management',
+    cup: 'Cup Bracket',
   }
 
   return (
@@ -4787,6 +5305,23 @@ export default function League() {
             setShowLogoMaker(false)
           }}
           onClose={() => setShowLogoMaker(false)}
+        />
+      )}
+
+      {/* ── Kit designer modal ───────────────────────────────────────────── */}
+      {showKitDesigner && myClub && (
+        <KitDesigner
+          leagueId={league.id}
+          clubName={myClub.name}
+          initialConfig={myClub.kitConfig as KitConfig | null}
+          onSaved={config => {
+            setLeague(prev => prev ? {
+              ...prev,
+              clubs: prev.clubs.map(c => c.id === myClub.id ? { ...c, kitConfig: config } : c),
+            } : prev)
+            setShowKitDesigner(false)
+          }}
+          onClose={() => setShowKitDesigner(false)}
         />
       )}
 
@@ -4864,13 +5399,22 @@ export default function League() {
             <>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                 <ClubBadge name={myClub.name} size={44} logoConfig={myClub.logoConfig} />
-                <button
-                  onClick={() => setShowLogoMaker(true)}
-                  title="Customize club logo"
-                  style={{ marginLeft: 'auto', background: 'none', border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', padding: '3px 7px', fontSize: 11, color: 'var(--text-2)', lineHeight: 1.4 }}
-                >
-                  ✎ Logo
-                </button>
+                <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
+                  <button
+                    onClick={() => setShowLogoMaker(true)}
+                    title="Customize club logo"
+                    style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', padding: '3px 7px', fontSize: 11, color: 'var(--text-2)', lineHeight: 1.4 }}
+                  >
+                    ✎ Logo
+                  </button>
+                  <button
+                    onClick={() => setShowKitDesigner(true)}
+                    title="Design club kit"
+                    style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', padding: '3px 7px', fontSize: 11, color: 'var(--text-2)', lineHeight: 1.4 }}
+                  >
+                    ✎ Kit
+                  </button>
+                </div>
               </div>
               <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-1)', marginTop: 10, lineHeight: 1.3 }}>{myClub.name}</div>
               <div style={{ fontSize: 11, color: 'var(--text-2)', marginTop: 3 }}>{league.name}</div>
@@ -5043,9 +5587,15 @@ export default function League() {
                   return { ...prev, clubs: prev.clubs.map(c => c.id === myClub.id ? { ...c, tactic } : c) }
                 })} />
           )}
-          {tab === 'transfers' && myClub && <Transfers leagueId={league.id} myClub={myClub} squadSize={league.squadSize} onRefresh={refresh} />}
+          {tab === 'transfers' && myClub && <Transfers leagueId={league.id} myClub={myClub} squadSize={league.squadSize} transferWindowOpen={league.transferWindowOpen} onRefresh={refresh} />}
           {tab === 'messages'  && myClub && <Messages leagueId={league.id} myClub={myClub} league={league} currentUserId={user!.id} onRefresh={refresh} />}
           {tab === 'manage'    && isCreator && <Manage league={league} onUpdate={updated => setLeague(prev => prev ? { ...prev, ...updated } : prev)} onDelete={() => navigate('/')} />}
+          {tab === 'management' && myClub && league.status === 'ACTIVE' && (
+            <Management league={league} myClub={myClub} isCreator={isCreator} onRefresh={refresh} />
+          )}
+          {tab === 'cup' && league.hasCup && (
+            <Cup leagueId={league.id} league={league} />
+          )}
         </div>
       </main>
     </div>

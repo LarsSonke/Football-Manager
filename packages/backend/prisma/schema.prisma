@@ -64,23 +64,33 @@ model LeagueMessage {
 // ─── LEAGUE ───────────────────────────────────────────────────────────────────
 
 model League {
-  id             String       @id @default(cuid())
+  id             String          @id @default(cuid())
   name           String
   startingBudget Int
-  maxClubs       Int          @default(18)
-  seasonLength   Int          @default(34)
-  status         LeagueStatus @default(SETUP)
-  currentDay     Int          @default(0)
-  matchTime      String       @default("20:00") // UTC time for daily match simulation
-  squadSize      Int          @default(25)     // players per club drafted
-  history        Json?        // Array of SeasonSnapshot saved at end of each season
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  maxClubs       Int             @default(18)
+  seasonLength   Int             @default(34)
+  status         LeagueStatus    @default(SETUP)
+  currentDay     Int             @default(0)
+  matchTime      String          @default("20:00")
+  squadSize      Int             @default(25)
+  history        Json?
+  hasCup             Boolean         @default(false)
+  transferWindowOpen Boolean         @default(true)
+  cupBracket         Json?
+  competitionType    CompetitionType @default(LEAGUE)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 
   clubs           Club[]
   matches         Match[]
   playerInstances PlayerInstance[]
   draftSession    DraftSession?
+}
+
+enum CompetitionType {
+  LEAGUE
+  WORLD_CUP
+  CHAMPIONS_LEAGUE
 }
 
 enum LeagueStatus {
@@ -97,9 +107,18 @@ model Club {
   name   String
   budget Int
   isAI   Boolean @default(false)
-  tactic      Json?   // TacticConfig
-  logoConfig  Json?   // LogoConfig
-  physioLevel Int     @default(0)  // 0=none 1=basic 2=advanced
+  tactic      Json?
+  logoConfig  Json?
+  kitConfig   Json?
+  physioLevel    Int @default(0)  // 0-2
+  scoutLevel     Int @default(0)  // 0-3
+  coachLevel     Int @default(0)  // 0-3
+  trainerLevel   Int @default(0)  // 0-3
+  marketingLevel Int @default(0)  // 0-3
+  stadiumLevel   Int @default(0)  // 0-3
+  trainingLevel  Int @default(0)  // 0-3
+  kitLevel       Int @default(0)  // 0-3
+  vipLevel       Int @default(0)  // 0-3
 
   leagueId String
   league   League @relation(fields: [leagueId], references: [id])
@@ -274,6 +293,7 @@ model PlayerInstance {
 
   performances    MatchPerformance[]
   transferListing TransferListing?
+  boosts          PlayerBoost[]
 
   @@unique([playerId, leagueId])
 }
@@ -312,12 +332,14 @@ model Match {
   homeScore Int?
   awayScore Int?
 
-  // Snapshot of what was used — immutable audit record
+  competition String @default("LEAGUE")  // "LEAGUE" | "CUP"
+  cupRound    String?                    // "R32" | "R16" | "QF" | "SF" | "F"
+
   homeLineup Json?
   awayLineup Json?
   homeTactic Json?
   awayTactic Json?
-  stats      Json?   // { home: TeamMatchStats, away: TeamMatchStats }
+  stats      Json?
 
   simulatedAt DateTime?
 
@@ -361,6 +383,19 @@ model MatchPerformance {
   assists          Int     @default(0)
   minutesPlayed    Int     @default(0)
   positionPlayed   String?
+}
+
+// ─── PLAYER BOOSTS ───────────────────────────────────────────────────────────
+
+model PlayerBoost {
+  id            String         @id @default(cuid())
+  leagueId      String
+  instanceId    String
+  instance      PlayerInstance @relation(fields: [instanceId], references: [id])
+  stat          String         // 'pace' | 'shooting' | 'passing' | 'defending' | 'physical'
+  amount        Int
+  matchdaysLeft Int
+  createdAt     DateTime       @default(now())
 }
 
 // ─── DRAFT ────────────────────────────────────────────────────────────────────

@@ -14,6 +14,8 @@ const createSchema = z.object({
   maxClubs: z.number().int().min(2).max(18).default(18),
   seasonLength: z.number().int().min(10).max(40).default(34),
   squadSize: z.number().int().min(11).max(30).default(25),
+  hasCup: z.boolean().default(false),
+  competitionType: z.enum(['LEAGUE', 'WORLD_CUP', 'CHAMPIONS_LEAGUE']).default('LEAGUE'),
 })
 
 const joinSchema = z.object({
@@ -376,6 +378,7 @@ router.post('/:id/release', async (req: AuthRequest, res) => {
     if (!club) { res.status(403).json({ error: 'No club in this league' }); return }
     const league = await prisma.league.findUnique({ where: { id: req.params.id } })
     if (league?.status !== 'ACTIVE') { res.status(400).json({ error: 'Can only release players during an active season' }); return }
+    if (!league.transferWindowOpen) { res.status(400).json({ error: 'Transfer window is currently closed' }); return }
     if (!club.squad.some(p => p.id === instanceId)) { res.status(403).json({ error: 'Player not in your squad' }); return }
     if (club.squad.length <= 11) { res.status(400).json({ error: 'Squad too small to release — need at least 11 players' }); return }
 
@@ -397,6 +400,7 @@ router.post('/:id/pickup', async (req: AuthRequest, res) => {
     const league = await prisma.league.findUnique({ where: { id: req.params.id } })
     if (!league) { res.status(404).json({ error: 'League not found' }); return }
     if (league.status !== 'ACTIVE') { res.status(400).json({ error: 'Can only sign players during an active season' }); return }
+    if (!league.transferWindowOpen) { res.status(400).json({ error: 'Transfer window is currently closed' }); return }
 
     const club = await prisma.club.findFirst({
       where: { leagueId: req.params.id, userId: req.userId! },
@@ -458,6 +462,7 @@ router.post('/:id/list', async (req: AuthRequest, res) => {
   try {
     const league = await prisma.league.findUnique({ where: { id: req.params.id } })
     if (league?.status !== 'ACTIVE') { res.status(400).json({ error: 'Can only list players during an active season' }); return }
+    if (!league.transferWindowOpen) { res.status(400).json({ error: 'Transfer window is currently closed' }); return }
 
     const club = await prisma.club.findFirst({
       where: { leagueId: req.params.id, userId: req.userId! },
@@ -500,6 +505,7 @@ router.post('/:id/buy/:instanceId', async (req: AuthRequest, res) => {
   try {
     const league = await prisma.league.findUnique({ where: { id: req.params.id } })
     if (league?.status !== 'ACTIVE') { res.status(400).json({ error: 'Can only buy players during an active season' }); return }
+    if (!league.transferWindowOpen) { res.status(400).json({ error: 'Transfer window is currently closed' }); return }
 
     const listing = await prisma.transferListing.findUnique({
       where: { instanceId: req.params.instanceId },
@@ -582,6 +588,106 @@ router.post('/:id/draft/start', async (req: AuthRequest, res) => {
   } catch (err: any) {
     res.status(400).json({ error: err.message })
   }
+})
+
+// ─── Club upgrades ────────────────────────────────────────────────────────────
+
+const upgradeSchema = z.object({
+  type: z.enum(['scout', 'coach', 'trainer', 'marketing', 'stadium', 'training', 'kit', 'vip']),
+})
+
+router.post('/:id/upgrade', async (req: AuthRequest, res) => {
+  const parsed = upgradeSchema.safeParse(req.body)
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.issues[0].message }); return }
+  try {
+    const club = await leagueService.upgradeClub(req.params.id, req.userId!, parsed.data.type)
+    res.json(club)
+  } catch (err: any) {
+    res.status(400).json({ error: err.message })
+  }
+})
+
+// ─── Stat boosts ─────────────────────────────────────────────────────────────
+
+const boostSchema = z.object({
+  instanceId: z.string(),
+  stat: z.enum(['pace', 'shooting', 'passing', 'dribbling', 'defending', 'physical']),
+})
+
+router.post('/:id/boost', async (req: AuthRequest, res) => {
+  const parsed = boostSchema.safeParse(req.body)
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.issues[0].message }); return }
+  try {
+    const result = await leagueService.purchaseBoost(req.params.id, req.userId!, parsed.data.instanceId, parsed.data.stat)
+    res.json(result)
+  } catch (err: any) {
+    res.status(400).json({ error: err.message })
+  }
+})
+
+// ─── Transfer window ──────────────────────────────────────────────────────────
+
+router.patch('/:id/transfer-window', async (req: AuthRequest, res) => {
+  const parsed = z.object({ open: z.boolean() }).safeParse(req.body)
+  if (!parsed.success) { res.status(400).json({ error: 'open (boolean) required' }); return }
+  try {
+    const league = await leagueService.setTransferWindow(req.params.id, req.userId!, parsed.data.open)
+    res.json({ transferWindowOpen: (league as any).transferWindowOpen })
+  } catch (err: any) {
+    res.status(400).json({ error: err.message })
+  }
+})
+
+// ─── Scout report ─────────────────────────────────────────────────────────────
+
+router.get('/:id/scout/:clubId', async (req: AuthRequest, res) => {
+  try {
+    const report = await leagueService.getScoutReport(req.params.id, req.userId!, req.params.clubId)
+    res.json(report)
+  } catch (err: any) {
+    res.status(400).json({ error: err.message })
+  }
+})
+
+// ─── Coach advice ─────────────────────────────────────────────────────────────
+
+router.get('/:id/coach-advice', async (req: AuthRequest, res) => {
+  try {
+    const advice = await leagueService.getCoachAdvice(req.params.id, req.userId!)
+    res.json(advice)
+  } catch (err: any) {
+    res.status(400).json({ error: err.message })
+  }
+})
+
+// ─── Cup bracket ─────────────────────────────────────────────────────────────
+
+router.get('/:id/cup', async (req: AuthRequest, res) => {
+  try {
+    const bracket = await leagueService.getCupBracket(req.params.id)
+    res.json(bracket)
+  } catch (err: any) {
+    res.status(400).json({ error: err.message })
+  }
+})
+
+// ─── Kit config ───────────────────────────────────────────────────────────────
+
+router.patch('/:id/kit', async (req: AuthRequest, res) => {
+  try {
+    const club = await leagueService.saveKit(req.params.id, req.userId!, req.body)
+    res.json({ ok: true, kitConfig: club.kitConfig })
+  } catch (err: any) {
+    res.status(400).json({ error: err.message })
+  }
+})
+
+// ─── Match events (rewatch) ───────────────────────────────────────────────────
+
+router.get('/:id/matches/:matchId/events', async (req: AuthRequest, res) => {
+  const data = await leagueService.getMatchEvents(req.params.id, req.params.matchId)
+  if (!data) { res.status(404).json({ error: 'Match not found or not yet played' }); return }
+  res.json(data)
 })
 
 export default router

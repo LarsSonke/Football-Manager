@@ -23,6 +23,7 @@ interface CreateForm {
   maxClubs: number
   seasonLength: number
   squadSize: number
+  hasCup: boolean
 }
 
 const STATUS_BADGE: Record<string, string> = {
@@ -56,6 +57,7 @@ export default function Dashboard() {
     maxClubs: 18,
     seasonLength: 34,
     squadSize: 25,
+    hasCup: false,
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -72,7 +74,7 @@ export default function Dashboard() {
       const r = await api.get('/leagues/mine')
       setLeagues(r.data)
       setPanel('none')
-      setForm({ name: '', startingBudget: 100000, maxClubs: 18, seasonLength: 34, squadSize: 25 })
+      setForm({ name: '', startingBudget: 100000, maxClubs: 18, seasonLength: 34, squadSize: 25, hasCup: false })
     } catch (err: any) {
       setError(err.response?.data?.error ?? 'Failed to create league')
     } finally {
@@ -212,6 +214,17 @@ export default function Dashboard() {
                   onChange={(e) => setForm({ ...form, squadSize: Number(e.target.value) })}
                   style={{ padding: 0, height: 4, background: 'none', border: 'none', boxShadow: 'none', cursor: 'pointer' }}
                 />
+              </div>
+
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', userSelect: 'none' }}>
+                  <input type="checkbox" checked={form.hasCup} onChange={e => setForm({ ...form, hasCup: e.target.checked })}
+                    style={{ width: 16, height: 16, cursor: 'pointer', accentColor: 'var(--green)' }} />
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-1)' }}>Fantasy Cup</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-2)' }}>Adds a knockout cup tournament alongside the league</div>
+                  </div>
+                </label>
               </div>
 
               <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>

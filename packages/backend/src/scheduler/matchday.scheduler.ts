@@ -1,7 +1,9 @@
 import cron from 'node-cron'
 import { prisma } from '../prisma'
 import { simulateMatch, adaptTacticForOpponent, buildOpponentProfile } from '../simulation/engine'
-import { applyMatchIncome, checkSponsorMissions, applyMatchdayAwards } from '../services/league.service'
+import { applyMatchIncome } from '../services/management.service'
+import { checkSponsorMissions } from '../services/sponsor.service'
+import { applyMatchdayAwards } from '../services/match.service'
 import { checkAndAdvanceCup } from '../simulation/cup'
 import { getIO } from '../websocket'
 

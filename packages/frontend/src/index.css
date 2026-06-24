@@ -281,10 +281,10 @@ input::placeholder { color: var(--text-3); }
 
 /* ── Hero speed lines ────────────────────────────────────────────────────── */
 .hero-speed-lines {
-  position: absolute; inset: 0; pointer-events: none; opacity: .14;
-  background: repeating-conic-gradient(from 0deg at 60% 52%, #fff 0deg .5deg, transparent .5deg 3.4deg);
-  -webkit-mask-image: radial-gradient(circle at 60% 52%, transparent 80px, #000 220px);
-  mask-image: radial-gradient(circle at 60% 52%, transparent 80px, #000 220px);
+  position: absolute; inset: 0; pointer-events: none; opacity: .16;
+  background: repeating-conic-gradient(from 0deg at 64% 52%, #fff 0deg .5deg, transparent .5deg 3.4deg);
+  -webkit-mask: radial-gradient(circle at 64% 52%, transparent 90px, #000 230px);
+  mask: radial-gradient(circle at 64% 52%, transparent 90px, #000 230px);
 }
 
 /* ── Manga entrance animations ───────────────────────────────────────────── */

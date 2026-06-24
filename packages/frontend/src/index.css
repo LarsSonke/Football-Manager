@@ -279,6 +279,14 @@ input::placeholder { color: var(--text-3); }
   font-size: 1.4em; color: var(--text-3);
 }
 
+/* ── Hero speed lines ────────────────────────────────────────────────────── */
+.hero-speed-lines {
+  position: absolute; inset: 0; pointer-events: none; opacity: .14;
+  background: repeating-conic-gradient(from 0deg at 60% 52%, #fff 0deg .5deg, transparent .5deg 3.4deg);
+  -webkit-mask-image: radial-gradient(circle at 60% 52%, transparent 80px, #000 220px);
+  mask-image: radial-gradient(circle at 60% 52%, transparent 80px, #000 220px);
+}
+
 /* ── Manga entrance animations ───────────────────────────────────────────── */
 @keyframes mgSlam { from{opacity:0;transform:scale(1.06)} to{opacity:1;transform:scale(1)} }
 @keyframes mgInL  { from{opacity:0;transform:translateX(-28px) skewX(-6deg)} to{opacity:1;transform:translateX(0) skewX(0)} }

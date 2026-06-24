@@ -6,7 +6,7 @@ import { KitSvg, type KitConfig } from '../../components/KitSvg'
 import {
   useIsMobile, getBadgeColor, posClass, squadAvgOvr,
   type LeagueData, type MatchData, type ClubData, type AwardEntry, type MatchdayAwards,
-  type AvailableDeal, type ActiveDeal,
+  type AvailableDeal, type ActiveDeal, type Tab,
 } from './types'
 
 // ─── TOTWPitch ────────────────────────────────────────────────────────────────
@@ -87,13 +87,14 @@ function SectionHeader({ title, right }: { title: string; right?: string }) {
 
 // ─── Overview ─────────────────────────────────────────────────────────────────
 
-export default function Overview({ league, matches, myClub, awards, onPhysioUpgrade, onRefresh }: {
+export default function Overview({ league, matches, myClub, awards, onPhysioUpgrade, onRefresh, onSwitchTab }: {
   league: LeagueData
   matches: MatchData[]
   myClub: ClubData | undefined
   awards: MatchdayAwards | null
   onPhysioUpgrade: () => void
   onRefresh: () => void
+  onSwitchTab?: (tab: Tab) => void
 }) {
   const isMobile = useIsMobile()
   const clubMap = Object.fromEntries(league.clubs.map(c => [c.id, c]))
@@ -159,8 +160,111 @@ export default function Overview({ league, matches, myClub, awards, onPhysioUpgr
     return s + (ms > os ? 3 : ms === os ? 1 : 0)
   }, 0)
 
+  const topPlayer = squad.length > 0 ? [...squad].sort((a, b) => b.player.overall - a.player.overall)[0] : null
+
+  const heroTagline = (() => {
+    if (!oppClub || !myClub) return 'The next chapter begins.'
+    const myPos = myPosition ?? sorted.length
+    const oppPos = sorted.findIndex(c => c.id === oppClub.id) + 1
+    const gapToTop = myPos > 1 ? sorted[0].points - myClub.points : 0
+    if (myPos === 1) return "Top of the table. Don't let up now."
+    if (gapToTop <= 3) return `${gapToTop} point${gapToTop !== 1 ? 's' : ''} off the top — win and it's alive.`
+    if (oppPos <= 2) return `A clash against the ${oppPos === 1 ? 'leaders' : 'contenders'}. This is a test.`
+    if (last5.length >= 3 && formPts >= 7) return "Good run of form. Don't let up now."
+    if (last5.length >= 3 && formPts <= 3) return 'Backs to the wall. This side needs a result.'
+    return `${isHome ? 'Home' : 'Away'} vs ${oppClub.name}. Three points change everything.`
+  })()
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+      {/* ══════════════════════════════ HERO: NEXT MATCHDAY ══════════════════════════════ */}
+      {myClub && nextMatch && league.status === 'ACTIVE' && (
+        <section style={{ position: 'relative', border: '3px solid var(--paper)', background: 'var(--steel)', overflow: 'hidden', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.32fr 1fr', minHeight: 380, animation: 'mgSlam .5s cubic-bezier(.2,.8,.3,1) both' }}>
+          {/* Speed lines burst */}
+          <div className="hero-speed-lines" />
+
+          {/* LEFT: headline + buttons */}
+          <div style={{ position: 'relative', padding: '28px 30px 26px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', zIndex: 2 }}>
+            <div>
+              <div style={{ display: 'inline-flex', alignItems: 'center', background: 'var(--accent)', padding: '5px 13px', transform: 'skewX(-9deg)' }}>
+                <span style={{ fontFamily: 'var(--font-narrow)', fontSize: 11, fontWeight: 700, letterSpacing: '.24em', textTransform: 'uppercase', transform: 'skewX(9deg)', color: '#fff' }}>
+                  Matchday {nextMatch.matchday} · {isHome ? 'Home' : 'Away'}
+                </span>
+              </div>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: 74, lineHeight: .82, marginTop: 16, letterSpacing: '-.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {myClub.name.toUpperCase()}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 6, overflow: 'hidden' }}>
+                <span style={{ fontFamily: 'var(--font-display)', fontSize: 26, color: 'var(--accent)', transform: 'skewX(-8deg)', flexShrink: 0 }}>VS</span>
+                <span style={{ fontFamily: 'var(--font-display)', fontSize: 48, lineHeight: .82, WebkitTextStroke: '2px var(--paper)', color: 'transparent', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {(oppClub?.name ?? '???').toUpperCase()}
+                </span>
+              </div>
+              <div style={{ fontFamily: 'var(--font-narrow)', fontSize: 12, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--ash)', marginTop: 16, lineHeight: 1.55, maxWidth: 400 }}>
+                {heroTagline}
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'stretch', gap: 10, marginTop: 22 }}>
+              <Link
+                to={`/league/${league.id}/match/${nextMatch.id}`}
+                style={{ display: 'flex', alignItems: 'center', padding: '14px 24px', textDecoration: 'none', background: 'var(--accent)', color: '#fff', clipPath: 'polygon(0 0, 100% 0, 92% 100%, 0 100%)', transition: 'transform .2s' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.transform = 'translateX(4px)' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.transform = '' }}
+              >
+                <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 900, letterSpacing: '.1em', textTransform: 'uppercase' }}>Next Match</span>
+              </Link>
+              <button
+                onClick={() => onSwitchTab?.('tactics')}
+                style={{ display: 'flex', alignItems: 'center', padding: '14px 20px', background: 'transparent', border: '2px solid var(--paper)', color: 'var(--paper)', cursor: 'pointer', transition: 'background .2s, color .2s' }}
+                onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.background = 'var(--paper)'; b.style.color = 'var(--ink)' }}
+                onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.background = 'transparent'; b.style.color = 'var(--paper)' }}
+              >
+                <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 900, letterSpacing: '.1em', textTransform: 'uppercase' }}>Team Sheet</span>
+              </button>
+            </div>
+          </div>
+
+          {/* RIGHT: top player portrait */}
+          <div style={{ position: 'relative', borderLeft: isMobile ? 'none' : '3px solid var(--paper)', borderTop: isMobile ? '3px solid var(--paper)' : 'none', background: 'var(--ink)', overflow: 'hidden', minHeight: isMobile ? 220 : 'auto' }}>
+            {topPlayer?.player.photoUrl && (
+              <div style={{ position: 'absolute', inset: 0, transform: 'skewX(-3deg) scale(1.06)', transformOrigin: 'top right' }}>
+                <img src={topPlayer.player.photoUrl} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', filter: 'grayscale(1) contrast(1.15)' }} />
+              </div>
+            )}
+            {/* Ghost opponent name when no photo */}
+            {!topPlayer?.player.photoUrl && (
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 20px', overflow: 'hidden' }}>
+                <span style={{ fontFamily: 'var(--font-display)', fontSize: 56, color: 'rgba(244,241,234,.05)', textAlign: 'center', lineHeight: .88, wordBreak: 'break-word' }}>
+                  {(oppClub?.name ?? '').toUpperCase()}
+                </span>
+              </div>
+            )}
+            {/* Gradient overlay */}
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(120deg, rgba(8,8,10,.8), transparent 42%, transparent 70%, rgba(8,8,10,.9))' }} />
+            {/* Accent corner triangle */}
+            <div style={{ position: 'absolute', right: 0, top: 0, width: 0, height: 0, borderTop: '90px solid var(--accent)', borderLeft: '90px solid transparent' }} />
+            {/* Big OVR */}
+            <div style={{ position: 'absolute', left: 18, top: 18, zIndex: 1 }}>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: 68, lineHeight: .78, color: 'var(--paper)' }}>
+                {topPlayer?.player.overall ?? squadAvgOvr(myClub) ?? '–'}
+              </div>
+              <div style={{ fontFamily: 'var(--font-narrow)', fontSize: 11, letterSpacing: '.3em', textTransform: 'uppercase', color: 'var(--accent)', marginTop: 2 }}>Overall</div>
+            </div>
+            {/* Name tag */}
+            {topPlayer && (
+              <div style={{ position: 'absolute', left: 0, bottom: 18, background: 'var(--paper)', color: 'var(--ink)', padding: '8px 20px 8px 14px', clipPath: 'polygon(0 0, 100% 0, 90% 100%, 0 100%)', zIndex: 1 }}>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: 26, lineHeight: .84 }}>
+                  {topPlayer.player.name.split(' ').slice(-1)[0].toUpperCase()}
+                </div>
+                <div style={{ fontFamily: 'var(--font-narrow)', fontSize: 10, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--accent)', fontWeight: 700 }}>
+                  {topPlayer.player.position} · OVR {topPlayer.player.overall}
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* ══════════════════════ SECOND ROW: stats / rival / standing ══════════════════════ */}
       {myClub && (

@@ -843,7 +843,7 @@ export default function League() {
 
         {/* Page content */}
         <div style={{ padding: isMobile ? '16px 12px' : '24px 28px', flex: 1 }}>
-          {tab === 'overview'  && <Overview league={league} matches={matches} myClub={myClub} awards={awards} onPhysioUpgrade={handlePhysioUpgrade} onRefresh={refresh} />}
+          {tab === 'overview'  && <Overview league={league} matches={matches} myClub={myClub} awards={awards} onPhysioUpgrade={handlePhysioUpgrade} onRefresh={refresh} onSwitchTab={setTab} />}
           {tab === 'squad'     && (myClub ? <Squad squad={myClub.squad} physioLevel={myClub.physioLevel} budget={myClub.budget} nextMatchday={nextMatchday} onHeal={handleHeal} onTrain={handleTrain} /> : <p style={{ color: 'var(--text-2)' }}>You don't have a club in this league.</p>)}
           {tab === 'fixtures'  && (matches.length === 0 ? <div style={{ textAlign: 'center', padding: '64px 0', color: 'var(--text-2)' }}><div style={{ fontSize: 36, marginBottom: 10 }}>📅</div><p>Fixtures will appear after the draft.</p></div> : <Fixtures matches={matches} clubs={league.clubs} myClubId={myClub?.id} currentDay={league.currentDay} leagueId={league.id} />)}
           {tab === 'standings' && <Standings clubs={league.clubs} myClubId={myClub?.id} leagueId={league.id} prevPositions={prevPositions} matches={matches} history={league.history} />}

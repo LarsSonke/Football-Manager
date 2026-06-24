@@ -6,6 +6,8 @@ import { useAuth } from '../stores/auth.store'
 import { api } from '../api/client'
 import type { DraftPickEvent } from '@football/shared'
 import { flagUrl } from '../utils/flagCodes'
+import { posClass, ovrColor } from '../utils/helpers'
+import { Navbar } from '../components/Navbar'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -93,13 +95,6 @@ const POS_GROUPS: Record<string, string[]> = {
   ATT: ['LW', 'RW', 'CF', 'ST'],
 }
 
-function posClass(pos: string): string {
-  if (pos === 'GK') return 'pos pos-gk'
-  if (['CB','LB','RB'].includes(pos)) return 'pos pos-def'
-  if (['CDM','CM','CAM','LM','RM'].includes(pos)) return 'pos pos-mid'
-  return 'pos pos-att'
-}
-
 function statColor(v: number, cmp?: number) {
   if (cmp !== undefined) return v > cmp ? 'var(--green)' : v < cmp ? 'var(--red)' : 'var(--text-2)'
   return v >= 85 ? 'var(--green)' : v >= 75 ? 'var(--blue)' : v >= 65 ? 'var(--text-1)' : 'var(--text-2)'
@@ -108,10 +103,6 @@ function statColor(v: number, cmp?: number) {
 function statBarColor(v: number, cmp?: number) {
   if (cmp !== undefined) return v > cmp ? 'var(--green)' : v < cmp ? 'var(--red)' : 'var(--border-md)'
   return v >= 85 ? 'var(--green)' : v >= 75 ? 'var(--blue)' : 'var(--border-md)'
-}
-
-function ovrColor(ovr: number) {
-  return ovr >= 85 ? '#e9c46a' : ovr >= 75 ? '#36e27e' : 'var(--text-1)'
 }
 
 // ─── HoverTag (badge with portal tooltip) ────────────────────────────────────
@@ -755,13 +746,9 @@ export default function Draft() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-base)' }}>
       {/* Nav */}
-      <nav className="nav">
-        <button className="btn btn-outline" style={{ fontSize: 12, padding: '5px 10px' }} onClick={() => navigate(`/league/${leagueId}`)}>← League</button>
-        <Link to="/" className="nav-logo"><img src="/tactixlogo.png" alt="Football Manager" style={{ height: 30, display: 'block' }} /></Link>
-        <div className="nav-spacer" />
+      <Navbar backTo={`/league/${leagueId}`} backLabel="← League">
         {myClub && <span style={{ fontSize: 12, color: 'var(--text-2)' }}>💰 €{(myClub.budget / 1000).toFixed(0)}M</span>}
-        <span className="nav-user">{user?.username}</span>
-      </nav>
+      </Navbar>
 
       {/* Header bar */}
       <div style={{ background: 'linear-gradient(110deg, rgba(54,226,126,0.12) 0%, var(--bg-card) 60%)', border: '1px solid rgba(54,226,126,0.3)', borderTop: 'none', borderLeft: 'none', borderRight: 'none', padding: '12px 24px' }}>

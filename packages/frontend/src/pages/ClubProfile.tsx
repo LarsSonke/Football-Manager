@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { api } from '../api/client'
 import { ClubBadge, type LogoConfig } from '../components/ClubBadge'
+import { posClass } from '../utils/helpers'
+import { Navbar } from '../components/Navbar'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -37,13 +39,6 @@ interface ClubProfileData {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function posClass(pos: string): string {
-  if (pos === 'GK') return 'pos-badge pos-gk'
-  if (['CB', 'LB', 'RB'].includes(pos)) return 'pos-badge pos-def'
-  if (['CDM', 'CM', 'CAM', 'LM', 'RM'].includes(pos)) return 'pos-badge pos-mid'
-  return 'pos-badge pos-att'
-}
 
 const POS_ORDER = ['GK', 'CB', 'LB', 'RB', 'CDM', 'CM', 'CAM', 'LM', 'RM', 'LW', 'RW', 'CF', 'ST']
 const POS_GROUP: Record<string, string> = {
@@ -100,19 +95,7 @@ export default function ClubProfile() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-base)' }}>
       {/* Nav */}
-      <nav className="nav">
-        <button
-          onClick={() => navigate(-1)}
-          style={{ background: 'none', border: 'none', color: 'var(--text-2)', cursor: 'pointer', fontSize: 20, padding: '0 8px', display: 'flex', alignItems: 'center' }}
-        >
-          ‹
-        </button>
-        <Link to={`/league/${leagueId}`} className="nav-logo" style={{ marginLeft: 4 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-2)' }}>League</span>
-        </Link>
-        <div className="nav-spacer" />
-        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)' }}>{club.name}</span>
-      </nav>
+      <Navbar backTo={`/league/${leagueId}`} backLabel="← League" />
 
       <div className="page" style={{ maxWidth: 720 }}>
 

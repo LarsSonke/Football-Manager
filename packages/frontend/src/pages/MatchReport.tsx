@@ -2,13 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams, Link, useLocation, useNavigate } from 'react-router-dom'
 import { api } from '../api/client'
 import { ClubBadge, type LogoConfig } from '../components/ClubBadge'
-
-function getBadgeColor(name: string): string {
-  const palette = ['#27cdff','#36e27e','#e9c46a','#e8806a','#f97316','#a78bfa','#34d399','#fbbf24']
-  let h = 0
-  for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h)
-  return palette[Math.abs(h) % palette.length]
-}
+import { getBadgeColor, ratingColor, posClass } from '../utils/helpers'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -57,21 +51,6 @@ interface MatchDetail {
 }
 
 // ─── Small helpers ────────────────────────────────────────────────────────────
-
-function ratingColor(r: number): string {
-  if (r >= 8.5) return '#36e27e'
-  if (r >= 7.5) return '#a8e36b'
-  if (r >= 6.5) return '#e9c46a'
-  if (r >= 6.0) return '#f0a26a'
-  return '#e8806a'
-}
-
-function posClass(pos: string): string {
-  if (pos === 'GK')                               return 'pos pos-gk'
-  if (['CB','LB','RB'].includes(pos))             return 'pos pos-def'
-  if (['CDM','CM','CAM','LM','RM'].includes(pos)) return 'pos pos-mid'
-  return 'pos pos-att'
-}
 
 // Two-sided bar comparing home vs away value
 function StatRow({ label, home, away, format = (n: number) => String(n) }: {

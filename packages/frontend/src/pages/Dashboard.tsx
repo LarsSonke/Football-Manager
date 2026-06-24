@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../stores/auth.store'
 import { api } from '../api/client'
+import { Navbar } from '../components/Navbar'
 
 interface LeagueEntry {
   id: string
@@ -41,7 +42,7 @@ const STATUS_LABEL: Record<string, string> = {
 }
 
 export default function Dashboard() {
-  const { user, logout } = useAuth()
+  const { logout } = useAuth()
   const navigate = useNavigate()
   const [leagues, setLeagues] = useState<LeagueEntry[]>([])
   const [copiedId, setCopiedId] = useState<string | null>(null)
@@ -106,16 +107,11 @@ export default function Dashboard() {
   return (
     <div>
       {/* Nav */}
-      <nav className="nav">
-        <Link to="/" className="nav-logo">
-          <img src="/tactixlogo.png" alt="Football Manager" style={{ height: 32, display: 'block' }} />
-        </Link>
-        <div className="nav-spacer" />
-        <span className="nav-user">{user?.username}</span>
+      <Navbar>
         <button className="btn btn-outline" onClick={logout} style={{ fontSize: 12, padding: '6px 12px' }}>
           Sign out
         </button>
-      </nav>
+      </Navbar>
 
       <div className="page">
         {/* Header row */}

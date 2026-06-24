@@ -13,12 +13,12 @@ export function Navbar({ backTo, backLabel, children }: NavbarProps) {
   return (
     <nav className="nav">
       {backTo && (
-        <Link to={backTo} className="btn btn-outline" style={{ fontSize: 12, padding: '5px 10px' }}>
-          {backLabel ?? '← Back'}
+        <Link to={backTo} className="btn btn-outline" style={{ fontSize: 11, padding: '5px 14px' }}>
+          ← {backLabel ?? 'Back'}
         </Link>
       )}
       <Link to="/" className="nav-logo">
-        <img src="/logo.png" alt="Football Manager" style={{ height: 32, display: 'block' }} />
+        <img src="/logo.png" alt="Football Manager" style={{ height: 28, display: 'block' }} />
       </Link>
       <div className="nav-spacer" />
       {user && <span className="nav-user">{user.username}</span>}

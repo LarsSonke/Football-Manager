@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import type { CSSProperties } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../stores/auth.store'
 import { api } from '../api/client'
@@ -39,6 +40,17 @@ const STATUS_LABEL: Record<string, string> = {
   DRAFTING: 'Drafting',
   ACTIVE: 'Live',
   FINISHED: 'Finished',
+}
+
+const LABEL: CSSProperties = {
+  fontFamily: 'var(--font-narrow)',
+  fontSize: 10,
+  color: 'var(--text-2)',
+  fontWeight: 700,
+  textTransform: 'uppercase',
+  letterSpacing: '0.14em',
+  display: 'block',
+  marginBottom: 6,
 }
 
 export default function Dashboard() {
@@ -106,25 +118,29 @@ export default function Dashboard() {
 
   return (
     <div>
-      {/* Nav */}
       <Navbar>
-        <button className="btn btn-outline" onClick={logout} style={{ fontSize: 12, padding: '6px 12px' }}>
+        <button className="btn btn-outline" onClick={logout} style={{ fontSize: 11, padding: '6px 14px' }}>
           Sign out
         </button>
       </Navbar>
 
       <div className="page">
-        {/* Header row */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
+
+        {/* ── Chapter header ── */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 28 }}>
           <div>
-            <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 30, fontWeight: 800, letterSpacing: 0.5 }}>
+            <div style={{ fontFamily: 'var(--font-narrow)', fontSize: 10, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--accent)', fontWeight: 700, marginBottom: 4 }}>
+              Your Leagues
+            </div>
+            <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 42, fontWeight: 400, letterSpacing: '.01em', lineHeight: 0.88 }}>
               MY LEAGUES
             </h1>
-            <p style={{ color: 'var(--text-2)', fontSize: 13, marginTop: 3 }}>
-              {leagues.length === 0 ? 'No leagues yet — create one or join a friend\'s' : `${leagues.length} league${leagues.length > 1 ? 's' : ''}`}
+            <p style={{ color: 'var(--text-2)', fontSize: 12, marginTop: 8, fontFamily: 'var(--font-narrow)', letterSpacing: '.06em' }}>
+              {leagues.length === 0 ? 'No leagues yet — create one or invite friends' : `${leagues.length} league${leagues.length > 1 ? 's' : ''} active`}
             </p>
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <span style={{ flex: 1, height: 2, background: 'var(--paper)', marginTop: 14 }} />
+          <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
             <button className="btn btn-ghost" onClick={() => setPanel(panel === 'join' ? 'none' : 'join')}>
               Join League
             </button>
@@ -136,147 +152,133 @@ export default function Dashboard() {
 
         {error && <p className="error-text" style={{ marginBottom: 16 }}>{error}</p>}
 
-        {/* Create panel */}
+        {/* ── Create panel ── */}
         {panel === 'create' && (
-          <div className="card" style={{ marginBottom: 24, padding: 0 }}>
-            <div className="card-header">
-              <span className="accent-bar" />
-              <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Create League</span>
+          <div style={{ border: '2px solid var(--paper)', background: 'var(--steel)', marginBottom: 24 }}>
+            <div style={{ background: 'var(--paper)', color: 'var(--ink)', padding: '10px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: 18, letterSpacing: '.02em' }}>CREATE LEAGUE</span>
             </div>
             <div style={{ padding: 24 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ fontSize: 11, color: 'var(--text-2)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 6 }}>
-                  League name
-                </label>
-                <input
-                  placeholder="e.g. Friday Night League"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                />
-              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
 
-              <div>
-                <label style={{ fontSize: 11, color: 'var(--text-2)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 6 }}>
-                  Starting budget
-                </label>
-                <div style={{ color: 'var(--green)', fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, marginBottom: 6 }}>
-                  €{(form.startingBudget / 1000).toFixed(0)}M
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label style={LABEL}>League name</label>
+                  <input
+                    placeholder="e.g. Friday Night League"
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  />
                 </div>
-                <input type="range" min={10000} max={500000} step={10000}
-                  value={form.startingBudget}
-                  onChange={(e) => setForm({ ...form, startingBudget: Number(e.target.value) })}
-                  style={{ padding: 0, height: 4, background: 'none', border: 'none', boxShadow: 'none', cursor: 'pointer' }}
-                />
-              </div>
 
-              <div>
-                <label style={{ fontSize: 11, color: 'var(--text-2)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 6 }}>
-                  Clubs
-                </label>
-                <div style={{ color: 'var(--text-1)', fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, marginBottom: 6 }}>
-                  {form.maxClubs} clubs
-                </div>
-                <input type="range" min={2} max={18} step={2}
-                  value={form.maxClubs}
-                  onChange={(e) => setForm({ ...form, maxClubs: Number(e.target.value) })}
-                  style={{ padding: 0, height: 4, background: 'none', border: 'none', boxShadow: 'none', cursor: 'pointer' }}
-                />
-              </div>
-
-              <div>
-                <label style={{ fontSize: 11, color: 'var(--text-2)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 6 }}>
-                  Season length
-                </label>
-                <div style={{ color: 'var(--text-1)', fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, marginBottom: 6 }}>
-                  {form.seasonLength} days
-                </div>
-                <input type="range" min={10} max={40} step={2}
-                  value={form.seasonLength}
-                  onChange={(e) => setForm({ ...form, seasonLength: Number(e.target.value) })}
-                  style={{ padding: 0, height: 4, background: 'none', border: 'none', boxShadow: 'none', cursor: 'pointer' }}
-                />
-              </div>
-
-              <div>
-                <label style={{ fontSize: 11, color: 'var(--text-2)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 6 }}>
-                  Squad size
-                </label>
-                <div style={{ color: 'var(--text-1)', fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 700, marginBottom: 6 }}>
-                  {form.squadSize} players
-                </div>
-                <input type="range" min={11} max={30} step={1}
-                  value={form.squadSize}
-                  onChange={(e) => setForm({ ...form, squadSize: Number(e.target.value) })}
-                  style={{ padding: 0, height: 4, background: 'none', border: 'none', boxShadow: 'none', cursor: 'pointer' }}
-                />
-              </div>
-
-              <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', userSelect: 'none' }}>
-                  <input type="checkbox" checked={form.hasCup} onChange={e => setForm({ ...form, hasCup: e.target.checked })}
-                    style={{ width: 16, height: 16, cursor: 'pointer', accentColor: 'var(--green)' }} />
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-1)' }}>Fantasy Cup</div>
-                    <div style={{ fontSize: 11, color: 'var(--text-2)' }}>Adds a knockout cup tournament alongside the league</div>
+                <div>
+                  <label style={LABEL}>Starting budget</label>
+                  <div style={{ color: 'var(--accent)', fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 400, marginBottom: 8, lineHeight: 1 }}>
+                    €{(form.startingBudget / 1000).toFixed(0)}M
                   </div>
-                </label>
-              </div>
+                  <input type="range" min={10000} max={500000} step={10000}
+                    value={form.startingBudget}
+                    onChange={(e) => setForm({ ...form, startingBudget: Number(e.target.value) })}
+                    style={{ padding: 0, height: 4, background: 'none', border: 'none', boxShadow: 'none', cursor: 'pointer' }}
+                  />
+                </div>
 
-              <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
-                <button className="btn btn-outline" onClick={() => setPanel('none')}>Cancel</button>
-                <button className="btn btn-green" onClick={createLeague} disabled={loading || !form.name}>
-                  {loading ? 'Creating...' : 'Create League'}
-                </button>
+                <div>
+                  <label style={LABEL}>Clubs</label>
+                  <div style={{ color: 'var(--text-1)', fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 400, marginBottom: 8, lineHeight: 1 }}>
+                    {form.maxClubs} clubs
+                  </div>
+                  <input type="range" min={2} max={18} step={2}
+                    value={form.maxClubs}
+                    onChange={(e) => setForm({ ...form, maxClubs: Number(e.target.value) })}
+                    style={{ padding: 0, height: 4, background: 'none', border: 'none', boxShadow: 'none', cursor: 'pointer' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={LABEL}>Season length</label>
+                  <div style={{ color: 'var(--text-1)', fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 400, marginBottom: 8, lineHeight: 1 }}>
+                    {form.seasonLength} days
+                  </div>
+                  <input type="range" min={10} max={40} step={2}
+                    value={form.seasonLength}
+                    onChange={(e) => setForm({ ...form, seasonLength: Number(e.target.value) })}
+                    style={{ padding: 0, height: 4, background: 'none', border: 'none', boxShadow: 'none', cursor: 'pointer' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={LABEL}>Squad size</label>
+                  <div style={{ color: 'var(--text-1)', fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 400, marginBottom: 8, lineHeight: 1 }}>
+                    {form.squadSize} players
+                  </div>
+                  <input type="range" min={11} max={30} step={1}
+                    value={form.squadSize}
+                    onChange={(e) => setForm({ ...form, squadSize: Number(e.target.value) })}
+                    style={{ padding: 0, height: 4, background: 'none', border: 'none', boxShadow: 'none', cursor: 'pointer' }}
+                  />
+                </div>
+
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', userSelect: 'none' }}>
+                    <input type="checkbox" checked={form.hasCup} onChange={e => setForm({ ...form, hasCup: e.target.checked })}
+                      style={{ width: 16, height: 16, cursor: 'pointer', accentColor: 'var(--accent)' }} />
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)', fontFamily: 'var(--font-narrow)', letterSpacing: '.08em', textTransform: 'uppercase' }}>Fantasy Cup</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-2)', marginTop: 2 }}>Adds a knockout cup tournament alongside the league</div>
+                    </div>
+                  </label>
+                </div>
+
+                <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
+                  <button className="btn btn-outline" onClick={() => setPanel('none')}>Cancel</button>
+                  <button className="btn btn-green" onClick={createLeague} disabled={loading || !form.name}>
+                    {loading ? 'Creating...' : 'Create League'}
+                  </button>
+                </div>
               </div>
-            </div>
             </div>
           </div>
         )}
 
-        {/* Join panel */}
+        {/* ── Join panel ── */}
         {panel === 'join' && (
-          <div className="card" style={{ marginBottom: 24, padding: 0 }}>
-            <div className="card-header">
-              <span className="accent-bar" />
-              <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Join League</span>
+          <div style={{ border: '2px solid var(--paper)', background: 'var(--steel)', marginBottom: 24 }}>
+            <div style={{ background: 'var(--paper)', color: 'var(--ink)', padding: '10px 18px' }}>
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: 18, letterSpacing: '.02em' }}>JOIN LEAGUE</span>
             </div>
             <div style={{ padding: 24 }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div>
-                <label style={{ fontSize: 11, color: 'var(--text-2)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 6 }}>
-                  Invite link or League ID
-                </label>
-                <input placeholder="Paste the invite link or league ID" value={joinId} onChange={(e) => setJoinId(e.target.value)} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div>
+                  <label style={LABEL}>Invite link or League ID</label>
+                  <input placeholder="Paste the invite link or league ID" value={joinId} onChange={(e) => setJoinId(e.target.value)} />
+                </div>
+                <div>
+                  <label style={LABEL}>Your club name</label>
+                  <input placeholder="e.g. Lars United" value={joinName} onChange={(e) => setJoinName(e.target.value)} />
+                </div>
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                  <button className="btn btn-outline" onClick={() => setPanel('none')}>Cancel</button>
+                  <button className="btn btn-green" onClick={joinLeague} disabled={loading || !joinId || !joinName}>
+                    {loading ? 'Joining...' : 'Join League'}
+                  </button>
+                </div>
               </div>
-              <div>
-                <label style={{ fontSize: 11, color: 'var(--text-2)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 6 }}>
-                  Your club name
-                </label>
-                <input placeholder="e.g. Lars United" value={joinName} onChange={(e) => setJoinName(e.target.value)} />
-              </div>
-              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                <button className="btn btn-outline" onClick={() => setPanel('none')}>Cancel</button>
-                <button className="btn btn-green" onClick={joinLeague} disabled={loading || !joinId || !joinName}>
-                  {loading ? 'Joining...' : 'Join'}
-                </button>
-              </div>
-            </div>
             </div>
           </div>
         )}
 
-        {/* League cards */}
+        {/* ── Empty state ── */}
         {leagues.length === 0 && panel === 'none' && (
-          <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-2)' }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>🏟️</div>
-            <p style={{ fontSize: 16, fontWeight: 500 }}>No leagues yet</p>
-            <p style={{ fontSize: 13, marginTop: 6 }}>Create a league and invite your friends to join</p>
+          <div style={{ border: '2px solid var(--border-md)', padding: '60px 0', textAlign: 'center', color: 'var(--text-2)', background: 'var(--steel)' }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 64, lineHeight: 1, color: 'rgba(244,241,234,0.06)', marginBottom: 12 }}>FM</div>
+            <p style={{ fontFamily: 'var(--font-display)', fontSize: 20, color: 'var(--text-1)' }}>NO LEAGUES YET</p>
+            <p style={{ fontSize: 13, marginTop: 8, fontFamily: 'var(--font-narrow)', letterSpacing: '.06em' }}>Create a league and invite your friends to join</p>
           </div>
         )}
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {leagues.map((entry) => {
+        {/* ── League cards ── */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {leagues.map((entry, i) => {
             const progress = entry.league.seasonLength > 0
               ? (entry.league.currentDay / entry.league.seasonLength) * 100
               : 0
@@ -285,30 +287,52 @@ export default function Dashboard() {
               <div
                 key={entry.id}
                 onClick={() => navigate(`/league/${entry.league.id}`)}
-                className="card"
-                style={{ padding: '18px 22px', cursor: 'pointer', transition: 'border-color 0.15s, background 0.15s' }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border-md)'; (e.currentTarget as HTMLDivElement).style.background = 'var(--bg-card-2)' }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(255,255,255,0.07)'; (e.currentTarget as HTMLDivElement).style.background = 'var(--bg-card)' }}
+                style={{
+                  border: '2px solid rgba(244,241,234,0.14)',
+                  background: 'var(--steel)',
+                  padding: '18px 22px',
+                  cursor: 'pointer',
+                  transition: 'border-color .15s, background .15s',
+                  animation: `mgUp .4s ${(i * 0.06).toFixed(2)}s both`,
+                  position: 'relative',
+                  overflow: 'hidden',
+                }}
+                onMouseEnter={e => {
+                  const el = e.currentTarget as HTMLDivElement
+                  el.style.borderColor = 'var(--paper)'
+                  el.style.background = '#1c1c22'
+                }}
+                onMouseLeave={e => {
+                  const el = e.currentTarget as HTMLDivElement
+                  el.style.borderColor = 'rgba(244,241,234,0.14)'
+                  el.style.background = 'var(--steel)'
+                }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                {/* ghost rank number */}
+                <div style={{ position: 'absolute', right: -8, top: -10, fontFamily: 'var(--font-display)', fontSize: 100, lineHeight: 1, color: 'rgba(244,241,234,0.04)', pointerEvents: 'none', userSelect: 'none' }}>
+                  {String(i + 1).padStart(2, '0')}
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', position: 'relative' }}>
                   <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-                      <span style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 700, letterSpacing: 0.3 }}>
-                        {entry.league.name}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                      <span style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 400, letterSpacing: '.01em', lineHeight: 1 }}>
+                        {entry.league.name.toUpperCase()}
                       </span>
                       <span className={`badge ${STATUS_BADGE[entry.league.status]}`}>
                         {STATUS_LABEL[entry.league.status]}
                       </span>
                     </div>
-                    <div style={{ color: 'var(--text-2)', fontSize: 12, display: 'flex', gap: 14 }}>
+                    <div style={{ fontFamily: 'var(--font-narrow)', color: 'var(--text-2)', fontSize: 12, display: 'flex', gap: 18, letterSpacing: '.08em', textTransform: 'uppercase' }}>
                       <span>🏟 {entry.name}</span>
-                      <span>💰 €{(entry.budget / 1000).toFixed(0)}M remaining</span>
+                      <span style={{ color: 'var(--green)' }}>€{(entry.budget / 1000).toFixed(0)}M remaining</span>
                       {(entry.league.status === 'ACTIVE' || entry.league.status === 'FINISHED') && (
-                        <span>📅 Day {entry.league.currentDay}/{entry.league.seasonLength}</span>
+                        <span>Day {entry.league.currentDay}/{entry.league.seasonLength}</span>
                       )}
                     </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                     {entry.league.status === 'SETUP' && (
                       <button
                         onClick={e => {
@@ -319,20 +343,28 @@ export default function Dashboard() {
                             setTimeout(() => setCopiedId(null), 2000)
                           })
                         }}
-                        style={{ fontSize: 11, padding: '4px 10px', background: 'rgba(39,205,255,0.1)', border: '1px solid rgba(39,205,255,0.3)', borderRadius: 6, color: copiedId === entry.league.id ? 'var(--green)' : 'var(--cyan)', cursor: 'pointer', fontWeight: 700, whiteSpace: 'nowrap' }}
+                        style={{
+                          fontFamily: 'var(--font-narrow)',
+                          fontSize: 11, padding: '5px 14px',
+                          background: copiedId === entry.league.id ? 'var(--green)' : 'transparent',
+                          border: `2px solid ${copiedId === entry.league.id ? 'var(--green)' : 'rgba(39,205,255,0.4)'}`,
+                          color: copiedId === entry.league.id ? 'var(--ink)' : 'var(--cyan)',
+                          cursor: 'pointer', fontWeight: 700, whiteSpace: 'nowrap',
+                          letterSpacing: '.12em', textTransform: 'uppercase',
+                          transition: 'all .15s',
+                        }}
                       >
-                        {copiedId === entry.league.id ? '✓ Copied!' : 'Copy Invite'}
+                        {copiedId === entry.league.id ? '✓ Copied' : 'Copy Invite'}
                       </button>
                     )}
-                    <span style={{ color: 'var(--text-3)', fontSize: 18 }}>›</span>
+                    <span style={{ fontFamily: 'var(--font-display)', color: 'var(--text-3)', fontSize: 22, lineHeight: 1 }}>›</span>
                   </div>
                 </div>
 
-                {/* Season progress bar */}
                 {entry.league.status === 'ACTIVE' && (
-                  <div style={{ marginTop: 12 }}>
-                    <div className="stat-bar-wrap">
-                      <div className="stat-bar-fill" style={{ width: `${progress}%`, background: 'var(--green)' }} />
+                  <div style={{ marginTop: 14 }}>
+                    <div style={{ height: 3, background: 'rgba(244,241,234,0.08)', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${progress}%`, background: 'var(--accent)', transformOrigin: 'left', animation: 'mgGrow .8s .2s cubic-bezier(.2,.8,.3,1) both' }} />
                     </div>
                   </div>
                 )}
@@ -340,6 +372,7 @@ export default function Dashboard() {
             )
           })}
         </div>
+
       </div>
     </div>
   )

@@ -128,23 +128,25 @@ export async function startDraft(leagueId: string, requestingUserId: string, dra
 }
 
 export async function startSeason(leagueId: string) {
-  const clubs = await prisma.club.findMany({ where: { leagueId } })
-  const schedule = generateRoundRobin(clubs.map((c) => c.id))
+  const league = await prisma.league.findUnique({ where: { id: leagueId }, select: { seasonLength: true, hasCup: true } })
+  if (!league) throw new Error('League not found')
 
-  const matchData = schedule.flatMap((round, i) =>
-    round.map((pair) => ({
-      leagueId,
-      matchday: i + 1,
-      homeClubId: pair.homeClubId,
-      awayClubId: pair.awayClubId,
-    })),
-  )
+  const clubs = await prisma.club.findMany({ where: { leagueId } })
+  const baseSchedule = generateRoundRobin(clubs.map((c) => c.id))
+
+  // Cycle the round-robin to fill every matchday in the season
+  const matchData: Array<{ leagueId: string; matchday: number; homeClubId: string; awayClubId: string }> = []
+  for (let md = 0; md < league.seasonLength; md++) {
+    const round = baseSchedule[md % baseSchedule.length]
+    for (const pair of round) {
+      matchData.push({ leagueId, matchday: md + 1, homeClubId: pair.homeClubId, awayClubId: pair.awayClubId })
+    }
+  }
 
   await prisma.match.createMany({ data: matchData })
   await assignAITactics(leagueId)
 
-  const league = await prisma.league.findUnique({ where: { id: leagueId }, select: { hasCup: true } })
-  if (league?.hasCup) {
+  if (league.hasCup) {
     await generateCupBracket(leagueId)
   }
 

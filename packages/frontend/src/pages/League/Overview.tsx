@@ -178,80 +178,119 @@ export default function Overview({ league, matches, myClub, awards, onPhysioUpgr
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-      {/* ══════════════════════════════ HERO: NEXT MATCHDAY ══════════════════════════════ */}
-      {myClub && nextMatch && league.status === 'ACTIVE' && (
-        <section style={{ position: 'relative', border: '3px solid var(--paper)', background: 'var(--steel)', overflow: 'hidden', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.32fr 1fr', minHeight: 380, animation: 'mgSlam .5s cubic-bezier(.2,.8,.3,1) both' }}>
-          {/* Speed lines burst */}
+      {/* ══════════════════════════════ HERO: MATCHDAY / SEASON ══════════════════════════════ */}
+      {myClub && league.status !== 'SETUP' && league.status !== 'DRAFTING' && (
+        <section style={{ position: 'relative', border: '3px solid var(--paper)', background: 'var(--steel)', overflow: 'hidden', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.32fr 1fr', minHeight: 400, animation: 'mgSlam .5s cubic-bezier(.2,.8,.3,1) both' }}>
           <div className="hero-speed-lines" />
 
-          {/* LEFT: headline + buttons */}
+          {/* LEFT */}
           <div style={{ position: 'relative', padding: '28px 30px 26px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', zIndex: 2 }}>
             <div>
+              {/* Badge */}
               <div style={{ display: 'inline-flex', alignItems: 'center', background: 'var(--accent)', padding: '5px 13px', transform: 'skewX(-9deg)' }}>
                 <span style={{ fontFamily: 'var(--font-narrow)', fontSize: 11, fontWeight: 700, letterSpacing: '.24em', textTransform: 'uppercase', transform: 'skewX(9deg)', color: '#fff' }}>
-                  Matchday {nextMatch.matchday} · {isHome ? 'Home' : 'Away'}
+                  {nextMatch
+                    ? `Matchday ${nextMatch.matchday} · ${isHome ? 'Home' : 'Away'}`
+                    : league.status === 'FINISHED' ? 'Season Complete · Final'
+                    : 'All Fixtures Played'}
                 </span>
               </div>
+              {/* Club name */}
               <div style={{ fontFamily: 'var(--font-display)', fontSize: 74, lineHeight: .82, marginTop: 16, letterSpacing: '-.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {myClub.name.toUpperCase()}
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 6, overflow: 'hidden' }}>
-                <span style={{ fontFamily: 'var(--font-display)', fontSize: 26, color: 'var(--accent)', transform: 'skewX(-8deg)', flexShrink: 0 }}>VS</span>
-                <span style={{ fontFamily: 'var(--font-display)', fontSize: 48, lineHeight: .82, WebkitTextStroke: '2px var(--paper)', color: 'transparent', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {(oppClub?.name ?? '???').toUpperCase()}
-                </span>
-              </div>
+              {/* VS line OR final standing */}
+              {nextMatch ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 6, overflow: 'hidden' }}>
+                  <span style={{ fontFamily: 'var(--font-display)', fontSize: 26, color: 'var(--accent)', transform: 'skewX(-8deg)', flexShrink: 0 }}>VS</span>
+                  <span style={{ fontFamily: 'var(--font-display)', fontSize: 48, lineHeight: .82, WebkitTextStroke: '2px var(--paper)', color: 'transparent', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {(oppClub?.name ?? '???').toUpperCase()}
+                  </span>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, marginTop: 6 }}>
+                  <span style={{ fontFamily: 'var(--font-display)', fontSize: 26, color: 'var(--accent)', transform: 'skewX(-8deg)', flexShrink: 0 }}>FINAL</span>
+                  <span style={{ fontFamily: 'var(--font-display)', fontSize: 72, lineHeight: .82 }}>{myPosition ?? '–'}</span>
+                  {myPosition && <span style={{ fontFamily: 'var(--font-display)', fontSize: 30, marginBottom: 8 }}>{myOrdinal}</span>}
+                </div>
+              )}
+              {/* Tagline */}
               <div style={{ fontFamily: 'var(--font-narrow)', fontSize: 12, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--ash)', marginTop: 16, lineHeight: 1.55, maxWidth: 400 }}>
-                {heroTagline}
+                {nextMatch ? heroTagline : (() => {
+                  const p = myPosition ?? sorted.length
+                  if (p === 1) return 'Champions. The title is yours.'
+                  if (p <= 3) return `${p}${myOrdinal} place — a strong campaign.`
+                  if (p <= Math.ceil(sorted.length / 2)) return 'Mid-table finish. More to come.'
+                  return 'A tough season. Regroup and come back stronger.'
+                })()}
               </div>
             </div>
+            {/* Buttons */}
             <div style={{ display: 'flex', alignItems: 'stretch', gap: 10, marginTop: 22 }}>
-              <Link
-                to={`/league/${league.id}/match/${nextMatch.id}`}
-                style={{ display: 'flex', alignItems: 'center', padding: '14px 24px', textDecoration: 'none', background: 'var(--accent)', color: '#fff', clipPath: 'polygon(0 0, 100% 0, 92% 100%, 0 100%)', transition: 'transform .2s' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.transform = 'translateX(4px)' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.transform = '' }}
-              >
-                <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 900, letterSpacing: '.1em', textTransform: 'uppercase' }}>Next Match</span>
-              </Link>
-              <button
-                onClick={() => onSwitchTab?.('tactics')}
-                style={{ display: 'flex', alignItems: 'center', padding: '14px 20px', background: 'transparent', border: '2px solid var(--paper)', color: 'var(--paper)', cursor: 'pointer', transition: 'background .2s, color .2s' }}
-                onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.background = 'var(--paper)'; b.style.color = 'var(--ink)' }}
-                onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.background = 'transparent'; b.style.color = 'var(--paper)' }}
-              >
-                <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 900, letterSpacing: '.1em', textTransform: 'uppercase' }}>Team Sheet</span>
-              </button>
+              {nextMatch ? (
+                <>
+                  <Link
+                    to={`/league/${league.id}/match/${nextMatch.id}`}
+                    style={{ display: 'flex', alignItems: 'center', padding: '14px 24px', textDecoration: 'none', background: 'var(--accent)', color: '#fff', clipPath: 'polygon(0 0, 100% 0, 92% 100%, 0 100%)', transition: 'transform .2s' }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.transform = 'translateX(4px)' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.transform = '' }}
+                  >
+                    <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 900, letterSpacing: '.1em', textTransform: 'uppercase' }}>Next Match</span>
+                  </Link>
+                  <button
+                    onClick={() => onSwitchTab?.('tactics')}
+                    style={{ display: 'flex', alignItems: 'center', padding: '14px 20px', background: 'transparent', border: '2px solid var(--paper)', color: 'var(--paper)', cursor: 'pointer', transition: 'background .2s, color .2s' }}
+                    onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.background = 'var(--paper)'; b.style.color = 'var(--ink)' }}
+                    onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.background = 'transparent'; b.style.color = 'var(--paper)' }}
+                  >
+                    <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 900, letterSpacing: '.1em', textTransform: 'uppercase' }}>Team Sheet</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => onSwitchTab?.('fixtures')}
+                    style={{ display: 'flex', alignItems: 'center', padding: '14px 24px', background: 'var(--accent)', color: '#fff', border: 'none', clipPath: 'polygon(0 0, 100% 0, 92% 100%, 0 100%)', cursor: 'pointer', transition: 'transform .2s' }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'translateX(4px)' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform = '' }}
+                  >
+                    <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 900, letterSpacing: '.1em', textTransform: 'uppercase' }}>View Results</span>
+                  </button>
+                  <button
+                    onClick={() => onSwitchTab?.('stats')}
+                    style={{ display: 'flex', alignItems: 'center', padding: '14px 20px', background: 'transparent', border: '2px solid var(--paper)', color: 'var(--paper)', cursor: 'pointer', transition: 'background .2s, color .2s' }}
+                    onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.background = 'var(--paper)'; b.style.color = 'var(--ink)' }}
+                    onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.background = 'transparent'; b.style.color = 'var(--paper)' }}
+                  >
+                    <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 900, letterSpacing: '.1em', textTransform: 'uppercase' }}>Season Stats</span>
+                  </button>
+                </>
+              )}
             </div>
           </div>
 
           {/* RIGHT: top player portrait */}
-          <div style={{ position: 'relative', borderLeft: isMobile ? 'none' : '3px solid var(--paper)', borderTop: isMobile ? '3px solid var(--paper)' : 'none', background: 'var(--ink)', overflow: 'hidden', minHeight: isMobile ? 220 : 'auto' }}>
+          <div style={{ position: 'relative', borderLeft: isMobile ? 'none' : '3px solid var(--paper)', borderTop: isMobile ? '3px solid var(--paper)' : 'none', background: 'var(--ink)', overflow: 'hidden', minHeight: isMobile ? 240 : 'auto' }}>
             {topPlayer?.player.photoUrl && (
               <div style={{ position: 'absolute', inset: 0, transform: 'skewX(-3deg) scale(1.06)', transformOrigin: 'top right' }}>
                 <img src={topPlayer.player.photoUrl} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center', filter: 'grayscale(1) contrast(1.15)' }} />
               </div>
             )}
-            {/* Ghost opponent name when no photo */}
             {!topPlayer?.player.photoUrl && (
               <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 20px', overflow: 'hidden' }}>
-                <span style={{ fontFamily: 'var(--font-display)', fontSize: 56, color: 'rgba(244,241,234,.05)', textAlign: 'center', lineHeight: .88, wordBreak: 'break-word' }}>
-                  {(oppClub?.name ?? '').toUpperCase()}
+                <span style={{ fontFamily: 'var(--font-display)', fontSize: 56, color: 'rgba(244,241,234,.04)', textAlign: 'center', lineHeight: .88, wordBreak: 'break-word' }}>
+                  {(nextMatch ? (oppClub?.name ?? '') : myClub.name).toUpperCase()}
                 </span>
               </div>
             )}
-            {/* Gradient overlay */}
             <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(120deg, rgba(8,8,10,.8), transparent 42%, transparent 70%, rgba(8,8,10,.9))' }} />
-            {/* Accent corner triangle */}
             <div style={{ position: 'absolute', right: 0, top: 0, width: 0, height: 0, borderTop: '90px solid var(--accent)', borderLeft: '90px solid transparent' }} />
-            {/* Big OVR */}
             <div style={{ position: 'absolute', left: 18, top: 18, zIndex: 1 }}>
               <div style={{ fontFamily: 'var(--font-display)', fontSize: 68, lineHeight: .78, color: 'var(--paper)' }}>
                 {topPlayer?.player.overall ?? squadAvgOvr(myClub) ?? '–'}
               </div>
               <div style={{ fontFamily: 'var(--font-narrow)', fontSize: 11, letterSpacing: '.3em', textTransform: 'uppercase', color: 'var(--accent)', marginTop: 2 }}>Overall</div>
             </div>
-            {/* Name tag */}
             {topPlayer && (
               <div style={{ position: 'absolute', left: 0, bottom: 18, background: 'var(--paper)', color: 'var(--ink)', padding: '8px 20px 8px 14px', clipPath: 'polygon(0 0, 100% 0, 90% 100%, 0 100%)', zIndex: 1 }}>
                 <div style={{ fontFamily: 'var(--font-display)', fontSize: 26, lineHeight: .84 }}>

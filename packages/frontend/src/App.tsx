@@ -14,6 +14,11 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
   return token ? <>{children}</> : <Navigate to="/login" replace />
 }
 
+function RootRoute() {
+  const { token } = useAuth()
+  return token ? <Navigate to="/dashboard" replace /> : <Home />
+}
+
 export default function App() {
   const { hydrate } = useAuth()
 
@@ -24,7 +29,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Home />} />
+        <Route path="/" element={<RootRoute />} />
         <Route path="/login" element={<Login />} />
         <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
         <Route path="/league/:id" element={<RequireAuth><League /></RequireAuth>} />

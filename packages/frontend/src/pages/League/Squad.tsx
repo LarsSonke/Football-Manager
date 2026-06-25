@@ -1,9 +1,28 @@
 import { useState } from 'react'
-import { effectiveRating } from '@football/shared'
 import { flagUrl } from '../../utils/flagCodes'
 import { posClass, getBadgeColor } from '../../utils/helpers'
-import type { SquadPlayer } from './types'
+import type { SquadPlayer, PlayerData } from './types'
 import { POS_ORDER } from './types'
+
+// ─── Manga helpers ────────────────────────────────────────────────────────────
+
+function rc(v: number): string {
+  return v >= 85 ? '#2f6b46' : v >= 78 ? '#6a8a2f' : v >= 70 ? '#cf9438' : '#e5202f'
+}
+
+function keyStats(p: PlayerData): Array<[string, number]> {
+  const pos = p.position
+  if (pos === 'GK') return [['DIV', p.gkDiving], ['HAN', p.gkHandling], ['REF', p.gkReflexes]]
+  if (['CB','LB','RB','LWB','RWB'].includes(pos)) return [['PAC', p.pace], ['DEF', p.defending], ['PHY', p.physical]]
+  if (['CDM','CM','LM','RM','CAM'].includes(pos)) return [['PAC', p.pace], ['PAS', p.passing], ['PHY', p.physical]]
+  return [['PAC', p.pace], ['SHT', p.shooting], ['PHY', p.physical]]
+}
+
+function formBars(form: number): string[] {
+  const n = Math.round(form / 20)
+  const c = form >= 75 ? '#2f6b46' : form >= 50 ? '#cf9438' : '#e5202f'
+  return Array.from({ length: 5 }, (_, i) => i < n ? c : 'rgba(140,140,146,.28)')
+}
 
 // ─── Squad helpers ────────────────────────────────────────────────────────────
 
@@ -29,54 +48,25 @@ function calcHealCost(daysLeft: number, physioLevel: number): number {
   return Math.round(daysLeft * 1_000 * discount)
 }
 
-// ─── OvrBadge ────────────────────────────────────────────────────────────────
+// ─── PlayerDetailModal ────────────────────────────────────────────────────────
 
-function OvrBadge({ value, label }: { value: number; label: string }) {
-  const color = value >= 85 ? 'var(--gold)' : value >= 75 ? 'var(--green)' : value >= 65 ? 'var(--text-2)' : 'var(--text-3)'
-  return (
-    <div style={{ textAlign: 'center', lineHeight: 1 }}>
-      <div style={{ fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 800, color }}>{Math.round(value)}</div>
-      <div style={{ fontSize: 10, color: 'var(--text-2)', marginTop: 3, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</div>
-    </div>
-  )
-}
-
-// ─── StatBar (for squad cards) ────────────────────────────────────────────────
-
-function StatBar({ label, value }: { label: string; value: number }) {
-  const barColor = value >= 75 ? 'var(--green)' : value >= 50 ? 'var(--gold)' : 'var(--red)'
-  return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 3 }}>
-        <span style={{ color: 'var(--text-2)' }}>{label}</span>
-        <span style={{ color: 'var(--text-1)', fontWeight: 600 }}>{value}</span>
-      </div>
-      <div className="stat-bar-wrap">
-        <div className="stat-bar-fill" style={{ width: `${value}%`, background: barColor }} />
-      </div>
-    </div>
-  )
-}
-
-// ─── PlayerDetailModal (minimal version for Squad — no role tab) ──────────────
-
-function ModalStatBar({ label, value }: { label: string; value: number }) {
+function ModalStatBar({ label, value, dark }: { label: string; value: number; dark: boolean }) {
   const pct = Math.min(100, Math.max(0, value))
-  const color = pct >= 80 ? 'var(--green)' : pct >= 65 ? 'var(--gold)' : pct >= 45 ? 'var(--text-2)' : 'var(--red)'
+  const color = rc(pct)
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
-      <span style={{ fontSize: 10, color: 'var(--text-2)', width: 110, textAlign: 'right', flexShrink: 0 }}>{label}</span>
-      <div style={{ flex: 1, height: 5, background: 'rgba(255,255,255,0.07)', borderRadius: 3, overflow: 'hidden' }}>
-        <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: 3, transition: 'width 0.3s' }} />
+      <span style={{ fontSize: 10, color: dark ? 'var(--ash)' : '#666', width: 110, textAlign: 'right', flexShrink: 0 }}>{label}</span>
+      <div style={{ flex: 1, height: 5, background: dark ? 'rgba(255,255,255,0.07)' : 'rgba(8,8,10,.1)', overflow: 'hidden' }}>
+        <div style={{ width: `${pct}%`, height: '100%', background: color, transition: 'width 0.3s' }} />
       </div>
-      <span style={{ fontFamily: 'var(--font-display)', fontSize: 12, fontWeight: 800, color, width: 24, textAlign: 'right', flexShrink: 0 }}>{value}</span>
+      <span style={{ fontFamily: 'var(--font-display)', fontSize: 12, color, width: 24, textAlign: 'right', flexShrink: 0 }}>{value}</span>
     </div>
   )
 }
 
 function Stars({ value, max = 5 }: { value: number; max?: number }) {
   return (
-    <span style={{ color: 'var(--gold)', letterSpacing: 1, fontSize: 13 }}>
+    <span style={{ color: '#cf9438', letterSpacing: 1, fontSize: 13 }}>
       {'★'.repeat(Math.max(0, Math.min(max, value)))}
       <span style={{ color: 'rgba(255,255,255,0.15)' }}>{'★'.repeat(Math.max(0, max - Math.min(max, value)))}</span>
     </span>
@@ -148,66 +138,60 @@ function PlayerDetailModal({ player, slotPos, onClose }: { player: SquadPlayer; 
 
   return (
     <div
-      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1000, display: 'flex', alignItems: isMobile ? 'flex-end' : 'center', justifyContent: 'center', padding: isMobile ? 0 : 16 }}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.82)', zIndex: 1000, display: 'flex', alignItems: isMobile ? 'flex-end' : 'center', justifyContent: 'center', padding: isMobile ? 0 : 20 }}
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: isMobile ? 0 : 'var(--radius)', width: '100%', maxWidth: isMobile ? '100%' : 680, height: isMobile ? '100%' : '82vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-        {/* Header */}
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 16 }}>
+      <div style={{ border: '3px solid var(--paper)', background: 'var(--steel)', width: '100%', maxWidth: isMobile ? '100%' : 680, height: isMobile ? '92vh' : '82vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', animation: 'mgSlam .35s cubic-bezier(.2,.8,.3,1) both' }}>
+
+        {/* Ink header */}
+        <div style={{ background: 'var(--ink)', padding: '10px 20px', borderBottom: '3px solid var(--paper)', display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
           {p.photoUrl ? (
-            <img src={p.photoUrl} alt={p.name} style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border)' }} />
+            <img src={p.photoUrl} alt={p.name} style={{ width: 52, height: 52, objectFit: 'cover', objectPosition: 'top', border: '2px solid var(--paper)', flexShrink: 0 }} referrerPolicy="no-referrer" />
           ) : (
-            <div style={{ width: 64, height: 64, borderRadius: '50%', background: getBadgeColor(p.name), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 900, color: '#000', flexShrink: 0 }}>
+            <div style={{ width: 52, height: 52, background: getBadgeColor(p.name), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 900, color: '#000', flexShrink: 0, border: '2px solid var(--paper)' }}>
               {p.name.split(' ').slice(0, 2).map(w => w[0]?.toUpperCase() ?? '').join('')}
             </div>
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-1)' }}>{p.name}</span>
-              <span className={posClass(slotPos)} style={{ fontSize: 10 }}>{slotPos}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: 22, lineHeight: .9, letterSpacing: '-.01em', textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
+              <span className={posClass(slotPos)} style={{ fontSize: 10, flexShrink: 0 }}>{slotPos}</span>
             </div>
-            <div style={{ display: 'flex', gap: 16, marginTop: 6, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 12, color: 'var(--text-2)' }}>Age {p.age}</span>
-              {p.heightCm > 0 && <span style={{ fontSize: 12, color: 'var(--text-2)' }}>{p.heightCm} cm</span>}
-              {p.nationality && <span style={{ fontSize: 12, color: 'var(--text-2)' }}>{p.nationality}</span>}
-            </div>
-            <div style={{ display: 'flex', gap: 20, marginTop: 8 }}>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 900, color: 'var(--text-1)' }}>{p.overall}</div>
-                <div style={{ fontSize: 9, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5 }}>OVR</div>
+            <div style={{ display: 'flex', gap: 16, marginTop: 5, flexWrap: 'wrap' }}>
+              <div>
+                <span style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: rc(p.overall) }}>{p.overall}</span>
+                <span style={{ fontFamily: 'var(--font-narrow)', fontSize: 9, color: 'var(--ash)', textTransform: 'uppercase', letterSpacing: '.14em', marginLeft: 4 }}>OVR</span>
               </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 900, color: 'var(--green)' }}>{p.potential}</div>
-                <div style={{ fontSize: 9, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5 }}>POT</div>
+              <div>
+                <span style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--ash)' }}>{p.potential}</span>
+                <span style={{ fontFamily: 'var(--font-narrow)', fontSize: 9, color: 'var(--ash)', textTransform: 'uppercase', letterSpacing: '.14em', marginLeft: 4 }}>POT</span>
               </div>
-              <div style={{ textAlign: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <Stars value={p.skillMoves} />
-                <div style={{ fontSize: 9, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 2 }}>Skill</div>
+                <span style={{ fontFamily: 'var(--font-narrow)', fontSize: 9, color: 'var(--ash)', textTransform: 'uppercase', letterSpacing: '.1em' }}>Skill</span>
               </div>
-              <div style={{ textAlign: 'center' }}>
-                <Stars value={p.weakFoot} />
-                <div style={{ fontSize: 9, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 2 }}>Weak Foot</div>
-              </div>
+              {p.nationality && (
+                <span style={{ fontFamily: 'var(--font-narrow)', fontSize: 11, color: 'var(--ash)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  {flagUrl(p.nationality) && <img src={flagUrl(p.nationality)!} alt="" style={{ width: 16, height: 12, border: '1px solid rgba(244,241,234,.2)' }} />}
+                  {p.nationality} · {p.age}y
+                </span>
+              )}
             </div>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-2)', fontSize: 20, padding: 4, lineHeight: 1, flexShrink: 0 }}>✕</button>
+          <button onClick={onClose} style={{ background: 'none', border: '2px solid rgba(244,241,234,.3)', cursor: 'pointer', color: 'var(--paper)', fontSize: 16, padding: '4px 10px', lineHeight: 1, flexShrink: 0, fontFamily: 'var(--font-display)' }}>✕</button>
         </div>
 
         {/* Body */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
-          {/* Main stat bars */}
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>Main Stats</div>
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '0 24px' }}>
-              {mainStats.map(s => <ModalStatBar key={s.label} label={s.label} value={s.value} />)}
-            </div>
+          <div style={{ fontFamily: 'var(--font-narrow)', fontSize: 10, fontWeight: 700, color: 'var(--ash)', textTransform: 'uppercase', letterSpacing: '.18em', marginBottom: 10 }}>Main Stats</div>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '0 24px', marginBottom: 20 }}>
+            {mainStats.map(s => <ModalStatBar key={s.label} label={s.label} value={s.value} dark />)}
           </div>
-          {/* Sub-stat groups */}
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '0 24px' }}>
             {subStatGroups.map(group => (
               <div key={group.title} style={{ marginBottom: 16 }}>
-                <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>{group.title}</div>
-                {group.stats.map(s => <ModalStatBar key={s.label} label={s.label} value={s.value} />)}
+                <div style={{ fontFamily: 'var(--font-narrow)', fontSize: 10, fontWeight: 700, color: 'var(--ash)', textTransform: 'uppercase', letterSpacing: '.18em', marginBottom: 8 }}>{group.title}</div>
+                {group.stats.map(s => <ModalStatBar key={s.label} label={s.label} value={s.value} dark />)}
               </div>
             ))}
           </div>
@@ -232,9 +216,9 @@ export default function Squad({ squad, physioLevel, budget, nextMatchday, onHeal
 
   if (squad.length === 0) {
     return (
-      <div style={{ textAlign: 'center', padding: '64px 0', color: 'var(--text-2)' }}>
-        <div style={{ fontSize: 48, marginBottom: 12 }}>👕</div>
-        <p>No players drafted yet</p>
+      <div style={{ padding: '64px 0', textAlign: 'center', animation: 'mgUp .4s both' }}>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: 36, color: 'var(--ash)', letterSpacing: '-.01em' }}>NO SQUAD YET</div>
+        <div style={{ fontFamily: 'var(--font-narrow)', fontSize: 11, color: 'var(--ash)', letterSpacing: '.18em', textTransform: 'uppercase', marginTop: 8 }}>Players will appear here after the draft</div>
       </div>
     )
   }
@@ -247,166 +231,192 @@ export default function Squad({ squad, physioLevel, budget, nextMatchday, onHeal
 
   return (
     <>
-    {detailPlayer && (
-      <PlayerDetailModal
-        player={detailPlayer}
-        slotPos={detailPlayer.player.position}
-        onClose={() => setDetailPlayer(null)}
-      />
-    )}
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
-      {sorted.map(inst => {
-        const effRating = effectiveRating(
-          { overall: inst.player.overall, morale: inst.morale, form: inst.form, fitness: inst.fitness, injured: inst.injured },
-          0.8,
-        )
-        const delta = Math.round(effRating - inst.player.overall)
-        const cardBorderColor = inst.injured ? 'rgba(232,128,106,0.45)' : inst.player.overall >= 85 ? 'rgba(233,196,106,0.35)' : inst.player.overall >= 75 ? 'rgba(54,226,126,0.15)' : 'rgba(255,255,255,0.06)'
-        const flagSrc = flagUrl(inst.player.nationality)
-        const healCost = calcHealCost(inst.injuryDaysLeft, physioLevel)
-        const isTraining = trainingFor === inst.id
+      {detailPlayer && (
+        <PlayerDetailModal
+          player={detailPlayer}
+          slotPos={detailPlayer.player.position}
+          onClose={() => setDetailPlayer(null)}
+        />
+      )}
 
-        return (
-          <div key={inst.id} style={{ background: 'linear-gradient(160deg, var(--bg-card-2) 0%, var(--bg-card) 100%)', border: `1px solid ${cardBorderColor}`, borderRadius: 'var(--radius)', padding: '14px 16px', position: 'relative', overflow: 'hidden' }}>
-            {inst.player.overall >= 85 && !inst.injured && <div style={{ position: 'absolute', top: -20, right: -20, width: 80, height: 80, background: 'radial-gradient(circle, rgba(245,166,35,0.08) 0%, transparent 70%)', pointerEvents: 'none' }} />}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: 13 }}>
+        {sorted.map((inst, idx) => {
+          const dark = idx % 2 === 0
+          const cardBg = dark ? 'var(--steel)' : 'var(--paper)'
+          const cardFg = dark ? 'var(--paper)' : 'var(--ink)'
+          const dimC = dark ? 'var(--ash)' : '#666'
+          const rule = dark ? 'rgba(244,241,234,.12)' : 'rgba(8,8,10,.12)'
+          const stats = keyStats(inst.player)
+          const bars = formBars(inst.form)
+          const role = inst.player.preferredRoles?.[0] ?? inst.player.position
+          const isTraining = trainingFor === inst.id
+          const healCost = calcHealCost(inst.injuryDaysLeft, physioLevel)
 
-            <div
-              role="button"
-              tabIndex={0}
-              onClick={() => setDetailPlayer(inst)}
-              onKeyDown={e => e.key === 'Enter' && setDetailPlayer(inst)}
-              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12, cursor: 'pointer', borderRadius: 6 }}
-              title="Click to view full stats"
-            >
-              <div style={{ display: 'flex', gap: 10, flex: 1, minWidth: 0 }}>
-                <div style={{ width: 52, height: 60, borderRadius: 6, overflow: 'hidden', background: 'var(--bg-base)', flexShrink: 0 }}>
-                  {inst.player.photoUrl
-                    ? <img src={inst.player.photoUrl} alt="" referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} onError={e => { const el = e.currentTarget as HTMLImageElement; el.style.display = 'none'; const p = el.parentElement; if (p) p.setAttribute('data-failed', '1') }} />
-                    : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)', fontSize: 24 }}>👤</div>
-                  }
+          return (
+            <div key={inst.id} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+
+              {/* ── Manga card ── */}
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => setDetailPlayer(inst)}
+                onKeyDown={e => e.key === 'Enter' && setDetailPlayer(inst)}
+                style={{
+                  position: 'relative', border: '3px solid var(--paper)',
+                  background: cardBg, color: cardFg, overflow: 'hidden',
+                  cursor: 'pointer', transition: 'transform .2s, box-shadow .2s',
+                  animation: `mgPop .4s ${(idx * 0.04).toFixed(2)}s both`,
+                }}
+                onMouseEnter={e => {
+                  const el = e.currentTarget as HTMLDivElement
+                  el.style.transform = 'translateY(-6px)'
+                  el.style.boxShadow = '0 16px 0 -8px var(--accent)'
+                }}
+                onMouseLeave={e => {
+                  const el = e.currentTarget as HTMLDivElement
+                  el.style.transform = ''
+                  el.style.boxShadow = ''
+                }}
+              >
+                {/* Diagonal hatch overlay */}
+                <div style={{ position: 'absolute', inset: 0, opacity: .06, background: 'repeating-linear-gradient(120deg, currentColor 0 2px, transparent 2px 10px)', pointerEvents: 'none' }} />
+
+                {/* Angled position tag — top right */}
+                <div style={{ position: 'absolute', right: 0, top: 0, background: 'var(--accent)', color: '#fff', padding: '3px 12px 5px', clipPath: 'polygon(16% 0,100% 0,100% 100%,0 100%)' }}>
+                  <span style={{ fontFamily: 'var(--font-display)', fontSize: 14 }}>{inst.player.position}</span>
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 5, flexWrap: 'wrap' }}>
-                    <span className={posClass(inst.player.position)}>{inst.player.position}</span>
-                    {inst.trainedPosition && (
-                      <span style={{ fontSize: 9, padding: '2px 5px', background: 'rgba(39,205,255,0.12)', color: 'var(--cyan)', borderRadius: 4, fontWeight: 700, border: '1px solid rgba(39,205,255,0.25)' }}>
-                        +{inst.trainedPosition}
-                      </span>
-                    )}
-                    {inst.player.age <= 22 && inst.player.potential - inst.player.overall >= 6 && (
-                      <span style={{ fontSize: 9, padding: '2px 5px', background: 'rgba(54,226,126,0.12)', color: 'var(--green)', borderRadius: 4, fontWeight: 700, border: '1px solid rgba(54,226,126,0.3)' }}>PROSPECT</span>
-                    )}
-                    {inst.player.age >= 32 && (
-                      <span style={{ fontSize: 9, padding: '2px 5px', background: 'rgba(232,128,106,0.1)', color: 'var(--red)', borderRadius: 4, fontWeight: 700, border: '1px solid rgba(232,128,106,0.3)' }}>VETERAN</span>
-                    )}
+
+                {/* Status stripe for injured */}
+                {inst.injured && (
+                  <div style={{ background: 'var(--accent)', color: '#fff', padding: '3px 16px', fontFamily: 'var(--font-narrow)', fontSize: 9, letterSpacing: '.2em', textTransform: 'uppercase', fontWeight: 700, textAlign: 'center' }}>
+                    INJURED · {inst.injuryDaysLeft}d left
                   </div>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{inst.player.name}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-2)', marginTop: 2 }}>{flagSrc && <img src={flagSrc} alt="" style={{ width: 16, height: 12, verticalAlign: 'middle', borderRadius: 1, marginRight: 3 }} />}{inst.player.nationality} · {inst.player.age}y</div>
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: 10, flexShrink: 0, marginLeft: 8 }}>
-                <OvrBadge value={inst.player.overall} label="OVR" />
-                <div style={{ width: 1, background: 'var(--border)' }} />
-                <div style={{ textAlign: 'center', lineHeight: 1 }}>
-                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 800, color: 'var(--text-3)', lineHeight: 1 }}>{inst.player.potential}</div>
-                  <div style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 3, fontWeight: 700 }}>POT</div>
-                </div>
-                <div style={{ width: 1, background: 'var(--border)' }} />
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 800, color: delta >= 0 ? 'var(--green)' : 'var(--red)', lineHeight: 1 }}>{Math.round(effRating)}</div>
-                  <div style={{ fontSize: 10, color: delta >= 0 ? 'var(--green)' : 'var(--red)', marginTop: 3, fontWeight: 700 }}>{delta > 0 ? `+${delta}` : delta === 0 ? '±0' : delta} EFF</div>
-                </div>
-              </div>
-            </div>
+                )}
+                {!inst.injured && inst.suspendedMatchday === nextMatchday && (
+                  <div style={{ background: '#cf9438', color: 'var(--ink)', padding: '3px 16px', fontFamily: 'var(--font-narrow)', fontSize: 9, letterSpacing: '.2em', textTransform: 'uppercase', fontWeight: 700, textAlign: 'center' }}>
+                    SUSPENDED
+                  </div>
+                )}
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
-              <StatBar label="Morale"   value={inst.morale} />
-              <StatBar label="Form"     value={inst.form} />
-              <StatBar label="Fitness"  value={inst.fitness} />
-            </div>
+                {/* OVR block */}
+                <div style={{ padding: '16px 16px 0', position: 'relative' }}>
+                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 58, lineHeight: .78, color: rc(inst.player.overall) }}>
+                    {inst.player.overall}
+                  </div>
+                  <div style={{ fontFamily: 'var(--font-narrow)', fontSize: 9, letterSpacing: '.2em', textTransform: 'uppercase', color: dimC, marginTop: 2 }}>Overall</div>
+                </div>
 
-            {/* Suspension row */}
-            {!inst.injured && inst.suspendedMatchday === nextMatchday && (
-              <div style={{ display: 'flex', alignItems: 'center', padding: '7px 10px', background: 'rgba(255,165,0,0.1)', border: '1px solid rgba(255,165,0,0.3)', borderRadius: 'var(--radius-xs)', marginBottom: 8 }}>
-                <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--gold)' }}>SUSPENDED</span>
-                <span style={{ fontSize: 11, color: 'var(--text-2)', marginLeft: 6 }}>Misses next match</span>
-              </div>
-            )}
+                {/* Name + role + stats */}
+                <div style={{ padding: '12px 16px 16px', position: 'relative' }}>
+                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 24, lineHeight: .86, textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {inst.player.name.split(' ').slice(-1)[0]}
+                  </div>
+                  <div style={{ fontFamily: 'var(--font-narrow)', fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', color: dimC, marginTop: 2 }}>
+                    {role} · {inst.player.age}
+                  </div>
 
-            {/* Yellow card accumulation row */}
-            {inst.yellowCards > 0 && inst.suspendedMatchday !== nextMatchday && (
-              <div style={{ display: 'flex', alignItems: 'center', padding: '5px 10px', background: inst.yellowCards % 5 === 4 ? 'rgba(255,214,0,0.08)' : 'transparent', border: inst.yellowCards % 5 === 4 ? '1px solid rgba(255,214,0,0.25)' : '1px solid transparent', borderRadius: 'var(--radius-xs)', marginBottom: 6 }}>
-                <span style={{ fontSize: 12 }}>🟨</span>
-                <span style={{ fontSize: 11, color: inst.yellowCards % 5 === 4 ? '#ffd600' : 'var(--text-2)', fontWeight: inst.yellowCards % 5 === 4 ? 700 : 400, marginLeft: 5 }}>
-                  {inst.yellowCards % 5} / 5 yellows
-                </span>
-                {inst.yellowCards % 5 === 4 && (
-                  <span style={{ fontSize: 10, color: '#ffd600', fontWeight: 700, marginLeft: 6 }}>— 1 more = ban</span>
+                  {/* Key stats + form bars */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 14, borderTop: `2px solid ${rule}`, paddingTop: 12 }}>
+                    {stats.map(([k, v]) => (
+                      <div key={k} style={{ textAlign: 'center' }}>
+                        <div style={{ fontFamily: 'var(--font-display)', fontSize: 19, color: rc(v) }}>{v}</div>
+                        <div style={{ fontFamily: 'var(--font-narrow)', fontSize: 8, letterSpacing: '.14em', textTransform: 'uppercase', color: dimC }}>{k}</div>
+                      </div>
+                    ))}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                      <div style={{ display: 'flex', gap: 2 }}>
+                        {bars.map((c, i) => (
+                          <span key={i} style={{ width: 6, height: 15, background: c, display: 'block' }} />
+                        ))}
+                      </div>
+                      <div style={{ fontFamily: 'var(--font-narrow)', fontSize: 8, letterSpacing: '.14em', textTransform: 'uppercase', color: dimC }}>Form</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Yellow card warning strip */}
+                {inst.yellowCards > 0 && inst.suspendedMatchday !== nextMatchday && inst.yellowCards % 5 === 4 && (
+                  <div style={{ background: 'rgba(207,148,56,.15)', borderTop: `2px solid rgba(207,148,56,.4)`, padding: '4px 16px', fontFamily: 'var(--font-narrow)', fontSize: 9, letterSpacing: '.12em', textTransform: 'uppercase', color: '#cf9438', fontWeight: 700 }}>
+                    {inst.yellowCards % 5}/5 yellows — next = ban
+                  </div>
+                )}
+
+                {/* Prospect / Veteran tag */}
+                {inst.player.age <= 22 && inst.player.potential - inst.player.overall >= 6 && (
+                  <div style={{ background: 'rgba(47,107,70,.25)', borderTop: `2px solid rgba(47,107,70,.4)`, padding: '4px 16px', fontFamily: 'var(--font-narrow)', fontSize: 9, letterSpacing: '.12em', textTransform: 'uppercase', color: '#2f6b46', fontWeight: 700 }}>
+                    Prospect · Pot {inst.player.potential}
+                  </div>
                 )}
               </div>
-            )}
 
-            {/* Injury row */}
-            {inst.injured && (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 10px', background: 'rgba(232,128,106,0.1)', border: '1px solid rgba(232,128,106,0.3)', borderRadius: 'var(--radius-xs)', marginBottom: 8 }}>
-                <div>
-                  <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--red)' }}>INJURED</span>
-                  <span style={{ fontSize: 11, color: 'var(--text-2)', marginLeft: 6 }}>{inst.injuryDaysLeft} day{inst.injuryDaysLeft !== 1 ? 's' : ''} left</span>
-                </div>
+              {/* ── Action strip below card ── */}
+              {inst.injured ? (
                 <button
-                  className="btn"
-                  style={{ fontSize: 11, padding: '4px 10px', background: budget >= healCost ? 'var(--red)' : 'rgba(232,128,106,0.15)', color: '#fff', border: 'none', opacity: budget >= healCost ? 1 : 0.5 }}
+                  style={{
+                    padding: '8px', border: '2px solid var(--accent)', background: budget >= healCost ? 'var(--accent)' : 'transparent',
+                    color: budget >= healCost ? '#fff' : 'var(--accent)', cursor: budget >= healCost ? 'pointer' : 'not-allowed',
+                    fontFamily: 'var(--font-narrow)', fontSize: 10, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase',
+                    opacity: budget >= healCost ? 1 : .5, transition: 'all .15s',
+                  }}
                   disabled={budget < healCost}
                   onClick={() => onHeal(inst.id)}
-                  title={`Heal for €${(healCost / 1000).toFixed(1)}k`}
                 >
-                  Heal €{(healCost / 1000).toFixed(1)}k
+                  Heal · €{(healCost / 1000).toFixed(1)}k
                 </button>
-              </div>
-            )}
-
-            {/* Train position */}
-            {!isTraining ? (
-              <button
-                className="btn btn-ghost"
-                style={{ width: '100%', fontSize: 11, padding: '5px 0' }}
-                onClick={() => setTrainingFor(inst.id)}
-              >
-                {inst.trainedPosition ? `Retrain (${inst.trainedPosition})` : 'Train position'}
-              </button>
-            ) : (
-              <div style={{ background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: 'var(--radius-xs)', padding: 10 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Train to position</div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 8 }}>
-                  {ALL_POSITIONS.filter(p => p !== inst.player.position).map(p => {
-                    const cost = calcTrainCost(inst.player.position, p)
-                    const canAfford = cost !== null && budget >= cost
-                    return (
-                      <button
-                        key={p}
-                        disabled={cost === null || !canAfford}
-                        onClick={() => { onTrain(inst.id, p); setTrainingFor(null) }}
-                        style={{
-                          padding: '4px 8px', borderRadius: 4, fontSize: 10, fontWeight: 700, cursor: cost !== null && canAfford ? 'pointer' : 'not-allowed',
-                          background: inst.trainedPosition === p ? 'rgba(39,205,255,0.2)' : 'var(--bg-card)',
-                          color: cost === null ? 'var(--text-3)' : !canAfford ? 'var(--text-3)' : inst.trainedPosition === p ? 'var(--cyan)' : 'var(--text-1)',
-                          border: `1px solid ${inst.trainedPosition === p ? 'rgba(39,205,255,0.4)' : 'var(--border)'}`,
-                          opacity: cost === null ? 0.4 : 1,
-                        }}
-                        title={cost === null ? 'GK restriction' : `€${(cost / 1000).toFixed(0)}k`}
-                      >
-                        {p}{cost !== null ? ` €${(cost / 1000).toFixed(0)}k` : ' —'}
-                      </button>
-                    )
-                  })}
+              ) : !isTraining ? (
+                <button
+                  style={{
+                    padding: '8px', border: '2px solid rgba(244,241,234,.2)', background: 'transparent',
+                    color: 'var(--ash)', cursor: 'pointer',
+                    fontFamily: 'var(--font-narrow)', fontSize: 10, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase',
+                    transition: 'border-color .15s, color .15s',
+                  }}
+                  onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = 'var(--paper)'; b.style.color = 'var(--paper)' }}
+                  onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = 'rgba(244,241,234,.2)'; b.style.color = 'var(--ash)' }}
+                  onClick={() => setTrainingFor(inst.id)}
+                >
+                  {inst.trainedPosition ? `Retrain (${inst.trainedPosition})` : 'Train Position'}
+                </button>
+              ) : (
+                <div style={{ border: '2px solid rgba(244,241,234,.2)', background: 'var(--steel)', padding: 10 }}>
+                  <div style={{ fontFamily: 'var(--font-narrow)', fontSize: 10, fontWeight: 700, color: 'var(--ash)', textTransform: 'uppercase', letterSpacing: '.14em', marginBottom: 8 }}>Train to position</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 8 }}>
+                    {ALL_POSITIONS.filter(p => p !== inst.player.position).map(p => {
+                      const cost = calcTrainCost(inst.player.position, p)
+                      const canAfford = cost !== null && budget >= cost
+                      return (
+                        <button
+                          key={p}
+                          disabled={cost === null || !canAfford}
+                          onClick={() => { onTrain(inst.id, p); setTrainingFor(null) }}
+                          style={{
+                            padding: '4px 8px', fontSize: 10, fontWeight: 700,
+                            cursor: cost !== null && canAfford ? 'pointer' : 'not-allowed',
+                            background: inst.trainedPosition === p ? 'rgba(39,205,255,0.15)' : 'var(--ink)',
+                            color: cost === null ? 'var(--ash)' : !canAfford ? 'var(--ash)' : inst.trainedPosition === p ? 'var(--cyan)' : 'var(--paper)',
+                            border: `2px solid ${inst.trainedPosition === p ? 'rgba(39,205,255,0.4)' : 'rgba(244,241,234,.15)'}`,
+                            opacity: cost === null ? 0.4 : 1,
+                            fontFamily: 'var(--font-narrow)', letterSpacing: '.08em', textTransform: 'uppercase',
+                          }}
+                          title={cost === null ? 'GK restriction' : `€${(cost / 1000).toFixed(0)}k`}
+                        >
+                          {p}{cost !== null ? ` €${(cost / 1000).toFixed(0)}k` : ''}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <button
+                    style={{ width: '100%', padding: '5px', border: '2px solid rgba(244,241,234,.2)', background: 'transparent', color: 'var(--ash)', cursor: 'pointer', fontFamily: 'var(--font-narrow)', fontSize: 10, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase' }}
+                    onClick={() => setTrainingFor(null)}
+                  >
+                    Cancel
+                  </button>
                 </div>
-                <button className="btn btn-ghost" style={{ width: '100%', fontSize: 11, padding: '4px 0' }} onClick={() => setTrainingFor(null)}>Cancel</button>
-              </div>
-            )}
-          </div>
-        )
-      })}
-    </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
     </>
   )
 }

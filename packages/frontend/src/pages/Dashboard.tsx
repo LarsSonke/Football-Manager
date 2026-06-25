@@ -117,14 +117,21 @@ export default function Dashboard() {
   }
 
   return (
-    <div>
+    <div style={{ position: 'relative' }}>
+      {/* Speed lines */}
+      <div style={{
+        position: 'fixed', inset: 0, pointerEvents: 'none', opacity: .04, zIndex: 0,
+        background: 'repeating-conic-gradient(from 0deg at 82% 50%, #fff 0 .5deg, transparent .5deg 3.4deg)',
+        WebkitMaskImage: 'radial-gradient(ellipse 80% 80% at 82% 50%, transparent 120px, #000 420px)',
+        maskImage: 'radial-gradient(ellipse 80% 80% at 82% 50%, transparent 120px, #000 420px)',
+      }} />
       <Navbar>
         <button className="btn btn-outline" onClick={logout} style={{ fontSize: 11, padding: '6px 14px' }}>
           Sign out
         </button>
       </Navbar>
 
-      <div className="page">
+      <div className="page" style={{ position: 'relative', zIndex: 1 }}>
 
         {/* ── Chapter header ── */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 28 }}>
@@ -154,8 +161,8 @@ export default function Dashboard() {
 
         {/* ── Create panel ── */}
         {panel === 'create' && (
-          <div style={{ border: '2px solid var(--paper)', background: 'var(--steel)', marginBottom: 24 }}>
-            <div style={{ background: 'var(--paper)', color: 'var(--ink)', padding: '10px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ border: '3px solid var(--paper)', background: 'var(--steel)', marginBottom: 24 }}>
+            <div style={{ background: 'var(--ink)', borderBottom: '3px solid var(--paper)', padding: '10px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontFamily: 'var(--font-display)', fontSize: 18, letterSpacing: '.02em' }}>CREATE LEAGUE</span>
             </div>
             <div style={{ padding: 24 }}>
@@ -242,8 +249,8 @@ export default function Dashboard() {
 
         {/* ── Join panel ── */}
         {panel === 'join' && (
-          <div style={{ border: '2px solid var(--paper)', background: 'var(--steel)', marginBottom: 24 }}>
-            <div style={{ background: 'var(--paper)', color: 'var(--ink)', padding: '10px 18px' }}>
+          <div style={{ border: '3px solid var(--paper)', background: 'var(--steel)', marginBottom: 24 }}>
+            <div style={{ background: 'var(--ink)', borderBottom: '3px solid var(--paper)', padding: '10px 18px' }}>
               <span style={{ fontFamily: 'var(--font-display)', fontSize: 18, letterSpacing: '.02em' }}>JOIN LEAGUE</span>
             </div>
             <div style={{ padding: 24 }}>
@@ -269,7 +276,7 @@ export default function Dashboard() {
 
         {/* ── Empty state ── */}
         {leagues.length === 0 && panel === 'none' && (
-          <div style={{ border: '2px solid var(--border-md)', padding: '60px 0', textAlign: 'center', color: 'var(--text-2)', background: 'var(--steel)' }}>
+          <div style={{ border: '3px solid var(--paper)', padding: '60px 0', textAlign: 'center', color: 'var(--text-2)', background: 'var(--steel)' }}>
             <div style={{ fontFamily: 'var(--font-display)', fontSize: 64, lineHeight: 1, color: 'rgba(244,241,234,0.06)', marginBottom: 12 }}>FM</div>
             <p style={{ fontFamily: 'var(--font-display)', fontSize: 20, color: 'var(--text-1)' }}>NO LEAGUES YET</p>
             <p style={{ fontSize: 13, marginTop: 8, fontFamily: 'var(--font-narrow)', letterSpacing: '.06em' }}>Create a league and invite your friends to join</p>
@@ -288,7 +295,7 @@ export default function Dashboard() {
                 key={entry.id}
                 onClick={() => navigate(`/league/${entry.league.id}`)}
                 style={{
-                  border: '2px solid rgba(244,241,234,0.14)',
+                  border: '3px solid rgba(244,241,234,0.1)',
                   background: 'var(--steel)',
                   padding: '18px 22px',
                   cursor: 'pointer',
@@ -304,7 +311,7 @@ export default function Dashboard() {
                 }}
                 onMouseLeave={e => {
                   const el = e.currentTarget as HTMLDivElement
-                  el.style.borderColor = 'rgba(244,241,234,0.14)'
+                  el.style.borderColor = 'rgba(244,241,234,0.1)'
                   el.style.background = 'var(--steel)'
                 }}
               >
@@ -324,8 +331,8 @@ export default function Dashboard() {
                       </span>
                     </div>
                     <div style={{ fontFamily: 'var(--font-narrow)', color: 'var(--text-2)', fontSize: 12, display: 'flex', gap: 18, letterSpacing: '.08em', textTransform: 'uppercase' }}>
-                      <span>🏟 {entry.name}</span>
-                      <span style={{ color: 'var(--green)' }}>€{(entry.budget / 1000).toFixed(0)}M remaining</span>
+                      <span>{entry.name}</span>
+                      <span style={{ color: 'var(--accent)' }}>€{(entry.budget / 1000).toFixed(0)}M</span>
                       {(entry.league.status === 'ACTIVE' || entry.league.status === 'FINISHED') && (
                         <span>Day {entry.league.currentDay}/{entry.league.seasonLength}</span>
                       )}
@@ -346,9 +353,9 @@ export default function Dashboard() {
                         style={{
                           fontFamily: 'var(--font-narrow)',
                           fontSize: 11, padding: '5px 14px',
-                          background: copiedId === entry.league.id ? 'var(--green)' : 'transparent',
-                          border: `2px solid ${copiedId === entry.league.id ? 'var(--green)' : 'rgba(39,205,255,0.4)'}`,
-                          color: copiedId === entry.league.id ? 'var(--ink)' : 'var(--cyan)',
+                          background: copiedId === entry.league.id ? 'var(--paper)' : 'transparent',
+                          border: `2px solid ${copiedId === entry.league.id ? 'var(--paper)' : 'rgba(244,241,234,0.4)'}`,
+                          color: copiedId === entry.league.id ? 'var(--ink)' : 'var(--paper)',
                           cursor: 'pointer', fontWeight: 700, whiteSpace: 'nowrap',
                           letterSpacing: '.12em', textTransform: 'uppercase',
                           transition: 'all .15s',

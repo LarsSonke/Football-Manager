@@ -39,64 +39,70 @@ export default function Login() {
       alignItems: 'center',
       justifyContent: 'center',
       padding: '20px',
-      background: 'radial-gradient(ellipse at 50% 0%, #0d2a1a 0%, var(--bg-base) 60%)',
+      position: 'relative',
     }}>
-      {/* Pitch lines decoration */}
-      <div style={{
-        position: 'fixed', inset: 0, pointerEvents: 'none', overflow: 'hidden', opacity: 0.04,
-      }}>
-        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 340, height: 340, border: '2px solid #fff', borderRadius: '50%' }} />
-        <div style={{ position: 'absolute', top: 0, bottom: 0, left: '50%', width: 2, background: '#fff' }} />
-        <div style={{ position: 'absolute', inset: 40, border: '2px solid #fff' }} />
-      </div>
 
-      <div style={{ width: '100%', maxWidth: 400, position: 'relative' }}>
+      {/* Speed lines emanating from center */}
+      <div style={{
+        position: 'fixed', inset: 0, pointerEvents: 'none', opacity: .08,
+        background: 'repeating-conic-gradient(from 0deg at 50% 50%, #fff 0deg .5deg, transparent .5deg 3.4deg)',
+        WebkitMaskImage: 'radial-gradient(circle at 50% 50%, transparent 100px, #000 360px)',
+        maskImage: 'radial-gradient(circle at 50% 50%, transparent 100px, #000 360px)',
+      }} />
+
+      <div style={{ width: '100%', maxWidth: 420, position: 'relative', animation: 'mgSlam .5s cubic-bezier(.2,.8,.3,1) both' }}>
+
         {/* Logo */}
-        <div style={{ textAlign: 'center', marginBottom: 36 }}>
-          <div style={{ fontSize: 48, marginBottom: 8 }}>⚽</div>
-          <div style={{
-            fontFamily: 'var(--font-display)', fontSize: 36, fontWeight: 800,
-            letterSpacing: 1, color: 'var(--text-1)',
-          }}>
-            FOOTBALL<span style={{ color: 'var(--green)' }}>MGR</span>
+        <div style={{ marginBottom: 28, animation: 'mgInL .45s .05s both' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
+            <span style={{ fontFamily: 'var(--font-display)', fontSize: 38, letterSpacing: '-.01em' }}>FOOTBALL</span>
+            <span style={{ fontFamily: 'var(--font-display)', fontSize: 38, color: 'var(--accent)', transform: 'skewX(-10deg)', margin: '0 6px 0 10px' }}>//</span>
+            <span style={{ fontFamily: 'var(--font-display)', fontSize: 38, letterSpacing: '-.01em' }}>MGR</span>
           </div>
-          <div style={{ color: 'var(--text-2)', fontSize: 13, marginTop: 4 }}>
+          <div style={{ fontFamily: 'var(--font-narrow)', fontSize: 11, letterSpacing: '.22em', textTransform: 'uppercase', color: 'var(--ash)', marginTop: 4 }}>
             Build your squad. Beat your friends.
           </div>
         </div>
 
-        {/* Card */}
-        <div className="card" style={{ padding: 28 }}>
-          {/* Mode toggle */}
-          <div style={{ display: 'flex', background: 'var(--bg-base)', borderRadius: 6, padding: 4, marginBottom: 24, gap: 4 }}>
-            {(['login', 'register'] as const).map((m) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => { setMode(m); setError('') }}
-                style={{
-                  flex: 1, padding: '8px', border: 'none', borderRadius: 4,
-                  cursor: 'pointer', fontFamily: 'var(--font-body)',
-                  fontSize: 13, fontWeight: 600, transition: 'all 0.15s',
-                  background: mode === m ? 'var(--bg-card-2)' : 'transparent',
-                  color: mode === m ? 'var(--text-1)' : 'var(--text-2)',
-                  boxShadow: mode === m ? 'var(--shadow-sm)' : 'none',
-                }}
-              >
-                {m === 'login' ? 'Sign in' : 'Create account'}
-              </button>
-            ))}
+        {/* Manga panel */}
+        <div style={{ border: '3px solid var(--paper)', background: 'var(--steel)', overflow: 'hidden' }}>
+
+          {/* Ink header bar */}
+          <div style={{ background: 'var(--ink)', padding: '9px 20px', borderBottom: '3px solid var(--paper)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontFamily: 'var(--font-display)', fontSize: 18, letterSpacing: '.02em' }}>
+              {mode === 'login' ? 'SIGN IN' : 'CREATE ACCOUNT'}
+            </span>
+            <div style={{ display: 'flex' }}>
+              {(['login', 'register'] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => { setMode(m); setError('') }}
+                  style={{
+                    padding: '4px 14px', border: 'none', cursor: 'pointer',
+                    fontFamily: 'var(--font-narrow)', fontSize: 10, fontWeight: 700,
+                    letterSpacing: '.18em', textTransform: 'uppercase',
+                    background: mode === m ? 'var(--accent)' : 'transparent',
+                    color: mode === m ? '#fff' : 'var(--ash)',
+                    transition: 'all .15s',
+                  }}
+                >
+                  {m === 'login' ? 'Sign in' : 'Register'}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <form onSubmit={handleSubmit} style={{ padding: '24px 20px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
             {mode === 'login' ? (
               <input
                 type="text"
-                placeholder="Email address or username"
+                placeholder="Email or username"
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
                 required
                 autoComplete="username"
+                style={{ background: 'var(--ink)', border: '2px solid rgba(244,241,234,.2)', color: 'var(--paper)', fontFamily: 'var(--font-narrow)', fontSize: 13, letterSpacing: '.06em', borderRadius: 0 }}
               />
             ) : (
               <input
@@ -106,6 +112,7 @@ export default function Login() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 autoComplete="email"
+                style={{ background: 'var(--ink)', border: '2px solid rgba(244,241,234,.2)', color: 'var(--paper)', fontFamily: 'var(--font-narrow)', fontSize: 13, letterSpacing: '.06em', borderRadius: 0 }}
               />
             )}
 
@@ -117,6 +124,7 @@ export default function Login() {
                 onChange={(e) => setUsername(e.target.value)}
                 required
                 autoComplete="username"
+                style={{ background: 'var(--ink)', border: '2px solid rgba(244,241,234,.2)', color: 'var(--paper)', fontFamily: 'var(--font-narrow)', fontSize: 13, letterSpacing: '.06em', borderRadius: 0 }}
               />
             )}
 
@@ -127,17 +135,26 @@ export default function Login() {
               onChange={(e) => setPassword(e.target.value)}
               required
               autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+              style={{ background: 'var(--ink)', border: '2px solid rgba(244,241,234,.2)', color: 'var(--paper)', fontFamily: 'var(--font-narrow)', fontSize: 13, letterSpacing: '.06em', borderRadius: 0 }}
             />
 
-            {error && <p className="error-text">{error}</p>}
+            {error && <p className="error-text" style={{ margin: 0 }}>{error}</p>}
 
             <button
               type="submit"
-              className="btn btn-green"
               disabled={loading}
-              style={{ marginTop: 4, padding: '11px', fontSize: 14 }}
+              style={{
+                marginTop: 4, padding: '14px', border: 'none', cursor: loading ? 'not-allowed' : 'pointer',
+                background: 'var(--accent)', color: '#fff',
+                clipPath: 'polygon(0 0, 100% 0, 96% 100%, 0 100%)',
+                fontFamily: 'var(--font-body)', fontSize: 14, fontWeight: 900,
+                letterSpacing: '.12em', textTransform: 'uppercase',
+                transition: 'transform .2s', opacity: loading ? .55 : 1,
+              }}
+              onMouseEnter={e => { if (!loading) (e.currentTarget as HTMLButtonElement).style.transform = 'translateX(4px)' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform = '' }}
             >
-              {loading ? '...' : mode === 'login' ? 'Sign in' : 'Create account'}
+              {loading ? '...' : mode === 'login' ? 'Sign In' : 'Create Account'}
             </button>
           </form>
         </div>

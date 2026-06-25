@@ -12,7 +12,7 @@
       rgba(12, 18, 28, 0.35) 70%,
       rgba(12, 18, 28, 0.15) 100%
     ),
-    url('./IMG_2998_Rashford.jpg');
+    url('/IMG_2998_Rashford.jpg');
 
   background-size: cover;
   background-position: center right;
@@ -135,7 +135,7 @@
         rgba(12, 18, 28, 0.7) 35%,
         rgba(12, 18, 28, 0.95) 100%
       ),
-      url("C:\Projects\footballmanagerfantasy\Football-Manager\packages\frontend\public\IMG_2998_Rashford.jpg");
+      url('/IMG_2998_Rashford.jpg');
 
     background-position: center top;
   }

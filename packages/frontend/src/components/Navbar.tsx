@@ -18,7 +18,7 @@ export function Navbar({ backTo, backLabel, children }: NavbarProps) {
         </Link>
       )}
       <Link to="/" className="nav-logo">
-        <img src="/logo.png" alt="Football Manager" style={{ height: 28, display: 'block' }} />
+        <img src="/tactixlogo.png" alt="Tactix" style={{ height: 32, display: 'block' }} />
       </Link>
       <div className="nav-spacer" />
       {user && <span className="nav-user">{user.username}</span>}

@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../../api/client'
 import { ClubBadge } from '../../components/ClubBadge'
+import { PlayerPhoto } from '../../components/PlayerPhoto'
 import { KitSvg, type KitConfig } from '../../components/KitSvg'
 import {
-  useIsMobile, getBadgeColor, posClass,
+  useIsMobile, posClass,
   type LeagueData, type MatchData, type ClubData, type AwardEntry, type MatchdayAwards,
   type AvailableDeal, type ActiveDeal, type Tab,
 } from './types'
@@ -46,13 +47,7 @@ function TOTWPitch({ players }: { players: AwardEntry[] }) {
       </svg>
       {positionedPlayers.map(({ player: p, x, y }) => (
         <div key={p.instanceId} style={{ position: 'absolute', left: `${x}%`, top: `${y}%`, transform: 'translate(-50%, -50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, width: 72 }}>
-          {p.photoUrl ? (
-            <img src={p.photoUrl} alt="" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '2.5px solid rgba(255,255,255,0.9)', flexShrink: 0, filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.7))' }} />
-          ) : (
-            <div style={{ width: 44, height: 44, borderRadius: '50%', background: getBadgeColor(p.playerName), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 900, color: '#000', border: '2.5px solid rgba(255,255,255,0.9)', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.7))' }}>
-              {p.playerName.split(' ').map(w => w[0]).slice(0, 2).join('')}
-            </div>
-          )}
+          <PlayerPhoto url={p.photoUrl} name={p.playerName} size={44} style={{ borderRadius: '50%', border: '2.5px solid rgba(255,255,255,0.9)', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.7))' }} />
           <KitSvg config={p.clubKitConfig as KitConfig | null} size={36} uid={`totw-${p.instanceId}`} />
           <div style={{ background: 'rgba(0,0,0,0.72)', padding: '2px 6px', textAlign: 'center', backdropFilter: 'blur(4px)' }}>
             <div style={{ fontSize: 9, fontWeight: 700, color: '#fff', whiteSpace: 'nowrap', lineHeight: 1.3, maxWidth: 68, overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.playerName.split(' ').slice(-1)[0]}</div>
@@ -539,13 +534,7 @@ export default function Overview({ league, matches, myClub, awards, onPhysioUpgr
                 <div key={item.label} style={{ background: 'var(--bg-card-2)', border: '2px solid rgba(244,241,234,0.10)', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start' }}>
                   <div style={{ fontFamily: 'var(--font-narrow)', fontSize: 9, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.12em' }}>{item.label}</div>
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    {item.entry.photoUrl ? (
-                      <img src={item.entry.photoUrl} alt="" style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border)', flexShrink: 0 }} />
-                    ) : (
-                      <div style={{ width: 36, height: 36, borderRadius: '50%', background: getBadgeColor(item.entry.playerName), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 900, color: '#000', flexShrink: 0 }}>
-                        {item.entry.playerName.split(' ').map(w => w[0]).slice(0, 2).join('')}
-                      </div>
-                    )}
+                    <PlayerPhoto url={item.entry.photoUrl} name={item.entry.playerName} size={36} style={{ borderRadius: '50%', border: '2px solid var(--border)' }} />
                     <KitSvg config={item.entry.clubKitConfig as KitConfig | null} size={32} uid={`award-${item.label}-kit`} />
                   </div>
                   <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)', lineHeight: 1.3 }}>{item.entry.playerName}</div>

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { tacticFitScore } from '@football/shared'
-import { getBadgeColor, posClass } from '../../utils/helpers'
+import { posClass } from '../../utils/helpers'
+import { PlayerPhoto } from '../../components/PlayerPhoto'
 import { KitSvg, type KitConfig } from '../../components/KitSvg'
 import { api } from '../../api/client'
 import { useIsMobile } from './types'
@@ -408,13 +409,7 @@ function PlayerDetailModal({
       <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: isMobile ? 0 : 'var(--radius)', width: '100%', maxWidth: isMobile ? '100%' : 680, height: isMobile ? '100%' : '82vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         {/* Header */}
         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 16 }}>
-          {p.photoUrl ? (
-            <img src={p.photoUrl} alt={p.name} style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border)' }} />
-          ) : (
-            <div style={{ width: 64, height: 64, borderRadius: '50%', background: getBadgeColor(p.name), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 900, color: '#000', flexShrink: 0 }}>
-              {p.name.split(' ').slice(0, 2).map(w => w[0]?.toUpperCase() ?? '').join('')}
-            </div>
-          )}
+          <PlayerPhoto url={p.photoUrl} name={p.name} size={64} style={{ borderRadius: '50%', border: '2px solid var(--border)' }} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-1)' }}>{p.name}</span>
@@ -830,13 +825,7 @@ export default function Tactics({ leagueId, myClub, onSaved, nextMatchday }: {
             padding: '4px 5px',
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
           }}>
-            {player.player.photoUrl ? (
-              <img src={player.player.photoUrl} alt="" style={{ width: photoSz, height: photoSz, borderRadius: '50%', objectFit: 'cover', border: `2px solid ${fitColor}` }} />
-            ) : (
-              <div style={{ width: photoSz, height: photoSz, borderRadius: '50%', background: getBadgeColor(player.player.name), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: Math.round(photoSz * 0.35), fontWeight: 900, color: '#000', flexShrink: 0, border: `2px solid ${fitColor}` }}>
-                {player.player.name.split(' ').map(w => w[0]).slice(0, 2).join('')}
-              </div>
-            )}
+            <PlayerPhoto url={player.player.photoUrl} name={player.player.name} size={photoSz} style={{ borderRadius: '50%', border: `2px solid ${fitColor}` }} />
             <span style={{ fontSize: nameFz, fontWeight: 700, color: '#fff', textAlign: 'center', lineHeight: 1.2, width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {player.player.name.split(' ').slice(-1)[0]}
             </span>
@@ -1105,13 +1094,7 @@ export default function Tactics({ leagueId, myClub, onSaved, nextMatchday }: {
                       const dimmed = player.injured || isSusp
                       return (
                         <div style={{ position: 'relative', flexShrink: 0 }}>
-                          {player.player.photoUrl ? (
-                            <img src={player.player.photoUrl} alt="" style={{ width: photoSz, height: photoSz, borderRadius: '50%', objectFit: 'cover', border: `2px solid ${alertColor ?? fitColor}`, opacity: dimmed ? 0.65 : 1 }} />
-                          ) : (
-                            <div style={{ width: photoSz, height: photoSz, borderRadius: '50%', background: getBadgeColor(player.player.name), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: Math.round(photoSz * 0.35), fontWeight: 900, color: '#000', flexShrink: 0, border: `2px solid ${alertColor ?? fitColor}`, opacity: dimmed ? 0.65 : 1 }}>
-                              {player.player.name.split(' ').map(w => w[0]).slice(0, 2).join('')}
-                            </div>
-                          )}
+                          <PlayerPhoto url={player.player.photoUrl} name={player.player.name} size={photoSz} style={{ borderRadius: '50%', border: `2px solid ${alertColor ?? fitColor}`, opacity: dimmed ? 0.65 : 1 }} />
                           {player.injured && (
                             <div style={{
                               position: 'absolute', bottom: -2, right: -2, zIndex: 2,
@@ -1264,13 +1247,7 @@ export default function Tactics({ leagueId, myClub, onSaved, nextMatchday }: {
                   onDragStart={() => { /* bench-to-pitch DnD could be added */ }}
                   style={{ padding: '6px 8px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 7, display: 'flex', alignItems: 'center', gap: 6, cursor: 'default' }}
                 >
-                  {p.player.photoUrl ? (
-                    <img src={p.player.photoUrl} alt="" style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                  ) : (
-                    <div style={{ width: 24, height: 24, borderRadius: '50%', background: getBadgeColor(p.player.name), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8, fontWeight: 900, color: '#000', flexShrink: 0 }}>
-                      {p.player.name.split(' ').map(w => w[0]).slice(0, 2).join('')}
-                    </div>
-                  )}
+                  <PlayerPhoto url={p.player.photoUrl} name={p.player.name} size={24} style={{ borderRadius: '50%' }} />
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.player.name.split(' ').slice(-1)[0]}</div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>

@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { api } from '../../api/client'
-import { posClass, getBadgeColor, ovrColor } from '../../utils/helpers'
+import { posClass, ovrColor } from '../../utils/helpers'
+import { PlayerPhoto } from '../../components/PlayerPhoto'
 import { useIsMobile } from './types'
 import type { ClubData, SquadPlayer, FreeAgent, TransferListing } from './types'
 
@@ -120,12 +121,7 @@ export default function Transfers({ leagueId, myClub, squadSize, transferWindowO
         alignItems: 'center', gap: 8,
         padding: '9px 14px', borderBottom: '1px solid var(--border)',
       }}>
-        {pl.photoUrl
-          ? <img src={pl.photoUrl} alt="" style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover' }} />
-          : <div style={{ width: 28, height: 28, borderRadius: '50%', background: getBadgeColor(pl.name), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 900, color: '#000' }}>
-              {pl.name.split(' ').map((w: string) => w[0]).slice(0, 2).join('')}
-            </div>
-        }
+        <PlayerPhoto url={pl.photoUrl} name={pl.name} size={28} style={{ borderRadius: '50%' }} />
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pl.name}</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -178,12 +174,7 @@ export default function Transfers({ leagueId, myClub, squadSize, transferWindowO
                 alignItems: 'center', gap: 8,
                 padding: '9px 14px', borderBottom: '1px solid var(--border)',
               }}>
-                {pl.photoUrl
-                  ? <img src={pl.photoUrl} alt="" style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover' }} />
-                  : <div style={{ width: 28, height: 28, borderRadius: '50%', background: getBadgeColor(pl.name), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 900, color: '#000' }}>
-                      {pl.name.split(' ').map((w: string) => w[0]).slice(0, 2).join('')}
-                    </div>
-                }
+                <PlayerPhoto url={pl.photoUrl} name={pl.name} size={28} style={{ borderRadius: '50%' }} />
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pl.name}</div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>

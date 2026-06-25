@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { ClubBadge } from '../../components/ClubBadge'
 import { KitSvg, type KitConfig } from '../../components/KitSvg'
 import { api } from '../../api/client'
-import { posClass, getBadgeColor } from '../../utils/helpers'
+import { posClass } from '../../utils/helpers'
+import { PlayerPhoto } from '../../components/PlayerPhoto'
 import type { StatEntry, AwardEntry, StatCategory } from './types'
 
 // ─── TOTW Pitch ───────────────────────────────────────────────────────────────
@@ -56,13 +57,7 @@ function TOTWPitch({ players }: { players: AwardEntry[] }) {
           display: 'flex', flexDirection: 'column', alignItems: 'center',
           gap: 2, width: 72,
         }}>
-          {p.photoUrl ? (
-            <img src={p.photoUrl} alt="" style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '2.5px solid rgba(255,255,255,0.9)', flexShrink: 0, filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.7))' }} />
-          ) : (
-            <div style={{ width: 44, height: 44, borderRadius: '50%', background: getBadgeColor(p.playerName), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 900, color: '#000', border: '2.5px solid rgba(255,255,255,0.9)', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.7))' }}>
-              {p.playerName.split(' ').map(w => w[0]).slice(0, 2).join('')}
-            </div>
-          )}
+          <PlayerPhoto url={p.photoUrl} name={p.playerName} size={44} style={{ borderRadius: '50%', border: '2.5px solid rgba(255,255,255,0.9)', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.7))' }} />
           <KitSvg config={p.clubKitConfig as KitConfig | null} size={36} uid={`totw-${p.instanceId}`} />
           <div style={{ background: 'rgba(0,0,0,0.72)', borderRadius: 4, padding: '2px 6px', textAlign: 'center', backdropFilter: 'blur(4px)' }}>
             <div style={{ fontSize: 9, fontWeight: 700, color: '#fff', whiteSpace: 'nowrap', lineHeight: 1.3, maxWidth: 68, overflow: 'hidden', textOverflow: 'ellipsis' }}>

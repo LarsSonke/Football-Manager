@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { io } from 'socket.io-client'
 import { api } from '../../api/client'
 import { posClass, getBadgeColor, ovrColor } from '../../utils/helpers'
+import { PlayerPhoto } from '../../components/PlayerPhoto'
 import { useIsMobile } from './types'
 import type { ClubData, LeagueData, SquadPlayer, MessageData, InboxEntry, LeagueChatMessage } from './types'
 
@@ -330,12 +331,7 @@ export default function Messages({ leagueId, myClub, league, currentUserId, onRe
                           </div>
                           {found ? (
                             <div style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 10 }}>
-                              {found.player.player.photoUrl
-                                ? <img src={found.player.player.photoUrl} alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover' }} />
-                                : <div style={{ width: 32, height: 32, borderRadius: '50%', background: getBadgeColor(found.player.player.name), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 900, color: '#000' }}>
-                                    {found.player.player.name.split(' ').map(w => w[0]).slice(0, 2).join('')}
-                                  </div>
-                              }
+                              <PlayerPhoto url={found.player.player.photoUrl} name={found.player.player.name} size={32} style={{ borderRadius: '50%' }} />
                               <div>
                                 <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-1)' }}>{found.player.player.name}</div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -397,12 +393,7 @@ export default function Messages({ leagueId, myClub, league, currentUserId, onRe
                         borderRadius: 6, cursor: 'pointer',
                         background: offerFor?.player.id === p.id ? 'rgba(255,255,255,0.07)' : 'transparent',
                       }}>
-                        {p.player.photoUrl
-                          ? <img src={p.player.photoUrl} alt="" style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover' }} />
-                          : <div style={{ width: 24, height: 24, borderRadius: '50%', background: getBadgeColor(p.player.name), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8, fontWeight: 900, color: '#000' }}>
-                              {p.player.name.split(' ').map(w => w[0]).slice(0, 2).join('')}
-                            </div>
-                        }
+                        <PlayerPhoto url={p.player.photoUrl} name={p.player.name} size={24} style={{ borderRadius: '50%' }} />
                         <span style={{ flex: 1, fontSize: 12, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.player.name}</span>
                         <span className={posClass(p.player.position)} style={{ fontSize: 9 }}>{p.player.position}</span>
                         <span style={{ fontSize: 12, fontFamily: 'var(--font-display)', fontWeight: 800, color: ovrColor(p.player.overall) }}>{p.player.overall}</span>
@@ -423,12 +414,7 @@ export default function Messages({ leagueId, myClub, league, currentUserId, onRe
                               borderRadius: 6, cursor: 'pointer',
                               background: offerFor?.player.id === p.id ? 'rgba(255,255,255,0.07)' : 'transparent',
                             }}>
-                              {p.player.photoUrl
-                                ? <img src={p.player.photoUrl} alt="" style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover' }} />
-                                : <div style={{ width: 24, height: 24, borderRadius: '50%', background: getBadgeColor(p.player.name), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8, fontWeight: 900, color: '#000' }}>
-                                    {p.player.name.split(' ').map(w => w[0]).slice(0, 2).join('')}
-                                  </div>
-                              }
+                              <PlayerPhoto url={p.player.photoUrl} name={p.player.name} size={24} style={{ borderRadius: '50%' }} />
                               <span style={{ flex: 1, fontSize: 12, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.player.name}</span>
                               <span className={posClass(p.player.position)} style={{ fontSize: 9 }}>{p.player.position}</span>
                               <span style={{ fontSize: 12, fontFamily: 'var(--font-display)', fontWeight: 800, color: ovrColor(p.player.overall) }}>{p.player.overall}</span>

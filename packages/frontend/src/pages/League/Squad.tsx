@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { flagUrl } from '../../utils/flagCodes'
-import { posClass, getBadgeColor } from '../../utils/helpers'
+import { posClass } from '../../utils/helpers'
+import { PlayerPhoto } from '../../components/PlayerPhoto'
 import type { SquadPlayer, PlayerData } from './types'
 import { POS_ORDER } from './types'
 
@@ -145,13 +146,7 @@ function PlayerDetailModal({ player, slotPos, onClose }: { player: SquadPlayer; 
 
         {/* Ink header */}
         <div style={{ background: 'var(--ink)', padding: '10px 20px', borderBottom: '3px solid var(--paper)', display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
-          {p.photoUrl ? (
-            <img src={p.photoUrl} alt={p.name} style={{ width: 52, height: 52, objectFit: 'cover', objectPosition: 'top', border: '2px solid var(--paper)', flexShrink: 0 }} referrerPolicy="no-referrer" />
-          ) : (
-            <div style={{ width: 52, height: 52, background: getBadgeColor(p.name), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 900, color: '#000', flexShrink: 0, border: '2px solid var(--paper)' }}>
-              {p.name.split(' ').slice(0, 2).map(w => w[0]?.toUpperCase() ?? '').join('')}
-            </div>
-          )}
+          <PlayerPhoto url={p.photoUrl} name={p.name} size={52} style={{ border: '2px solid var(--paper)' }} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ fontFamily: 'var(--font-display)', fontSize: 22, lineHeight: .9, letterSpacing: '-.01em', textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>

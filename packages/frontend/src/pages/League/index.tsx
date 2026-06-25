@@ -659,7 +659,7 @@ export default function League() {
       }}>
         {/* Logo */}
         <div style={{ padding: '18px 20px', borderBottom: '1px solid var(--border)' }}>
-          <Link to="/" className="nav-logo"><img src="/logo.png" alt="Football Manager" style={{ height: 28, display: 'block' }} /></Link>
+          <Link to="/" className="nav-logo"><img src="/tactixlogo.png" alt="Tactix" style={{ height: 28, display: 'block' }} /></Link>
         </div>
 
         {/* Club identity */}

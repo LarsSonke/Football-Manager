@@ -120,10 +120,10 @@ export default function Dashboard() {
     <div style={{ position: 'relative' }}>
       {/* Speed lines */}
       <div style={{
-        position: 'fixed', inset: 0, pointerEvents: 'none', opacity: .04, zIndex: 0,
-        background: 'repeating-conic-gradient(from 0deg at 82% 50%, #fff 0 .5deg, transparent .5deg 3.4deg)',
-        WebkitMaskImage: 'radial-gradient(ellipse 80% 80% at 82% 50%, transparent 120px, #000 420px)',
-        maskImage: 'radial-gradient(ellipse 80% 80% at 82% 50%, transparent 120px, #000 420px)',
+        // position: 'fixed', inset: 0, pointerEvents: 'none', opacity: .04, zIndex: 0,
+        // background: 'repeating-conic-gradient(from 0deg at 82% 50%, #fff 0 .5deg, transparent .5deg 3.4deg)',
+        // WebkitMaskImage: 'radial-gradient(ellipse 80% 80% at 82% 50%, transparent 120px, #000 420px)',
+        // maskImage: 'radial-gradient(ellipse 80% 80% at 82% 50%, transparent 120px, #000 420px)',
       }} />
       <Navbar>
         <button className="btn btn-outline" onClick={logout} style={{ fontSize: 11, padding: '6px 14px' }}>

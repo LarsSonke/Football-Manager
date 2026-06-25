@@ -8,6 +8,7 @@ import League from './pages/League'
 import Draft from './pages/Draft'
 import MatchReport from './pages/MatchReport'
 import ClubProfile from './pages/ClubProfile'
+import BackgroundMusic from './backgroundMusic'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { token } = useAuth()
@@ -28,6 +29,8 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <BackgroundMusic />
+
       <Routes>
         <Route path="/" element={<RootRoute />} />
         <Route path="/login" element={<Login />} />

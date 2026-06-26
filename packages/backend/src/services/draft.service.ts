@@ -94,6 +94,7 @@ export async function makePick(
   leagueId: string,
   clubId: string,
   playerId: string,
+  skipChain = false,
 ): Promise<DraftPickEvent> {
   const session = await prisma.draftSession.findUnique({ where: { leagueId } })
   if (!session) throw new Error('Draft session not found')
@@ -180,7 +181,7 @@ export async function makePick(
   }
 
   // If next club is AI, trigger an auto-pick after a short delay
-  if (!draftComplete && nextClubId) {
+  if (!skipChain && !draftComplete && nextClubId) {
     const nextClub = await prisma.club.findUnique({ where: { id: nextClubId } })
     if (nextClub?.isAI) {
       setTimeout(() => aiAutoPick(leagueId, nextClubId), 2000)
@@ -435,7 +436,7 @@ function positionCategory(pos: string): 'GK' | 'DEF' | 'MID' | 'ATT' {
   return 'MID'
 }
 
-async function aiAutoPick(leagueId: string, clubId: string): Promise<void> {
+async function aiAutoPick(leagueId: string, clubId: string, skipChain = false): Promise<void> {
   const [club, session] = await Promise.all([
     prisma.club.findUnique({ where: { id: clubId } }),
     prisma.draftSession.findUnique({ where: { leagueId } }),
@@ -519,9 +520,30 @@ async function aiAutoPick(leagueId: string, clubId: string): Promise<void> {
   scored.sort((a, b) => b.score - a.score)
 
   try {
-    await makePick(leagueId, clubId, scored[0].inst.playerId)
+    await makePick(leagueId, clubId, scored[0].inst.playerId, skipChain)
   } catch {
     // Transient failure — no retry needed
+  }
+}
+
+export async function quickCompleteDraft(leagueId: string, requestingUserId: string): Promise<void> {
+  const league = await prisma.league.findUnique({
+    where: { id: leagueId },
+    include: { clubs: { where: { isAI: false }, orderBy: { createdAt: 'asc' }, take: 1 } },
+  })
+  if (!league) throw new Error('League not found')
+  if (league.clubs[0]?.userId !== requestingUserId) throw new Error('Only the league host can quick-complete the draft')
+
+  const session = await prisma.draftSession.findUnique({ where: { leagueId } })
+  if (!session || session.status !== 'ACTIVE') throw new Error('Draft is not currently active')
+  if (session.type === 'AUCTION') throw new Error('Quick draft is only available for snake drafts')
+
+  let current = await prisma.draftSession.findUnique({ where: { leagueId } })
+  while (current && current.status === 'ACTIVE') {
+    const clubId = current.pickOrder[current.currentPick]
+    if (!clubId) break
+    await aiAutoPick(leagueId, clubId, true)
+    current = await prisma.draftSession.findUnique({ where: { leagueId } })
   }
 }
 

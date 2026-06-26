@@ -89,4 +89,13 @@ router.post('/:leagueId/bid', async (req: AuthRequest, res) => {
   }
 })
 
+router.post('/:leagueId/quick-complete', async (req: AuthRequest, res) => {
+  try {
+    await draftService.quickCompleteDraft(req.params.leagueId, req.userId!)
+    res.json({ ok: true })
+  } catch (err: any) {
+    res.status(400).json({ error: err.message })
+  }
+})
+
 export default router

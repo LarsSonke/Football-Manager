@@ -4,6 +4,7 @@ import { requireAuth, type AuthRequest } from '../middleware/auth'
 import * as leagueService from '../services/league.service'
 import * as draftService from '../services/draft.service'
 import { prisma } from '../prisma'
+import { simulateLeagueMatchday, simulateSeasonFast } from '../scheduler/matchday.scheduler'
 
 const router = Router()
 router.use(requireAuth)
@@ -220,6 +221,33 @@ router.post('/:id/new-season', async (req: AuthRequest, res) => {
   } catch (err: any) {
     res.status(400).json({ error: err.message })
   }
+})
+
+async function getHostClub(leagueId: string) {
+  return prisma.club.findFirst({
+    where: { leagueId, isAI: false },
+    orderBy: { createdAt: 'asc' },
+  })
+}
+
+router.post('/:id/simulate-matchday', async (req: AuthRequest, res) => {
+  const host = await getHostClub(req.params.id)
+  if (!host) { res.status(404).json({ error: 'League not found' }); return }
+  if (host.userId !== req.userId) { res.status(403).json({ error: 'Only the league host can trigger matchdays' }); return }
+  const league = await prisma.league.findUnique({ where: { id: req.params.id } })
+  if (league?.status !== 'ACTIVE') { res.status(400).json({ error: 'League is not currently active' }); return }
+  simulateLeagueMatchday(req.params.id).catch(err => console.error('Manual matchday error:', err))
+  res.json({ ok: true })
+})
+
+router.post('/:id/simulate-season', async (req: AuthRequest, res) => {
+  const host = await getHostClub(req.params.id)
+  if (!host) { res.status(404).json({ error: 'League not found' }); return }
+  if (host.userId !== req.userId) { res.status(403).json({ error: 'Only the league host can simulate the season' }); return }
+  const league = await prisma.league.findUnique({ where: { id: req.params.id } })
+  if (league?.status !== 'ACTIVE') { res.status(400).json({ error: 'League is not currently active' }); return }
+  simulateSeasonFast(req.params.id).catch(err => console.error('Instant season error:', err))
+  res.json({ ok: true })
 })
 
 router.post('/:id/draft/start', async (req: AuthRequest, res) => {

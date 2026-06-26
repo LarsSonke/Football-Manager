@@ -18,6 +18,9 @@ export default function Manage({ league, onUpdate, onDelete }: { league: LeagueD
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [formError, setFormError] = useState('')
+  const [hostMsg, setHostMsg] = useState('')
+  const [hostLoading, setHostLoading] = useState<'draft' | 'matchday' | 'season' | null>(null)
+  const [confirmSeason, setConfirmSeason] = useState(false)
 
   async function handleSave() {
     setFormError('')
@@ -60,6 +63,33 @@ export default function Manage({ league, onUpdate, onDelete }: { league: LeagueD
 
   const field: React.CSSProperties = { width: '100%', padding: '9px 12px', background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text-1)', fontSize: 13 }
   const lbl: React.CSSProperties = { fontSize: 11, fontWeight: 700, color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 5, display: 'block' }
+
+  async function handleQuickDraft() {
+    setHostLoading('draft'); setHostMsg('')
+    try {
+      await api.post(`/draft/${league.id}/quick-complete`)
+      setHostMsg('Draft completed! Season is starting...')
+    } catch (e: any) { setHostMsg(e.response?.data?.error ?? 'Failed') }
+    finally { setHostLoading(null) }
+  }
+
+  async function handleSimulateMatchday() {
+    setHostLoading('matchday'); setHostMsg('')
+    try {
+      await api.post(`/leagues/${league.id}/simulate-matchday`)
+      setHostMsg('Matchday simulation started!')
+    } catch (e: any) { setHostMsg(e.response?.data?.error ?? 'Failed') }
+    finally { setHostLoading(null) }
+  }
+
+  async function handleSimulateSeason() {
+    setHostLoading('season'); setConfirmSeason(false); setHostMsg('')
+    try {
+      await api.post(`/leagues/${league.id}/simulate-season`)
+      setHostMsg('Season simulation running... results will appear when done.')
+    } catch (e: any) { setHostMsg(e.response?.data?.error ?? 'Failed') }
+    finally { setHostLoading(null) }
+  }
 
   return (
     <div style={{ maxWidth: 600 }}>
@@ -113,6 +143,63 @@ export default function Manage({ league, onUpdate, onDelete }: { league: LeagueD
         </div>
         </div>
       </div>
+
+      {(league.draftSession?.status === 'ACTIVE' || league.status === 'ACTIVE') && (
+        <div className="card" style={{ marginBottom: 16, padding: 0 }}>
+          <div className="card-header">
+            <span className="accent-bar" />
+            <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Host Controls</span>
+          </div>
+          <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {hostMsg && <div style={{ fontSize: 12, color: 'var(--green)', padding: '8px 12px', background: 'rgba(54,226,126,0.08)', border: '1px solid rgba(54,226,126,0.2)', borderRadius: 'var(--radius-sm)' }}>{hostMsg}</div>}
+
+            {league.draftSession?.status === 'ACTIVE' && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-1)' }}>Quick Draft</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-2)', marginTop: 2 }}>Auto-pick all remaining draft slots for every club.</div>
+                </div>
+                <button className="btn btn-green" style={{ whiteSpace: 'nowrap', flexShrink: 0 }} disabled={hostLoading !== null} onClick={handleQuickDraft}>
+                  {hostLoading === 'draft' ? 'Drafting...' : 'Quick Draft'}
+                </button>
+              </div>
+            )}
+
+            {league.status === 'ACTIVE' && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-1)' }}>Simulate Matchday</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-2)', marginTop: 2 }}>Immediately play the next matchday.</div>
+                </div>
+                <button className="btn" style={{ whiteSpace: 'nowrap', flexShrink: 0, background: 'rgba(39,205,255,0.12)', color: 'var(--cyan)', border: '1px solid rgba(39,205,255,0.3)' }} disabled={hostLoading !== null} onClick={handleSimulateMatchday}>
+                  {hostLoading === 'matchday' ? 'Starting...' : 'Sim Matchday'}
+                </button>
+              </div>
+            )}
+
+            {league.status === 'ACTIVE' && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-1)' }}>Simulate Full Season</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-2)', marginTop: 2 }}>Instantly play out all remaining matchdays.</div>
+                </div>
+                {!confirmSeason ? (
+                  <button className="btn" style={{ whiteSpace: 'nowrap', flexShrink: 0, background: 'rgba(233,196,106,0.12)', color: 'var(--gold)', border: '1px solid rgba(233,196,106,0.3)' }} disabled={hostLoading !== null} onClick={() => setConfirmSeason(true)}>
+                    Sim Full Season
+                  </button>
+                ) : (
+                  <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                    <button className="btn" style={{ background: 'var(--gold)', color: '#000', border: 'none', fontSize: 12 }} disabled={hostLoading !== null} onClick={handleSimulateSeason}>
+                      {hostLoading === 'season' ? 'Running...' : 'Confirm'}
+                    </button>
+                    <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => setConfirmSeason(false)}>Cancel</button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {canDelete && (
         <div className="card" style={{ padding: 0, border: '1px solid rgba(232,128,106,0.25)', background: 'rgba(232,128,106,0.04)', overflow: 'hidden' }}>

@@ -24,7 +24,7 @@ export async function runDailyMatchday(): Promise<void> {
   }
 }
 
-async function simulateLeagueMatchday(leagueId: string): Promise<void> {
+export async function simulateLeagueMatchday(leagueId: string, options?: { skipBroadcast?: boolean }): Promise<void> {
   const league = await prisma.league.findUnique({ where: { id: leagueId } })
   if (!league) return
 
@@ -45,9 +45,11 @@ async function simulateLeagueMatchday(leagueId: string): Promise<void> {
       return b.goalsFor - a.goalsFor
     })[0]
 
-    try {
-      getIO().to(`league:${leagueId}`).emit('season:finished', { leagueId, championId: champion?.id, championName: champion?.name })
-    } catch {}
+    if (!options?.skipBroadcast) {
+      try {
+        getIO().to(`league:${leagueId}`).emit('season:finished', { leagueId, championId: champion?.id, championName: champion?.name })
+      } catch {}
+    }
     return
   }
 
@@ -190,14 +192,40 @@ async function simulateLeagueMatchday(leagueId: string): Promise<void> {
   // Advance cup bracket if a cup round was played today
   await checkAndAdvanceCup(leagueId, nextDay)
 
-  // Broadcast live event replay before the final result
-  await broadcastMatchesLive(leagueId, results.map(r => r.matchId))
+  if (!options?.skipBroadcast) {
+    // Broadcast live event replay before the final result
+    await broadcastMatchesLive(leagueId, results.map(r => r.matchId))
+
+    try {
+      getIO().to(`league:${leagueId}`).emit('matchday:complete', { matchday: nextDay, results, awards })
+      if (sponsorResolutions.length > 0) {
+        getIO().to(`league:${leagueId}`).emit('sponsor:resolved', { resolutions: sponsorResolutions })
+      }
+    } catch {}
+  }
+}
+
+export async function simulateSeasonFast(leagueId: string): Promise<void> {
+  let league = await prisma.league.findUnique({ where: { id: leagueId } })
+  while (league?.status === 'ACTIVE') {
+    await simulateLeagueMatchday(leagueId, { skipBroadcast: true })
+    league = await prisma.league.findUnique({ where: { id: leagueId } })
+  }
+
+  // Determine champion for the broadcast
+  const clubs = await prisma.club.findMany({
+    where: { leagueId },
+    select: { id: true, name: true, points: true, goalsFor: true, goalsAgainst: true },
+  })
+  const champion = clubs.sort((a, b) => {
+    if (b.points !== a.points) return b.points - a.points
+    const gdA = a.goalsFor - a.goalsAgainst, gdB = b.goalsFor - b.goalsAgainst
+    if (gdB !== gdA) return gdB - gdA
+    return b.goalsFor - a.goalsFor
+  })[0]
 
   try {
-    getIO().to(`league:${leagueId}`).emit('matchday:complete', { matchday: nextDay, results, awards })
-    if (sponsorResolutions.length > 0) {
-      getIO().to(`league:${leagueId}`).emit('sponsor:resolved', { resolutions: sponsorResolutions })
-    }
+    getIO().to(`league:${leagueId}`).emit('season:finished', { leagueId, championId: champion?.id, championName: champion?.name })
   } catch {}
 }
 

@@ -174,20 +174,20 @@ export default function Messages({ leagueId, myClub, league, currentUserId, onRe
               padding: '10px 14px',
               borderBottom: '1px solid var(--border)',
               cursor: 'pointer',
-              background: view === 'league' ? 'rgba(39,205,255,0.08)' : 'transparent',
+              background: view === 'league' ? 'rgba(229,32,47,0.08)' : 'transparent',
               display: 'flex', alignItems: 'center', gap: 10,
             }}
           >
             <div style={{
               width: 34, height: 34, borderRadius: '50%', flexShrink: 0,
-              background: 'rgba(39,205,255,0.2)',
+              background: 'rgba(244,241,234,0.1)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 16,
             }}>
               💬
             </div>
             <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: view === 'league' ? 'var(--cyan)' : 'var(--text-1)' }}>League Chat</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)' }}>League Chat</div>
               <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Everyone can see this</div>
             </div>
           </div>
@@ -265,9 +265,9 @@ export default function Messages({ leagueId, myClub, league, currentUserId, onRe
                       </div>
                       <div style={{
                         maxWidth: '75%', padding: '8px 12px',
-                        background: isMe ? 'rgba(39,205,255,0.15)' : 'var(--bg-base)',
-                        border: `1px solid ${isMe ? 'rgba(39,205,255,0.3)' : 'var(--border)'}`,
-                        borderRadius: isMe ? '12px 12px 4px 12px' : '12px 12px 12px 4px',
+                        background: isMe ? 'rgba(229,32,47,0.1)' : 'var(--steel)',
+                        border: `2px solid ${isMe ? 'rgba(229,32,47,0.4)' : 'rgba(244,241,234,0.1)'}`,
+                        borderRadius: 0,
                         fontSize: 13, color: 'var(--text-1)',
                       }}>
                         {msg.text}
@@ -286,7 +286,7 @@ export default function Messages({ leagueId, myClub, league, currentUserId, onRe
                   placeholder="Message everyone..."
                   style={{ flex: 1, background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '8px 12px', color: 'var(--text-1)', fontSize: 13, outline: 'none' }}
                 />
-                <button className="btn btn-primary" style={{ flexShrink: 0 }} onClick={handleSendLeague} disabled={sendingLeague || !leagueChatText.trim()}>
+                <button className="btn btn-green" style={{ flexShrink: 0 }} onClick={handleSendLeague} disabled={sendingLeague || !leagueChatText.trim()}>
                   Send
                 </button>
               </div>

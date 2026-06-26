@@ -653,17 +653,17 @@ export default function League() {
 
       {/* ── Sidebar ──────────────────────────────────────────────────────── */}
       <aside style={{
-        width: 220, background: 'var(--bg-card)', borderRight: '1px solid var(--border)',
+        width: 220, background: 'var(--steel)', borderRight: '3px solid rgba(244,241,234,0.12)',
         position: 'fixed', top: 0, bottom: 0, left: 0,
         display: isMobile ? 'none' : 'flex', flexDirection: 'column', zIndex: 50,
       }}>
         {/* Logo */}
-        <div style={{ padding: '18px 20px', borderBottom: '1px solid var(--border)' }}>
+        <div style={{ padding: '18px 20px', borderBottom: '3px solid var(--paper)' }}>
           <Link to="/" className="nav-logo"><img src="/tactixlogo.png" alt="Tactix" style={{ height: 28, display: 'block' }} /></Link>
         </div>
 
         {/* Club identity */}
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(244,241,234,0.1)' }}>
           {myClub ? (
             <>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
@@ -672,14 +672,14 @@ export default function League() {
                   <button
                     onClick={() => setShowLogoMaker(true)}
                     title="Customize club logo"
-                    style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', padding: '3px 7px', fontSize: 11, color: 'var(--text-2)', lineHeight: 1.4 }}
+                    style={{ background: 'none', border: '1px solid rgba(244,241,234,0.2)', borderRadius: 0, cursor: 'pointer', padding: '3px 7px', fontSize: 11, color: 'var(--text-2)', lineHeight: 1.4 }}
                   >
                     ✎ Logo
                   </button>
                   <button
                     onClick={() => setShowKitDesigner(true)}
                     title="Design club kit"
-                    style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', padding: '3px 7px', fontSize: 11, color: 'var(--text-2)', lineHeight: 1.4 }}
+                    style={{ background: 'none', border: '1px solid rgba(244,241,234,0.2)', borderRadius: 0, cursor: 'pointer', padding: '3px 7px', fontSize: 11, color: 'var(--text-2)', lineHeight: 1.4 }}
                   >
                     ✎ Kit
                   </button>
@@ -710,10 +710,10 @@ export default function League() {
               <button key={item.key} onClick={() => setTab(item.key)} style={{
                 width: '100%', display: 'flex', alignItems: 'center', gap: 10,
                 padding: '10px 12px', marginBottom: 2,
-                background: active ? 'rgba(54,226,126,0.1)' : 'transparent',
-                border: 'none', borderRadius: 'var(--radius-sm)',
-                borderLeft: `3px solid ${active ? 'var(--green)' : 'transparent'}`,
-                color: active ? 'var(--green)' : 'var(--text-2)',
+                background: active ? 'rgba(229,32,47,0.08)' : 'transparent',
+                border: 'none', borderRadius: 0,
+                borderLeft: `3px solid ${active ? 'var(--accent)' : 'transparent'}`,
+                color: active ? 'var(--paper)' : 'var(--text-2)',
                 cursor: 'pointer', textAlign: 'left', fontSize: 13, fontWeight: active ? 700 : 500,
                 transition: 'all 0.15s',
               }}
@@ -732,14 +732,14 @@ export default function League() {
 
         {/* Budget */}
         {myClub && (
-          <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border)' }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 3 }}>Budget</div>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, color: 'var(--green)' }}>€{(myClub.budget / 1_000).toFixed(1)}M</div>
+          <div style={{ padding: '14px 20px', borderTop: '1px solid rgba(244,241,234,0.1)' }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--ash)', textTransform: 'uppercase', letterSpacing: '.14em', marginBottom: 3, fontFamily: 'var(--font-narrow)' }}>Budget</div>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 400, color: 'var(--accent)' }}>€{(myClub.budget / 1_000).toFixed(1)}M</div>
           </div>
         )}
 
         {/* User + back */}
-        <div style={{ padding: '12px 20px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ padding: '12px 20px', borderTop: '1px solid rgba(244,241,234,0.1)', display: 'flex', alignItems: 'center', gap: 8 }}>
           <button className="btn btn-ghost" style={{ fontSize: 11, padding: '4px 8px' }} onClick={() => navigate('/')}>← Back</button>
           <span style={{ flex: 1 }} />
           <span style={{ fontSize: 12, color: 'var(--text-2)' }}>{user?.username}</span>
@@ -750,7 +750,7 @@ export default function League() {
       {isMobile && (
         <nav style={{
           position: 'fixed', bottom: 0, left: 0, right: 0, height: 56,
-          background: 'var(--bg-card)', borderTop: '1px solid var(--border)',
+          background: 'var(--ink)', borderTop: '3px solid var(--paper)',
           display: 'flex', zIndex: 200, paddingBottom: 'env(safe-area-inset-bottom)',
         }}>
           {navItems.map(item => {
@@ -760,13 +760,13 @@ export default function League() {
               <button key={item.key} onClick={() => setTab(item.key)} style={{
                 flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
                 justifyContent: 'center', gap: 2, background: 'none', border: 'none',
-                cursor: 'pointer', color: active ? 'var(--green)' : 'var(--text-3)',
+                cursor: 'pointer', color: active ? 'var(--paper)' : 'var(--text-3)',
                 position: 'relative', padding: '4px 0',
               }}>
                 <span style={{ fontSize: 18, lineHeight: 1 }}>{item.icon}</span>
                 <span style={{ fontSize: 9, fontWeight: active ? 700 : 500 }}>{item.label}</span>
                 {showDot && <span style={{ position: 'absolute', top: 4, right: '20%', width: 6, height: 6, borderRadius: '50%', background: 'var(--red)' }} />}
-                {active && <span style={{ position: 'absolute', bottom: 0, left: '25%', right: '25%', height: 2, background: 'var(--green)', borderRadius: 1 }} />}
+                {active && <span style={{ position: 'absolute', bottom: 0, left: '25%', right: '25%', height: 3, background: 'var(--accent)' }} />}
               </button>
             )
           })}
@@ -777,7 +777,7 @@ export default function League() {
       <main style={{ marginLeft: isMobile ? 0 : 220, flex: 1, paddingBottom: isMobile ? 56 : 0, display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
 
         {/* Top bar */}
-        <div style={{ background: 'var(--bg-card)', borderBottom: '1px solid var(--border)', padding: isMobile ? '12px 16px' : '16px 28px', display: 'flex', alignItems: 'center', gap: 16, position: 'sticky', top: 0, zIndex: 40 }}>
+        <div style={{ background: 'var(--ink)', borderBottom: '3px solid var(--paper)', padding: isMobile ? '12px 16px' : '16px 28px', display: 'flex', alignItems: 'center', gap: 16, position: 'sticky', top: 0, zIndex: 40 }}>
           <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, letterSpacing: 0.5, margin: 0, color: 'var(--text-1)' }}>
             {PAGE_TITLES[tab]}
           </h1>
@@ -789,9 +789,9 @@ export default function League() {
           {error && <span className="error-text" style={{ fontSize: 12 }}>{error}</span>}
 
           {notification && (
-            <div style={{ padding: '7px 14px', background: 'var(--green-glow)', border: '1px solid var(--green)', borderRadius: 'var(--radius-sm)', fontSize: 12, color: 'var(--green)', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ padding: '7px 14px', background: 'rgba(229,32,47,0.1)', border: '2px solid var(--accent)', fontSize: 12, color: 'var(--paper)', display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-narrow)', letterSpacing: '.06em' }}>
               {notification}
-              <button onClick={() => setNotification(null)} style={{ background: 'none', border: 'none', color: 'var(--green)', cursor: 'pointer', fontSize: 14, lineHeight: 1 }}>×</button>
+              <button onClick={() => setNotification(null)} style={{ background: 'none', border: 'none', color: 'var(--paper)', cursor: 'pointer', fontSize: 14, lineHeight: 1 }}>×</button>
             </div>
           )}
 
@@ -803,10 +803,10 @@ export default function League() {
                     key={t}
                     onClick={() => setDraftType(t)}
                     style={{
-                      padding: '6px 16px', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 700,
-                      background: draftType === t ? 'rgba(54,226,126,0.15)' : 'transparent',
-                      border: `1px solid ${draftType === t ? 'rgba(54,226,126,0.4)' : 'var(--border)'}`,
-                      color: draftType === t ? 'var(--green)' : 'var(--text-2)',
+                      padding: '6px 16px', borderRadius: 0, cursor: 'pointer', fontSize: 12, fontWeight: 700,
+                      background: draftType === t ? 'rgba(229,32,47,0.12)' : 'transparent',
+                      border: `2px solid ${draftType === t ? 'var(--accent)' : 'rgba(244,241,234,0.2)'}`,
+                      color: draftType === t ? 'var(--paper)' : 'var(--text-2)',
                     }}
                   >
                     {t === 'SNAKE' ? '🐍 Snake' : '🏷️ Auction'}

@@ -111,7 +111,7 @@ export default function ClubProfile() {
             </div>
             <div style={{ display: 'flex', gap: 16, marginTop: 8 }}>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, color: 'var(--green)' }}>{club.points}</div>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, color: 'var(--accent)' }}>{club.points}</div>
                 <div style={{ fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Pts</div>
               </div>
               <div style={{ textAlign: 'center' }}>
@@ -127,7 +127,7 @@ export default function ClubProfile() {
                 <div style={{ fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5 }}>L</div>
               </div>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, color: gd >= 0 ? 'var(--green)' : 'var(--red)' }}>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, color: gd >= 0 ? 'var(--paper)' : 'var(--accent)' }}>
                   {gd > 0 ? '+' : ''}{gd}
                 </div>
                 <div style={{ fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5 }}>GD</div>
@@ -179,13 +179,13 @@ export default function ClubProfile() {
                           { val: p.morale, label: 'Mor' },
                           { val: p.form, label: 'Form' },
                         ].map(({ val, label }) => {
-                          const color = val >= 75 ? 'var(--green)' : val >= 55 ? 'var(--gold)' : 'var(--red)'
+                          const color = val >= 75 ? '#2f6b46' : val >= 55 ? 'var(--gold)' : 'var(--accent)'
                           return (
                             <div key={label} title={`${label}: ${val}`} style={{ width: 6, height: 6, borderRadius: '50%', background: color }} />
                           )
                         })}
                       </div>
-                      <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: p.overall >= 82 ? 'var(--gold)' : p.overall >= 75 ? 'var(--blue)' : 'var(--text-1)', textAlign: 'right', minWidth: 28 }}>
+                      <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: p.overall >= 85 ? '#2f6b46' : p.overall >= 78 ? '#6a8a2f' : p.overall >= 70 ? '#cf9438' : 'var(--accent)', textAlign: 'right', minWidth: 28 }}>
                         {p.overall}
                       </div>
                     </div>
@@ -263,8 +263,8 @@ export default function ClubProfile() {
                         <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{p.appearances} apps · ⭐{p.avgRating.toFixed(1)}</div>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        {p.goals > 0 && <div style={{ fontSize: 12, color: 'var(--green)', fontWeight: 700 }}>⚽ {p.goals}</div>}
-                        {p.assists > 0 && <div style={{ fontSize: 11, color: 'var(--blue)', fontWeight: 600 }}>🎯 {p.assists}</div>}
+                        {p.goals > 0 && <div style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 700 }}>⚽ {p.goals}</div>}
+                        {p.assists > 0 && <div style={{ fontSize: 11, color: 'var(--ash)', fontWeight: 600 }}>🎯 {p.assists}</div>}
                       </div>
                     </div>
                   ))}
@@ -279,7 +279,7 @@ export default function ClubProfile() {
                 <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-2)' }}>Finances</span>
               </div>
               <div style={{ padding: 16 }}>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 800, color: 'var(--green)', marginBottom: 4 }}>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 400, color: 'var(--accent)', marginBottom: 4 }}>
                   €{(club.budget / 1_000).toFixed(1)}M
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--text-2)' }}>Available budget</div>

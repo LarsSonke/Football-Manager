@@ -1,0 +1,254 @@
+/* ── Pagination bar ──────────────────────────────────────────────────────── */
+.paginationBar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  align-items: center;
+}
+.paginationLabel {
+  font-size: 13px;
+  color: var(--text-2);
+  flex: 1;
+  text-align: center;
+}
+.paginationBtn {
+  font-size: 12px;
+  padding: 6px 12px;
+}
+
+/* ── Matchday group ──────────────────────────────────────────────────────── */
+.matchdayGroup {
+  margin-bottom: 20px;
+}
+.matchdayHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.matchdayTitle {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-2);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.matchList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* ── Match row (shared layout for both <div> and <Link>) ─────────────────── */
+.matchRow {
+  display: grid;
+  grid-template-columns: 1fr 90px 1fr;
+  align-items: center;
+  padding: 10px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  gap: 8px;
+  text-decoration: none;
+}
+.matchRow[data-mine="true"] {
+  background: rgba(54, 226, 126, 0.05);
+  border-color: rgba(54, 226, 126, 0.2);
+}
+.matchRow[data-clickable="true"] {
+  cursor: pointer;
+}
+
+/* ── Home club cell ──────────────────────────────────────────────────────── */
+.homeCell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.clubName {
+  text-align: right;
+  font-size: 13px;
+}
+.clubName[data-bold="true"] {
+  font-weight: 700;
+  color: var(--text-1);
+}
+.clubName[data-bold="false"][data-winner="true"] {
+  font-weight: 600;
+  color: var(--text-1);
+}
+.clubName[data-bold="false"][data-winner="false"][data-simulated="true"] {
+  font-weight: 400;
+  color: var(--text-2);
+}
+.clubName[data-bold="false"][data-winner="false"][data-simulated="false"] {
+  font-weight: 400;
+  color: var(--text-1);
+}
+
+/* ── Score / VS cell ─────────────────────────────────────────────────────── */
+.scoreCell {
+  text-align: center;
+}
+.scoreInner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+.myResult {
+  font-size: 10px;
+  font-weight: 800;
+  width: 16px;
+  text-align: center;
+}
+.myResult[data-result="W"] { color: var(--green); }
+.myResult[data-result="D"] { color: var(--gold); }
+.myResult[data-result="L"] { color: var(--red); }
+.scoreSpacer {
+  width: 16px;
+}
+.scoreValue {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: var(--text-1);
+}
+.vsLabel {
+  font-size: 11px;
+  color: var(--text-2);
+  font-weight: 600;
+}
+
+/* ── Away club cell ──────────────────────────────────────────────────────── */
+.awayCell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.awayName {
+  font-size: 13px;
+}
+
+/* ── Empty state ─────────────────────────────────────────────────────────── */
+.emptyState {
+  color: var(--text-2);
+  text-align: center;
+  padding: 32px 0;
+}
+
+/* ── Draft Summary Overlay ───────────────────────────────────────────────── */
+.draftOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.88);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.draftPanel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  max-width: 760px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.draftHeader {
+  padding: 28px 32px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.draftHeaderLabel {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-2);
+  margin-bottom: 4px;
+}
+.draftHeaderTitle {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 900;
+  color: var(--green);
+}
+.draftCloseBtn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  color: var(--text-2);
+  padding: 6px 12px;
+  font-size: 12px;
+}
+.draftClubGrid {
+  padding: 20px 32px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+.draftClubCard {
+  background: var(--bg-card-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+}
+.draftClubHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.draftClubName {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--text-1);
+  line-height: 1.2;
+}
+.draftClubType {
+  font-size: 10px;
+  color: var(--text-3);
+}
+.draftPlayerList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.draftPlayerRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.draftPlayerName {
+  font-size: 12px;
+  color: var(--text-1);
+  flex: 1;
+}
+.draftPlayerOvr {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 13px;
+}
+.draftPlayerOvr[data-tier="gold"]  { color: var(--gold); }
+.draftPlayerOvr[data-tier="green"] { color: var(--green); }
+.draftPlayerOvr[data-tier="dim"]   { color: var(--text-2); }
+.draftMorePlayers {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 2px;
+}
+.draftFooter {
+  padding: 16px 32px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+}

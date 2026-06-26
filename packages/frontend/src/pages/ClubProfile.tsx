@@ -4,6 +4,7 @@ import { api } from '../api/client'
 import { ClubBadge, type LogoConfig } from '../components/ClubBadge'
 import { posClass } from '../utils/helpers'
 import { Navbar } from '../components/Navbar'
+import styles from './ClubProfile.module.css'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -47,6 +48,19 @@ const POS_GROUP: Record<string, string> = {
   LW: 'Attackers', RW: 'Attackers', CF: 'Attackers', ST: 'Attackers',
 }
 
+function ovrTier(ovr: number): string {
+  if (ovr >= 85) return 'elite'
+  if (ovr >= 78) return 'good'
+  if (ovr >= 70) return 'decent'
+  return 'poor'
+}
+
+function conditionLevel(val: number): string {
+  if (val >= 75) return 'high'
+  if (val >= 55) return 'mid'
+  return 'low'
+}
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function ClubProfile() {
@@ -65,14 +79,14 @@ export default function ClubProfile() {
   }, [leagueId, clubId])
 
   if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
-      <div style={{ color: 'var(--text-2)', fontSize: 14 }}>Loading…</div>
+    <div className={styles.centered}>
+      <div className={styles.loadingText}>Loading…</div>
     </div>
   )
 
   if (error || !data) return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', gap: 12 }}>
-      <div style={{ color: 'var(--text-2)' }}>{error || 'Club not found'}</div>
+    <div className={styles.centeredCol}>
+      <div className={styles.errorText}>{error || 'Club not found'}</div>
       <button className="btn btn-outline" onClick={() => navigate(-1)}>Go back</button>
     </div>
   )
@@ -93,99 +107,101 @@ export default function ClubProfile() {
   const groupOrder = ['Goalkeeper', 'Defenders', 'Midfielders', 'Attackers', 'Other']
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg-base)' }}>
+    <div className={styles.pageRoot}>
       {/* Nav */}
       <Navbar backTo={`/league/${leagueId}`} backLabel="← League" />
 
       <div className="page" style={{ maxWidth: 720 }}>
 
         {/* Hero */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 28 }}>
+        <div className={styles.hero}>
           <ClubBadge name={club.name} size={72} logoConfig={club.logoConfig} />
           <div>
-            <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 800, letterSpacing: 0.5, marginBottom: 4 }}>
-              {club.name}
-            </h1>
-            <div style={{ fontSize: 13, color: 'var(--text-2)' }}>
+            <h1 className={styles.heroName}>{club.name}</h1>
+            <div className={styles.heroManager}>
               {club.isAI ? 'AI Club' : club.user ? `Manager: ${club.user.username}` : '—'}
             </div>
-            <div style={{ display: 'flex', gap: 16, marginTop: 8 }}>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, color: 'var(--accent)' }}>{club.points}</div>
-                <div style={{ fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Pts</div>
+            <div className={styles.statsRow}>
+              <div className={styles.statPill}>
+                <div className={`${styles.statValue} ${styles.statValueAccent}`}>{club.points}</div>
+                <div className={styles.statLabel}>Pts</div>
               </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800 }}>{club.wins}</div>
-                <div style={{ fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5 }}>W</div>
+              <div className={styles.statPill}>
+                <div className={styles.statValue}>{club.wins}</div>
+                <div className={styles.statLabel}>W</div>
               </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800 }}>{club.draws}</div>
-                <div style={{ fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5 }}>D</div>
+              <div className={styles.statPill}>
+                <div className={styles.statValue}>{club.draws}</div>
+                <div className={styles.statLabel}>D</div>
               </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800 }}>{club.losses}</div>
-                <div style={{ fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5 }}>L</div>
+              <div className={styles.statPill}>
+                <div className={styles.statValue}>{club.losses}</div>
+                <div className={styles.statLabel}>L</div>
               </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, color: gd >= 0 ? 'var(--paper)' : 'var(--accent)' }}>
+              <div className={styles.statPill}>
+                <div
+                  className={styles.statValue}
+                  data-ovr={gd >= 0 ? undefined : 'poor'}
+                >
                   {gd > 0 ? '+' : ''}{gd}
                 </div>
-                <div style={{ fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5 }}>GD</div>
+                <div className={styles.statLabel}>GD</div>
               </div>
               {avgOvr > 0 && (
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, color: 'var(--gold)' }}>{avgOvr}</div>
-                  <div style={{ fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5 }}>OVR</div>
+                <div className={styles.statPill}>
+                  <div className={`${styles.statValue} ${styles.statValueGold}`}>{avgOvr}</div>
+                  <div className={styles.statLabel}>OVR</div>
                 </div>
               )}
             </div>
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: 16, alignItems: 'start' }}>
+        <div className={styles.columns}>
 
           {/* Left: Squad */}
           <div>
             <div className="card" style={{ padding: 0 }}>
               <div className="card-header">
                 <span className="accent-bar" />
-                <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-2)' }}>
+                <span className={styles.cardHeaderLabel}>
                   Squad · {squad.length} players
                 </span>
               </div>
               {groupOrder.filter(g => grouped[g]?.length).map(grp => (
                 <div key={grp}>
-                  <div style={{ padding: '8px 16px 4px', fontSize: 10, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5, background: 'rgba(255,255,255,0.02)' }}>
-                    {grp}
-                  </div>
+                  <div className={styles.groupHeading}>{grp}</div>
                   {grouped[grp].map((p, i) => (
-                    <div key={p.id} style={{
-                      display: 'grid', gridTemplateColumns: 'auto 1fr auto auto',
-                      alignItems: 'center', gap: 10, padding: '9px 16px',
-                      borderBottom: i < grouped[grp].length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
-                    }}>
+                    <div
+                      key={p.id}
+                      className={`${styles.squadRow} ${i < grouped[grp].length - 1 ? styles.squadRowDivider : ''}`}
+                    >
                       <span className={posClass(p.position)} style={{ fontSize: 9 }}>{p.position}</span>
                       <div>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: p.injured ? 'var(--red)' : 'var(--text-1)', lineHeight: 1.2 }}>
+                        <div className={`${styles.playerName} ${p.injured ? styles.playerNameInjured : ''}`}>
                           {p.name}
-                          {p.injured && <span style={{ fontSize: 9, color: 'var(--red)', fontWeight: 700, marginLeft: 6 }}>INJ {p.injuryDaysLeft}d</span>}
+                          {p.injured && (
+                            <span className={styles.injuryTag}>INJ {p.injuryDaysLeft}d</span>
+                          )}
                         </div>
-                        <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Age {p.age}</div>
+                        <div className={styles.playerAge}>Age {p.age}</div>
                       </div>
                       {/* Condition dots */}
-                      <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                      <div className={styles.conditionDots}>
                         {[
                           { val: p.fitness, label: 'Fit' },
                           { val: p.morale, label: 'Mor' },
                           { val: p.form, label: 'Form' },
-                        ].map(({ val, label }) => {
-                          const color = val >= 75 ? '#2f6b46' : val >= 55 ? 'var(--gold)' : 'var(--accent)'
-                          return (
-                            <div key={label} title={`${label}: ${val}`} style={{ width: 6, height: 6, borderRadius: '50%', background: color }} />
-                          )
-                        })}
+                        ].map(({ val, label }) => (
+                          <div
+                            key={label}
+                            title={`${label}: ${val}`}
+                            className={styles.conditionDot}
+                            data-level={conditionLevel(val)}
+                          />
+                        ))}
                       </div>
-                      <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: p.overall >= 85 ? '#2f6b46' : p.overall >= 78 ? '#6a8a2f' : p.overall >= 70 ? '#cf9438' : 'var(--accent)', textAlign: 'right', minWidth: 28 }}>
+                      <div className={styles.ovrValue} data-ovr={ovrTier(p.overall)}>
                         {p.overall}
                       </div>
                     </div>
@@ -193,50 +209,48 @@ export default function ClubProfile() {
                 </div>
               ))}
               {squad.length === 0 && (
-                <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>No squad data</div>
+                <div className={styles.squadEmpty}>No squad data</div>
               )}
             </div>
           </div>
 
           {/* Right column */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div className={styles.rightCol}>
 
             {/* Recent form */}
             <div className="card" style={{ padding: 0 }}>
               <div className="card-header">
                 <span className="accent-bar" />
-                <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-2)' }}>Recent Form</span>
+                <span className={styles.cardHeaderLabel}>Recent Form</span>
               </div>
-              <div style={{ padding: '14px 16px' }}>
+              <div className={styles.recentBody}>
                 {recentMatches.length === 0 ? (
-                  <div style={{ fontSize: 12, color: 'var(--text-3)', textAlign: 'center', padding: '8px 0' }}>No matches played yet</div>
+                  <div className={styles.noMatches}>No matches played yet</div>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div className={styles.matchList}>
                     {[...recentMatches].reverse().map(m => {
                       const isHome = m.homeClub.id === clubId
                       const myScore = isHome ? m.homeScore! : m.awayScore!
                       const oppScore = isHome ? m.awayScore! : m.homeScore!
                       const opp = isHome ? m.awayClub : m.homeClub
                       const result = myScore > oppScore ? 'W' : myScore === oppScore ? 'D' : 'L'
-                      const colors: Record<string, string> = { W: 'var(--green)', D: 'var(--gold)', L: 'var(--red)' }
                       return (
-                        <Link key={m.id} to={`/league/${leagueId}/match/${m.id}`} style={{ textDecoration: 'none' }}>
-                          <div style={{ display: 'grid', gridTemplateColumns: '24px 1fr auto', alignItems: 'center', gap: 10, padding: '6px 8px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-base)', transition: 'background 0.12s' }}
-                            onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-card-2)')}
-                            onMouseLeave={e => (e.currentTarget.style.background = 'var(--bg-base)')}
-                          >
-                            <div style={{ width: 24, height: 24, borderRadius: '50%', background: colors[result], display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 11, color: result === 'L' ? '#fff' : '#000', flexShrink: 0 }}>
-                              {result}
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                              <ClubBadge name={opp.name} size={18} logoConfig={opp.logoConfig} />
-                              <span style={{ fontSize: 12, color: 'var(--text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {isHome ? 'vs' : '@'} {opp.name}
-                              </span>
-                            </div>
-                            <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 800, color: 'var(--text-1)', whiteSpace: 'nowrap' }}>
-                              {isHome ? `${myScore}–${oppScore}` : `${myScore}–${oppScore}`}
-                            </div>
+                        <Link
+                          key={m.id}
+                          to={`/league/${leagueId}/match/${m.id}`}
+                          className={styles.matchRow}
+                        >
+                          <div className={styles.resultDot} data-result={result}>
+                            {result}
+                          </div>
+                          <div className={styles.matchOpponent}>
+                            <ClubBadge name={opp.name} size={18} logoConfig={opp.logoConfig} />
+                            <span className={styles.matchOppName}>
+                              {isHome ? 'vs' : '@'} {opp.name}
+                            </span>
+                          </div>
+                          <div className={styles.matchScore}>
+                            {myScore}–{oppScore}
                           </div>
                         </Link>
                       )
@@ -251,20 +265,25 @@ export default function ClubProfile() {
               <div className="card" style={{ padding: 0 }}>
                 <div className="card-header">
                   <span className="accent-bar-gold" />
-                  <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-2)' }}>Top Performers</span>
+                  <span className={styles.cardHeaderLabel}>Top Performers</span>
                 </div>
-                <div style={{ padding: '8px 0' }}>
+                <div className={styles.performerBody}>
                   {topPerformers.map((p, i) => (
-                    <div key={p.instanceId} style={{ display: 'grid', gridTemplateColumns: '28px auto 1fr auto', alignItems: 'center', gap: 8, padding: '8px 16px', borderBottom: i < topPerformers.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}>
-                      <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 800, color: i === 0 ? 'var(--gold)' : 'var(--text-3)', textAlign: 'center' }}>{i + 1}</div>
+                    <div
+                      key={p.instanceId}
+                      className={`${styles.performerRow} ${i < topPerformers.length - 1 ? styles.performerRowDivider : ''}`}
+                    >
+                      <div className={`${styles.performerRank} ${i === 0 ? styles.performerRankFirst : ''}`}>
+                        {i + 1}
+                      </div>
                       <span className={posClass(p.position)} style={{ fontSize: 9 }}>{p.position}</span>
                       <div>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-1)', lineHeight: 1.2 }}>{p.name}</div>
-                        <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{p.appearances} apps · ⭐{p.avgRating.toFixed(1)}</div>
+                        <div className={styles.performerName}>{p.name}</div>
+                        <div className={styles.performerApps}>{p.appearances} apps · ⭐{p.avgRating.toFixed(1)}</div>
                       </div>
-                      <div style={{ textAlign: 'right' }}>
-                        {p.goals > 0 && <div style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 700 }}>⚽ {p.goals}</div>}
-                        {p.assists > 0 && <div style={{ fontSize: 11, color: 'var(--ash)', fontWeight: 600 }}>🎯 {p.assists}</div>}
+                      <div className={styles.performerStats}>
+                        {p.goals > 0 && <div className={styles.performerGoals}>⚽ {p.goals}</div>}
+                        {p.assists > 0 && <div className={styles.performerAssists}>🎯 {p.assists}</div>}
                       </div>
                     </div>
                   ))}
@@ -276,15 +295,15 @@ export default function ClubProfile() {
             <div className="card" style={{ padding: 0 }}>
               <div className="card-header">
                 <span className="accent-bar-gold" />
-                <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-2)' }}>Finances</span>
+                <span className={styles.cardHeaderLabel}>Finances</span>
               </div>
-              <div style={{ padding: 16 }}>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 400, color: 'var(--accent)', marginBottom: 4 }}>
+              <div className={styles.financeBody}>
+                <div className={styles.budgetValue}>
                   €{(club.budget / 1_000).toFixed(1)}M
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--text-2)' }}>Available budget</div>
+                <div className={styles.budgetLabel}>Available budget</div>
                 {played > 0 && (
-                  <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-2)' }}>
+                  <div className={styles.goalsInfo}>
                     {club.goalsFor} scored · {club.goalsAgainst} conceded
                   </div>
                 )}

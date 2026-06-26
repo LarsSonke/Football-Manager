@@ -1,0 +1,1643 @@
+/* ── Overview root ────────────────────────────────────────────────────────── */
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Hero ─────────────────────────────────────────────────────────────────── */
+.heroSection {
+  position: relative;
+  border: 3px solid var(--paper);
+  background: var(--steel);
+  overflow: hidden;
+  min-height: 340px;
+  animation: mgSlam 0.5s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+
+.heroContent {
+  position: relative;
+  padding: 30px 30px 28px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  z-index: 2;
+}
+
+.heroBadge {
+  display: inline-flex;
+  align-items: center;
+  background: var(--accent);
+  padding: 5px 13px;
+  transform: skewX(-9deg);
+}
+
+.heroBadgeText {
+  font-family: var(--font-narrow);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  transform: skewX(9deg);
+  color: #fff;
+}
+
+.heroClubName {
+  font-family: var(--font-display);
+  font-size: 88px;
+  line-height: 0.82;
+  margin-top: 18px;
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.heroVsRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 2px;
+  overflow: hidden;
+}
+
+.heroVs {
+  font-family: var(--font-display);
+  font-size: 34px;
+  color: var(--accent);
+  transform: skewX(-8deg);
+  flex-shrink: 0;
+}
+
+.heroOpponent {
+  font-family: var(--font-display);
+  font-size: 62px;
+  line-height: 0.82;
+  -webkit-text-stroke: 2px var(--paper);
+  color: transparent;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.heroFinalRow {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.heroFinalLabel {
+  font-family: var(--font-display);
+  font-size: 34px;
+  color: var(--accent);
+  transform: skewX(-8deg);
+  flex-shrink: 0;
+}
+
+.heroFinalPos {
+  font-family: var(--font-display);
+  font-size: 78px;
+  line-height: 0.82;
+}
+
+.heroFinalOrdinal {
+  font-family: var(--font-display);
+  font-size: 34px;
+  margin-bottom: 10px;
+}
+
+.heroTagline {
+  font-family: var(--font-narrow);
+  font-size: 13px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ash);
+  margin-top: 16px;
+  line-height: 1.5;
+  max-width: 420px;
+}
+
+.heroButtons {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.heroBtnAccent {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--accent);
+  color: #fff;
+  padding: 15px 24px;
+  text-decoration: none;
+  clip-path: polygon(0 0, 100% 0, 92% 100%, 0 100%);
+  transition: transform 0.2s;
+  border: none;
+  cursor: pointer;
+}
+
+.heroBtnAccent:hover {
+  transform: translateX(4px);
+}
+
+.heroBtnGhost {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 2px solid var(--paper);
+  padding: 15px 22px;
+  background: transparent;
+  color: var(--paper);
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.heroBtnGhost:hover {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.heroBtnText {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.heroBtnTextSm {
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* ── Row A: Budget + Squad Condition ─────────────────────────────────────── */
+.rowA {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 14px;
+  animation: mgInL 0.5s 0.1s both;
+}
+
+/* Budget panel */
+.budgetPanel {
+  border: 3px solid var(--paper);
+  background: var(--steel);
+  overflow: hidden;
+}
+
+.budgetHeader {
+  background: var(--ink);
+  padding: 9px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 3px solid var(--paper);
+}
+
+.budgetHeaderTitle {
+  font-family: var(--font-display);
+  font-size: 18px;
+  letter-spacing: 0.02em;
+}
+
+.budgetHeaderBadge {
+  font-family: var(--font-narrow);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.budgetBody {
+  padding: 18px;
+}
+
+.budgetMainRow {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+.budgetBigNumber {
+  font-family: var(--font-display);
+  font-size: 60px;
+  line-height: 0.8;
+}
+
+.budgetBigNumberUnit {
+  font-size: 32px;
+}
+
+.budgetAvailableLabel {
+  font-family: var(--font-narrow);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ash);
+  margin-top: 6px;
+}
+
+.budgetNetSpend {
+  text-align: right;
+}
+
+.budgetNetSpendValue {
+  font-family: var(--font-display);
+  font-size: 28px;
+  line-height: 0.9;
+}
+
+.budgetNetSpendPositive {
+  color: var(--accent);
+}
+
+.budgetNetSpendNegative {
+  color: #2f6b46;
+}
+
+.budgetNetSpendLabel {
+  font-family: var(--font-narrow);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ash);
+}
+
+.budgetStats {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.budgetStatRow {
+  /* container for label+value + bar */
+}
+
+.budgetStatMeta {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 6px;
+}
+
+.budgetStatKey {
+  font-family: var(--font-narrow);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ash);
+}
+
+.budgetStatValue {
+  font-family: var(--font-display);
+  font-size: 17px;
+}
+
+/* Squad Condition panel */
+.conditionPanel {
+  border: 3px solid var(--paper);
+  background: var(--paper);
+  color: var(--ink);
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.conditionHeader {
+  background: var(--ink);
+  color: var(--paper);
+  padding: 9px 16px;
+  border-bottom: 3px solid var(--paper);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.conditionHeaderTitle {
+  font-family: var(--font-display);
+  font-size: 18px;
+  letter-spacing: 0.02em;
+}
+
+.conditionHeaderBadge {
+  font-family: var(--font-narrow);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  opacity: 0.8;
+}
+
+.conditionBody {
+  padding: 16px 18px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.conditionStat {
+  /* container */
+}
+
+.conditionStatMeta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 5px;
+}
+
+.conditionStatKey {
+  font-family: var(--font-narrow);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #666;
+}
+
+.conditionStatValue {
+  font-family: var(--font-display);
+  font-size: 30px;
+  line-height: 0.8;
+}
+
+.conditionBarWrap {
+  height: 6px;
+  background: rgba(8, 8, 10, 0.12);
+}
+
+/* ── Row B: Sponsors + Physio + Standing ─────────────────────────────────── */
+.rowB {
+  display: grid;
+  grid-template-columns: 1.15fr 1.15fr 0.9fr;
+  gap: 14px;
+  animation: mgUp 0.5s 0.14s both;
+}
+
+/* Sponsors card */
+.sponsorsPanel {
+  border: 3px solid var(--paper);
+  background: var(--steel);
+  overflow: hidden;
+}
+
+.sponsorsPanelClickable {
+  cursor: pointer;
+}
+
+.sponsorsPanelHeader {
+  background: var(--ink);
+  padding: 9px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 3px solid var(--paper);
+  pointer-events: none;
+}
+
+.sponsorsPanelTitle {
+  font-family: var(--font-display);
+  font-size: 18px;
+}
+
+.sponsorsPanelBadge {
+  font-family: var(--font-narrow);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.sponsorsPanelBody {
+  padding: 14px 16px 16px;
+}
+
+.sponsorDealRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid rgba(244, 241, 234, 0.07);
+}
+
+.sponsorDealEmoji {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  background: var(--accent);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 22% 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+}
+
+.sponsorDealInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.sponsorDealName {
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sponsorDealDeadline {
+  font-family: var(--font-narrow);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ash);
+}
+
+.sponsorDealReward {
+  font-family: var(--font-display);
+  font-size: 16px;
+  flex-shrink: 0;
+  color: var(--paper);
+}
+
+.sponsorsEmptyNote {
+  font-family: var(--font-narrow);
+  font-size: 11px;
+  color: var(--ash);
+  padding: 4px 0 8px;
+  letter-spacing: 0.06em;
+}
+
+.sponsorsLoadingNote {
+  font-family: var(--font-narrow);
+  font-size: 11px;
+  color: var(--ash);
+  padding: 8px 0;
+}
+
+.sponsorsAvailableNote {
+  font-family: var(--font-narrow);
+  font-size: 10px;
+  color: #2f6b46;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-top: 8px;
+}
+
+.sponsorsManageLink {
+  font-family: var(--font-narrow);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(244, 241, 234, 0.25);
+  margin-top: 12px;
+  text-align: right;
+}
+
+.sponsorsNotStarted {
+  font-family: var(--font-narrow);
+  font-size: 11px;
+  color: var(--ash);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 8px 0;
+}
+
+/* Physio card */
+.physioPanel {
+  border: 3px solid var(--paper);
+  background: var(--steel);
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.physioPanelHeader {
+  background: var(--ink);
+  padding: 9px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 3px solid var(--paper);
+  pointer-events: none;
+}
+
+.physioPanelTitle {
+  font-family: var(--font-display);
+  font-size: 18px;
+}
+
+.physioPanelBadge {
+  font-family: var(--font-narrow);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.physioPanelBody {
+  padding: 14px 16px 16px;
+}
+
+.physioLevelBarRow {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 14px;
+}
+
+.physioLevelSegment {
+  flex: 1;
+  height: 8px;
+  background: #2a2a2e;
+}
+
+.physioLevelSegmentActive {
+  background: var(--accent);
+}
+
+.physioInjuredLabel {
+  font-family: var(--font-narrow);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+
+.physioInjuredRow {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 7px 0;
+  border-bottom: 1px solid rgba(244, 241, 234, 0.07);
+}
+
+.physioInjuredBar {
+  width: 5px;
+  height: 24px;
+  flex-shrink: 0;
+  background: var(--accent);
+}
+
+.physioInjuredInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.physioInjuredName {
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.physioInjuredFitness {
+  font-family: var(--font-display);
+  font-size: 18px;
+  color: var(--accent);
+}
+
+.physioMoreNote {
+  font-family: var(--font-narrow);
+  font-size: 10px;
+  color: var(--ash);
+  letter-spacing: 0.08em;
+  margin-top: 6px;
+}
+
+.physioAllClear {
+  font-family: var(--font-narrow);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #2f6b46;
+  margin-bottom: 8px;
+}
+
+.physioUpgradeNote {
+  font-family: var(--font-narrow);
+  font-size: 10px;
+  color: var(--accent);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-top: 10px;
+}
+
+.physioManageLink {
+  font-family: var(--font-narrow);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(244, 241, 234, 0.25);
+  margin-top: 12px;
+  text-align: right;
+}
+
+/* Standing card */
+.standingPanel {
+  border: 3px solid var(--accent);
+  background: var(--accent);
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+  padding: 18px 18px 16px;
+}
+
+.standingGhostNumber {
+  position: absolute;
+  right: -20px;
+  bottom: -30px;
+  opacity: 0.18;
+  font-family: var(--font-display);
+  font-size: 200px;
+  line-height: 0.7;
+  pointer-events: none;
+  user-select: none;
+}
+
+.standingLabel {
+  font-family: var(--font-narrow);
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  position: relative;
+}
+
+.standingPosRow {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  position: relative;
+  margin-top: 2px;
+}
+
+.standingPosNumber {
+  font-family: var(--font-display);
+  font-size: 78px;
+  line-height: 0.78;
+}
+
+.standingPosOrdinal {
+  font-family: var(--font-display);
+  font-size: 30px;
+  margin-bottom: 12px;
+}
+
+.standingBarWrap {
+  height: 3px;
+  background: rgba(255, 255, 255, 0.4);
+  margin: 8px 0 12px;
+  position: relative;
+  overflow: hidden;
+}
+
+.standingBarFill {
+  height: 100%;
+  background: #fff;
+  transform-origin: left;
+  animation: mgGrow 1s 0.4s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+
+.standingStatsRow {
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+}
+
+.standingStatItem {
+  /* container */
+}
+
+.standingStatValue {
+  font-family: var(--font-display);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.standingStatKey {
+  font-family: var(--font-narrow);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+/* ── Recent Arcs ──────────────────────────────────────────────────────────── */
+.recentArcs {
+  animation: mgUp 0.4s 0.18s both;
+}
+
+.recentArcsHeading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.recentArcsTitle {
+  font-family: var(--font-display);
+  font-size: 22px;
+}
+
+.recentArcsRule {
+  flex: 1;
+  height: 3px;
+  background: var(--paper);
+}
+
+.recentArcsSummary {
+  font-family: var(--font-narrow);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.recentArcsGrid {
+  display: grid;
+  gap: 12px;
+  margin-top: 13px;
+}
+
+.recentArcCard {
+  text-decoration: none;
+  position: relative;
+  border: 3px solid var(--paper);
+  padding: 15px 16px;
+  overflow: hidden;
+}
+
+.recentArcCardStripe {
+  position: absolute;
+  inset: 0;
+  opacity: 0.1;
+  background: repeating-linear-gradient(115deg, currentColor 0 2px, transparent 2px 9px);
+  pointer-events: none;
+}
+
+.recentArcOpp {
+  font-family: var(--font-narrow);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  opacity: 0.75;
+  position: relative;
+}
+
+.recentArcScore {
+  font-family: var(--font-display);
+  font-size: 34px;
+  line-height: 0.84;
+  margin-top: 5px;
+  position: relative;
+}
+
+.recentArcResult {
+  font-family: var(--font-display);
+  position: absolute;
+  right: 10px;
+  bottom: 6px;
+  font-size: 30px;
+  opacity: 0.9;
+}
+
+/* ── Awards section ──────────────────────────────────────────────────────── */
+.awardsPanel {
+  border: 3px solid var(--paper);
+  background: var(--steel);
+  overflow: hidden;
+}
+
+.awardsPanelHeader {
+  background: var(--ink);
+  padding: 9px 16px;
+  border-bottom: 3px solid var(--paper);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.awardsPanelTitle {
+  font-family: var(--font-display);
+  font-size: 18px;
+  letter-spacing: 0.02em;
+}
+
+.awardsBody {
+  padding: 20px;
+}
+
+.awardsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.awardCard {
+  background: var(--bg-card-2);
+  border: 2px solid rgba(244, 241, 234, 0.1);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.awardCardLabel {
+  font-family: var(--font-narrow);
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.awardCardPhotos {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.awardCardName {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-1);
+  line-height: 1.3;
+}
+
+.awardCardClub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.awardCardClubName {
+  font-size: 10px;
+  color: var(--text-2);
+}
+
+.awardCardValue {
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: var(--gold);
+}
+
+.totwLabel {
+  font-family: var(--font-narrow);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-bottom: 10px;
+}
+
+/* ── TOTWPitch ────────────────────────────────────────────────────────────── */
+.totwPitch {
+  position: relative;
+  width: 100%;
+  padding-bottom: 62%;
+  overflow: hidden;
+  background: #1a5c28;
+}
+
+.totwPitchSvg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.totwPlayerWrap {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 72px;
+}
+
+.totwNameplate {
+  background: rgba(0, 0, 0, 0.72);
+  padding: 2px 6px;
+  text-align: center;
+  backdrop-filter: blur(4px);
+}
+
+.totwPlayerName {
+  font-size: 9px;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  line-height: 1.3;
+  max-width: 68px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.totwPlayerMeta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.totwPlayerPos {
+  font-size: 7px;
+  padding: 1px 3px;
+}
+
+.totwPlayerRating {
+  font-family: var(--font-display);
+  font-size: 11px;
+  color: var(--gold);
+  line-height: 1;
+}
+
+.totwPlayerStats {
+  font-size: 8px;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.2;
+}
+
+.totwGoalStat {
+  color: var(--paper);
+}
+
+.totwAssistStat {
+  color: var(--ash);
+}
+
+/* ── League Table section ─────────────────────────────────────────────────── */
+.leagueTableSection {
+  /* container */
+}
+
+.leagueTableHeading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.leagueTableTitle {
+  font-family: var(--font-display);
+  font-size: 22px;
+}
+
+.leagueTableRule {
+  flex: 1;
+  height: 3px;
+  background: var(--paper);
+}
+
+.leagueTableFullBtn {
+  font-family: var(--font-narrow);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ash);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.leagueTableFullBtn:hover {
+  color: var(--paper);
+}
+
+.leagueTableWrap {
+  border: 3px solid var(--paper);
+  background: var(--steel);
+  overflow: hidden;
+}
+
+.leagueTableRow {
+  text-decoration: none;
+  display: grid;
+  grid-template-columns: 40px 1fr 90px 60px 50px;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 12px;
+  background: transparent;
+  border-bottom: 2px solid rgba(244, 241, 234, 0.06);
+  transition: background 0.12s;
+}
+
+.leagueTableRow:hover {
+  background: rgba(244, 241, 234, 0.03);
+}
+
+.leagueTableRow[data-me="true"] {
+  background: rgba(229, 32, 47, 0.12);
+}
+
+.leagueTableRow[data-me="true"]:hover {
+  background: rgba(229, 32, 47, 0.2);
+}
+
+.leagueTablePos {
+  font-family: var(--font-display);
+  font-size: 22px;
+  text-align: center;
+}
+
+.leagueTableClub {
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  color: var(--paper);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.leagueTableRow[data-me="true"] .leagueTableClub {
+  color: var(--accent);
+}
+
+.leagueTableWDL {
+  display: flex;
+  gap: 5px;
+  font-family: var(--font-narrow);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  justify-content: center;
+  align-items: center;
+}
+
+.leagueTableW {
+  color: #2f6b46;
+  font-weight: 700;
+}
+
+.leagueTableD {
+  color: var(--ash);
+}
+
+.leagueTableL {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.leagueTableGd {
+  font-family: var(--font-narrow);
+  font-size: 12px;
+  color: var(--ash);
+  text-align: center;
+}
+
+.leagueTablePts {
+  font-family: var(--font-display);
+  font-size: 22px;
+  text-align: right;
+  color: var(--paper);
+}
+
+.leagueTableRow[data-me="true"] .leagueTablePts {
+  color: var(--accent);
+}
+
+.leagueTableMoreBtn {
+  width: 100%;
+  font-family: var(--font-narrow);
+  font-size: 11px;
+  color: var(--ash);
+  text-align: center;
+  padding: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: none;
+  border: none;
+  border-top: 1px solid rgba(244, 241, 234, 0.06);
+  cursor: pointer;
+}
+
+.leagueTableMoreBtn:hover {
+  color: var(--paper);
+}
+
+/* ── Overlay body content ─────────────────────────────────────────────────── */
+.overlayBody {
+  padding: 16px 20px 24px;
+}
+
+/* Sponsors overlay */
+.overlaySectionLabel {
+  font-family: var(--font-narrow);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ash);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  margin-bottom: 10px;
+}
+
+.overlayActiveDealBlock {
+  margin-bottom: 20px;
+}
+
+.overlayDealRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 0;
+  border-bottom: 2px solid rgba(244, 241, 234, 0.08);
+}
+
+.overlayDealEmojiActive {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  background: var(--accent);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 22% 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+
+.overlayDealEmojiAvailable {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  background: #2a2a2e;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 22% 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+
+.overlayDealInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.overlayDealName {
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 800;
+  text-transform: uppercase;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.overlayDealDeadline {
+  font-family: var(--font-narrow);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ash);
+  margin-top: 2px;
+}
+
+.overlayDealRight {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.overlayDealRewardLg {
+  font-family: var(--font-display);
+  font-size: 20px;
+  color: var(--paper);
+}
+
+.overlayDealActiveLabel {
+  font-family: var(--font-narrow);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #2f6b46;
+}
+
+.overlayDealCost {
+  font-family: var(--font-display);
+  font-size: 16px;
+  color: var(--ash);
+}
+
+.overlayDealSignBtn {
+  font-family: var(--font-display);
+  font-size: 14px;
+  background: none;
+  cursor: pointer;
+  padding: 3px 12px;
+  margin-top: 4px;
+  letter-spacing: 0.05em;
+}
+
+.overlaySlotsLabel {
+  font-family: var(--font-narrow);
+  font-size: 11px;
+  color: var(--ash);
+  padding: 8px 0 16px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.overlayAvailDealsBlock {
+  margin-bottom: 20px;
+}
+
+.overlaySponsorMsg {
+  font-size: 13px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  font-family: var(--font-narrow);
+  letter-spacing: 0.06em;
+}
+
+.overlaySponsorMsgSuccess {
+  background: rgba(47, 107, 70, 0.15);
+  border: 2px solid rgba(47, 107, 70, 0.4);
+  color: var(--paper);
+}
+
+.overlaySponsorMsgError {
+  background: rgba(229, 32, 47, 0.1);
+  border: 2px solid rgba(229, 32, 47, 0.4);
+  color: var(--accent);
+}
+
+.overlayHistoryBlock {
+  padding-top: 16px;
+  border-top: 2px solid rgba(244, 241, 234, 0.08);
+}
+
+.overlayHistoryRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px solid rgba(244, 241, 234, 0.05);
+}
+
+.overlayHistoryEmoji {
+  font-size: 15px;
+}
+
+.overlayHistoryName {
+  font-family: var(--font-narrow);
+  font-size: 12px;
+  color: var(--ash);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.overlayHistoryCompleted {
+  font-family: var(--font-display);
+  font-size: 14px;
+  color: var(--paper);
+}
+
+.overlayHistoryFailed {
+  font-family: var(--font-display);
+  font-size: 14px;
+  color: var(--accent);
+}
+
+.overlayLoadingNote {
+  font-family: var(--font-narrow);
+  font-size: 11px;
+  color: var(--ash);
+  padding: 12px 0;
+}
+
+/* Physio overlay */
+.physioOverlayLevelBlock {
+  margin-bottom: 20px;
+}
+
+.physioOverlayLevelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.physioOverlayLevelLabel {
+  font-family: var(--font-narrow);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ash);
+}
+
+.physioOverlayLevelValue {
+  font-family: var(--font-display);
+  font-size: 18px;
+  color: var(--accent);
+}
+
+.physioOverlayLevelBar {
+  display: flex;
+  gap: 6px;
+}
+
+.physioOverlayLevelSegment {
+  flex: 1;
+  height: 10px;
+  background: #2a2a2e;
+  position: relative;
+}
+
+.physioOverlayLevelSegmentActive {
+  background: var(--accent);
+}
+
+.physioOverlaySegmentStripe {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.08) 0 4px, transparent 4px 8px);
+}
+
+.physioOverlayUpgradeWrap {
+  margin-top: 12px;
+}
+
+.physioOverlayUpgradeNote {
+  font-family: var(--font-narrow);
+  font-size: 10px;
+  color: var(--ash);
+  margin-top: 6px;
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+
+.physioOverlayMaxLevel {
+  font-family: var(--font-narrow);
+  font-size: 11px;
+  text-align: center;
+  padding: 8px 0;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #2f6b46;
+  margin-top: 8px;
+}
+
+.physioOverlayTreatmentLabel {
+  font-family: var(--font-narrow);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ash);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  margin-bottom: 10px;
+}
+
+.physioOverlayAllClear {
+  font-family: var(--font-narrow);
+  font-size: 12px;
+  color: #2f6b46;
+  letter-spacing: 0.06em;
+  padding: 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.physioOverlayPatientRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 2px solid rgba(244, 241, 234, 0.08);
+}
+
+.physioOverlayPatientBar {
+  width: 4px;
+  height: 32px;
+  flex-shrink: 0;
+  background: var(--accent);
+}
+
+.physioOverlayPatientInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.physioOverlayPatientName {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 800;
+  text-transform: uppercase;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.physioOverlayPatientStatus {
+  font-family: var(--font-narrow);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.physioOverlayPatientFitness {
+  text-align: right;
+}
+
+.physioOverlayFitnessValue {
+  font-family: var(--font-display);
+  font-size: 20px;
+  color: var(--accent);
+  line-height: 0.9;
+}
+
+.physioOverlayFitnessLabel {
+  font-family: var(--font-narrow);
+  font-size: 8px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ash);
+}
+
+.physioOverlayFitnessBlock {
+  margin-top: 20px;
+}
+
+.physioOverlayFullFitnessLabel {
+  font-family: var(--font-narrow);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ash);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  margin-bottom: 10px;
+}
+
+.physioOverlayFitnessRows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.physioOverlayFitnessRow {
+  display: grid;
+  grid-template-columns: auto 1fr 36px;
+  gap: 10px;
+  align-items: center;
+}
+
+.physioOverlayFitnessPlayerName {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.physioOverlayInjTag {
+  font-family: var(--font-narrow);
+  font-size: 8px;
+  color: var(--accent);
+  margin-left: 6px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.physioOverlayBarTrack {
+  height: 4px;
+  background: #0c0c0e;
+}
+
+.physioOverlayFitnessNumber {
+  font-family: var(--font-display);
+  font-size: 16px;
+  text-align: right;
+}
+
+.physioOverlaySquadBtn {
+  margin-top: 20px;
+  font-family: var(--font-narrow);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--paper);
+  background: none;
+  border: 2px solid rgba(244, 241, 234, 0.3);
+  cursor: pointer;
+  padding: 8px 16px;
+  width: 100%;
+}
+
+/* Condition overlay */
+.conditionOverlayHeaderRow {
+  display: grid;
+  grid-template-columns: auto 1fr 70px 70px 70px;
+  gap: 8px;
+  align-items: center;
+  padding: 0 0 8px;
+  border-bottom: 2px solid rgba(244, 241, 234, 0.12);
+  margin-bottom: 4px;
+}
+
+.conditionOverlayColHeader {
+  font-family: var(--font-narrow);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ash);
+}
+
+.conditionOverlayColHeaderCenter {
+  font-family: var(--font-narrow);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ash);
+  text-align: center;
+}
+
+.conditionOverlayRow {
+  display: grid;
+  grid-template-columns: auto 1fr 70px 70px 70px;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(244, 241, 234, 0.05);
+}
+
+.conditionOverlayPlayerName {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.conditionOverlayInjTag {
+  font-family: var(--font-narrow);
+  font-size: 8px;
+  color: var(--accent);
+  margin-left: 5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.conditionOverlayStatCell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  align-items: center;
+}
+
+.conditionOverlayStatValue {
+  font-family: var(--font-display);
+  font-size: 16px;
+  line-height: 1;
+}
+
+.conditionOverlayBarTrack {
+  width: 100%;
+  height: 3px;
+  background: #0c0c0e;
+}
+
+/* ── Overlay badge text ──────────────────────────────────────────────────── */
+.overlayBadgeText {
+  font-family: var(--font-narrow);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+/* ── Position icon size override ─────────────────────────────────────────── */
+.posIconSm {
+  font-size: 9px;
+}
+
+/* ── Responsive ───────────────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  .rowA {
+    grid-template-columns: 1fr;
+  }
+
+  .rowB {
+    grid-template-columns: 1fr;
+  }
+}

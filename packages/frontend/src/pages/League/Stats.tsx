@@ -5,6 +5,7 @@ import { api } from '../../api/client'
 import { posClass } from '../../utils/helpers'
 import { PlayerPhoto } from '../../components/PlayerPhoto'
 import type { StatEntry, AwardEntry, StatCategory } from './types'
+import styles from './Stats.module.css'
 
 // ─── TOTW Pitch ───────────────────────────────────────────────────────────────
 
@@ -34,8 +35,8 @@ function TOTWPitch({ players }: { players: AwardEntry[] }) {
   }
 
   return (
-    <div style={{ position: 'relative', width: '100%', paddingBottom: '62%', borderRadius: 10, overflow: 'hidden', background: '#1a5c28' }}>
-      <svg viewBox="0 0 100 62" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
+    <div className={styles.pitchWrap}>
+      <svg viewBox="0 0 100 62" preserveAspectRatio="none" className={styles.pitchSvg}>
         {[0,1,2,3,4,5].map(i => <rect key={i} x="0" y={i*10.3} width="100" height="5.2" fill="rgba(0,0,0,0.06)" />)}
         <rect x="2" y="2" width="96" height="58" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="0.5" />
         <line x1="2" y1="31" x2="98" y2="31" stroke="rgba(255,255,255,0.3)" strokeWidth="0.5" />
@@ -50,27 +51,25 @@ function TOTWPitch({ players }: { players: AwardEntry[] }) {
       </svg>
 
       {positionedPlayers.map(({ player: p, x, y }) => (
-        <div key={p.instanceId} style={{
-          position: 'absolute',
-          left: `${x}%`, top: `${y}%`,
-          transform: 'translate(-50%, -50%)',
-          display: 'flex', flexDirection: 'column', alignItems: 'center',
-          gap: 2, width: 72,
-        }}>
+        <div
+          key={p.instanceId}
+          className={styles.pitchPlayerPin}
+          style={{ left: `${x}%`, top: `${y}%` }}
+        >
           <PlayerPhoto url={p.photoUrl} name={p.playerName} size={44} style={{ borderRadius: '50%', border: '2.5px solid rgba(255,255,255,0.9)', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.7))' }} />
           <KitSvg config={p.clubKitConfig as KitConfig | null} size={36} uid={`totw-${p.instanceId}`} />
-          <div style={{ background: 'rgba(0,0,0,0.72)', borderRadius: 4, padding: '2px 6px', textAlign: 'center', backdropFilter: 'blur(4px)' }}>
-            <div style={{ fontSize: 9, fontWeight: 700, color: '#fff', whiteSpace: 'nowrap', lineHeight: 1.3, maxWidth: 68, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <div className={styles.pitchNameplate}>
+            <div className={styles.pitchLastName}>
               {p.playerName.split(' ').slice(-1)[0]}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-              <span className={posClass(p.position)} style={{ fontSize: 7, padding: '1px 3px' }}>{p.position}</span>
-              <span style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 900, color: 'var(--gold)', lineHeight: 1 }}>{p.rating.toFixed(1)}</span>
+            <div className={styles.pitchRatingRow}>
+              <span className={`${posClass(p.position)} ${styles.pitchPosLabel}`}>{p.position}</span>
+              <span className={styles.pitchRating}>{p.rating.toFixed(1)}</span>
             </div>
             {(p.goals > 0 || p.assists > 0) && (
-              <div style={{ fontSize: 8, color: 'rgba(255,255,255,0.8)', lineHeight: 1.2 }}>
-                {p.goals > 0 && <span style={{ color: '#7effa0' }}>⚽{p.goals} </span>}
-                {p.assists > 0 && <span style={{ color: '#7dd3fc' }}>🅰{p.assists}</span>}
+              <div className={styles.pitchContribRow}>
+                {p.goals > 0 && <span className={styles.pitchGoals}>⚽{p.goals} </span>}
+                {p.assists > 0 && <span className={styles.pitchAssists}>🅰{p.assists}</span>}
               </div>
             )}
           </div>
@@ -130,33 +129,27 @@ export default function Stats({ leagueId, status }: { leagueId: string; status: 
     return `${e.goals}G ${e.assists}A`
   }
 
-  if (loading) return <div style={{ padding: '64px 0', textAlign: 'center', color: 'var(--text-2)' }}>Loading…</div>
+  if (loading) return <div className={styles.loadingState}>Loading…</div>
 
   if (status === 'SETUP' || status === 'DRAFTING') return (
-    <div style={{ textAlign: 'center', padding: '64px 0', color: 'var(--text-2)' }}>
-      <div style={{ fontSize: 36, marginBottom: 10 }}>📊</div>
-      <p style={{ fontWeight: 600, marginBottom: 6 }}>No stats yet</p>
-      <p style={{ fontSize: 13, color: 'var(--text-3)' }}>Stats appear here after the first matchday.</p>
+    <div className={styles.setupState}>
+      <div className={styles.setupIcon}>📊</div>
+      <p className={styles.setupTitle}>No stats yet</p>
+      <p className={styles.setupSubtitle}>Stats appear here after the first matchday.</p>
     </div>
   )
 
   return (
-    <div style={{ maxWidth: 680 }}>
+    <div className={styles.pageWrap}>
 
       {/* Category tabs */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
+      <div className={styles.catTabs}>
         {categories.map(c => (
           <button
             key={c.key}
             onClick={() => setCat(c.key)}
-            style={{
-              padding: '8px 14px', borderRadius: 'var(--radius-sm)', cursor: 'pointer',
-              fontSize: 13, fontWeight: cat === c.key ? 700 : 500,
-              background: cat === c.key ? 'rgba(54,226,126,0.12)' : 'var(--bg-card)',
-              border: `1.5px solid ${cat === c.key ? 'var(--green)' : 'var(--border)'}`,
-              color: cat === c.key ? 'var(--green)' : 'var(--text-2)',
-              display: 'flex', alignItems: 'center', gap: 6,
-            }}
+            className={styles.catTab}
+            data-active={String(cat === c.key)}
           >
             <span>{c.icon}</span>{c.label}
           </button>
@@ -165,57 +158,47 @@ export default function Stats({ leagueId, status }: { leagueId: string; status: 
 
       {/* Table */}
       {entries.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-2)' }}>No match data yet.</div>
+        <div className={styles.noData}>No match data yet.</div>
       ) : sorted.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-2)' }}>
+        <div className={styles.noData}>
           {cat === 'cleanSheets' ? 'No clean sheets recorded yet.' : 'No data for this category.'}
         </div>
       ) : (
-        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+        <div className={styles.leaderboard}>
           {sorted.map((e, i) => {
             const isTop = i === 0
             const medal = i === 0 ? 'var(--gold)' : i === 1 ? '#a0a8b8' : i === 2 ? '#cd7f32' : 'var(--text-3)'
             return (
               <div
                 key={e.instanceId}
-                style={{
-                  display: 'grid', gridTemplateColumns: '40px 1fr auto',
-                  alignItems: 'center', padding: '11px 16px',
-                  borderBottom: i < sorted.length - 1 ? '1px solid var(--border)' : 'none',
-                  background: isTop ? 'rgba(255,196,0,0.04)' : 'transparent',
-                }}
+                className={styles.leaderRow}
+                data-top={String(isTop)}
               >
                 {/* Rank */}
-                <div style={{
-                  fontFamily: 'var(--font-display)', fontSize: isTop ? 20 : 14,
-                  fontWeight: 800, color: medal, textAlign: 'center',
-                }}>
+                <div className={styles.rankCell} data-top={String(isTop)} style={{ color: medal }}>
                   {i + 1}
                 </div>
 
                 {/* Player info */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                <div className={styles.playerInfo}>
                   <ClubBadge name={e.clubName} size={30} logoConfig={e.clubLogoConfig} />
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontWeight: isTop ? 700 : 600, fontSize: 14, color: 'var(--text-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <div className={styles.playerDetails}>
+                    <div className={styles.playerNameText} data-top={String(isTop)}>
                       {e.playerName}
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                    <div className={styles.playerMeta}>
                       <span className={posClass(e.position)} style={{ fontSize: 9 }}>{e.position}</span>
-                      <span style={{ fontSize: 11, color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.clubName}</span>
+                      <span className={styles.playerClub}>{e.clubName}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Stat value + secondary */}
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{
-                    fontFamily: 'var(--font-display)', fontSize: isTop ? 26 : 20,
-                    fontWeight: 800, color: isTop ? 'var(--gold)' : 'var(--text-1)', lineHeight: 1,
-                  }}>
+                <div className={styles.statValueCell}>
+                  <div className={styles.statPrimary} data-top={String(isTop)}>
                     {statValue(e)}
                   </div>
-                  <div style={{ fontSize: 10, color: 'var(--text-3)', fontWeight: 600, marginTop: 2 }}>
+                  <div className={styles.statSecondary}>
                     {secondaryLabel(e)}
                   </div>
                 </div>

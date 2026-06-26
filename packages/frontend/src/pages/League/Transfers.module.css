@@ -1,0 +1,443 @@
+/* ─── Layout ─────────────────────────────────────────────────────────────── */
+.root {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 767px) {
+  .root {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ─── Transfer window banner ─────────────────────────────────────────────── */
+.windowBanner {
+  grid-column: 1 / -1;
+  padding: 10px 14px;
+  background: rgba(245, 166, 35, 0.08);
+  border: 1px solid rgba(245, 166, 35, 0.3);
+  border-radius: var(--radius-sm);
+  margin-bottom: 16px;
+  font-size: 12px;
+  color: var(--gold);
+  font-weight: 600;
+}
+
+/* ─── Panel card ─────────────────────────────────────────────────────────── */
+.panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.panelFullWidth {
+  composes: panel;
+  grid-column: 1 / -1;
+}
+
+/* ─── Panel header ───────────────────────────────────────────────────────── */
+.panelHeader {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.panelTitle {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-1);
+}
+
+.panelCount {
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.panelWarning {
+  font-size: 11px;
+  color: var(--red);
+  margin-left: auto;
+}
+
+/* ─── Search + position filter ───────────────────────────────────────────── */
+.filterArea {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.filterTitle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 6px 10px;
+  background: var(--bg-base);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-1);
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.posFilters {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.posChip {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text-2);
+}
+
+.posChipActive {
+  composes: posChip;
+  background: var(--green);
+  color: #000;
+}
+
+/* ─── Column headers ─────────────────────────────────────────────────────── */
+.colHeaders {
+  display: grid;
+  gap: 8px;
+  padding: 6px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.colHeadersFreeAgent {
+  composes: colHeaders;
+  grid-template-columns: 28px 1fr 36px 36px 36px 36px auto;
+}
+
+.colHeadersMarket {
+  composes: colHeaders;
+  grid-template-columns: 28px 1fr 80px 36px 36px 36px 36px auto;
+}
+
+.colHead {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.colHeadCenter {
+  composes: colHead;
+  text-align: center;
+}
+
+/* ─── Player row ─────────────────────────────────────────────────────────── */
+.playerRow {
+  display: grid;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.playerRowFreeAgent {
+  composes: playerRow;
+  grid-template-columns: 28px 1fr 36px 36px 36px 36px auto;
+}
+
+.playerRowFreeAgentMobile {
+  composes: playerRow;
+  grid-template-columns: 28px 1fr 36px auto;
+}
+
+.playerRowMarket {
+  composes: playerRow;
+  grid-template-columns: 28px 1fr 80px 36px 36px 36px 36px auto;
+}
+
+.playerRowMarketMobile {
+  composes: playerRow;
+  grid-template-columns: 28px 1fr auto;
+}
+
+.playerAvatar {
+  border-radius: 50%;
+}
+
+.playerInfo {
+  min-width: 0;
+}
+
+.playerName {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.playerMeta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.playerAge {
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.playerInjured {
+  font-size: 10px;
+  color: var(--red);
+  font-weight: 700;
+}
+
+.playerOvr {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.playerStat {
+  font-size: 11px;
+  text-align: center;
+}
+
+.playerClub {
+  font-size: 11px;
+  color: var(--text-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ─── Stat colours via data attributes ──────────────────────────────────── */
+[data-level="high"] { color: var(--green); }
+[data-level="mid"]  { color: var(--gold); }
+[data-level="low"]  { color: var(--red); }
+
+/* ─── Action buttons ─────────────────────────────────────────────────────── */
+.btnSign {
+  padding: 4px 12px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  border: none;
+  white-space: nowrap;
+  cursor: pointer;
+  background: var(--green);
+  color: #000;
+}
+
+.btnSign:disabled {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-3);
+  cursor: not-allowed;
+}
+
+.btnBuy {
+  composes: btnSign;
+}
+
+.btnList {
+  padding: 4px 8px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid var(--text-3);
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btnList:disabled {
+  color: var(--text-3);
+  cursor: not-allowed;
+}
+
+.btnDelist {
+  padding: 4px 8px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid var(--gold);
+  background: transparent;
+  color: var(--gold);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btnRelease {
+  padding: 4px 8px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid var(--red);
+  background: transparent;
+  color: var(--red);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btnRelease:disabled {
+  color: var(--text-3);
+  cursor: not-allowed;
+}
+
+.actionGroup {
+  display: flex;
+  gap: 4px;
+}
+
+/* ─── Empty/loading state ────────────────────────────────────────────────── */
+.emptyState {
+  padding: 32px;
+  text-align: center;
+  color: var(--text-3);
+  font-size: 13px;
+}
+
+/* ─── Feedback banner ────────────────────────────────────────────────────── */
+.feedback {
+  grid-column: 1 / -1;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.feedbackSuccess {
+  composes: feedback;
+  background: rgba(54, 226, 126, 0.1);
+  border: 1px solid var(--green);
+  color: var(--green);
+}
+
+.feedbackError {
+  composes: feedback;
+  background: rgba(255, 60, 60, 0.1);
+  border: 1px solid var(--red);
+  color: var(--red);
+}
+
+.feedbackClose {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  font-size: 16px;
+}
+
+/* ─── Dialogs (overlay) ──────────────────────────────────────────────────── */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.dialog {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px 28px;
+  max-width: 360px;
+  width: 100%;
+}
+
+.dialogTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-1);
+  margin-bottom: 4px;
+}
+
+.dialogSub {
+  font-size: 12px;
+  color: var(--text-3);
+  margin-bottom: 16px;
+}
+
+.dialogLabel {
+  font-size: 12px;
+  color: var(--text-2);
+  display: block;
+  margin-bottom: 6px;
+}
+
+.dialogInput {
+  width: 100%;
+  padding: 8px 10px;
+  background: var(--bg-base);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-1);
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+
+.dialogMarketValue {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-bottom: 20px;
+}
+
+.dialogBody {
+  font-size: 13px;
+  color: var(--text-2);
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+
+.dialogActions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.btnConfirmList {
+  padding: 7px 18px;
+  border-radius: 7px;
+  background: var(--green);
+  border: none;
+  color: #000;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.btnConfirmList:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btnConfirmRelease {
+  padding: 7px 18px;
+  border-radius: 7px;
+  background: var(--red);
+  border: none;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 13px;
+}

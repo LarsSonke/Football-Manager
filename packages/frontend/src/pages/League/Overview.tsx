@@ -1,14 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../../api/client'
 import { ClubBadge } from '../../components/ClubBadge'
 import { PlayerPhoto } from '../../components/PlayerPhoto'
 import { KitSvg, type KitConfig } from '../../components/KitSvg'
 import {
-  useIsMobile, posClass,
+  posClass,
   type LeagueData, type MatchData, type ClubData, type AwardEntry, type MatchdayAwards,
   type AvailableDeal, type ActiveDeal, type Tab,
 } from './types'
+import styles from './Overview.module.css'
 
 // ─── TOTWPitch ────────────────────────────────────────────────────────────────
 
@@ -34,8 +35,8 @@ function TOTWPitch({ players }: { players: AwardEntry[] }) {
     })
   }
   return (
-    <div style={{ position: 'relative', width: '100%', paddingBottom: '62%', overflow: 'hidden', background: '#1a5c28' }}>
-      <svg viewBox="0 0 100 62" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
+    <div className={styles.totwPitch}>
+      <svg viewBox="0 0 100 62" preserveAspectRatio="none" className={styles.totwPitchSvg}>
         {[0,1,2,3,4,5].map(i => <rect key={i} x="0" y={i*10.3} width="100" height="5.2" fill="rgba(0,0,0,0.06)" />)}
         <rect x="2" y="2" width="96" height="58" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="0.5" />
         <line x1="2" y1="31" x2="98" y2="31" stroke="rgba(255,255,255,0.3)" strokeWidth="0.5" />
@@ -46,24 +47,62 @@ function TOTWPitch({ players }: { players: AwardEntry[] }) {
         <rect x="38" y="56" width="24" height="6" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="0.5" />
       </svg>
       {positionedPlayers.map(({ player: p, x, y }) => (
-        <div key={p.instanceId} style={{ position: 'absolute', left: `${x}%`, top: `${y}%`, transform: 'translate(-50%, -50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, width: 72 }}>
+        <div
+          key={p.instanceId}
+          className={styles.totwPlayerWrap}
+          style={{ left: `${x}%`, top: `${y}%` }}
+        >
           <PlayerPhoto url={p.photoUrl} name={p.playerName} size={44} style={{ borderRadius: '50%', border: '2.5px solid rgba(255,255,255,0.9)', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.7))' }} />
           <KitSvg config={p.clubKitConfig as KitConfig | null} size={36} uid={`totw-${p.instanceId}`} />
-          <div style={{ background: 'rgba(0,0,0,0.72)', padding: '2px 6px', textAlign: 'center', backdropFilter: 'blur(4px)' }}>
-            <div style={{ fontSize: 9, fontWeight: 700, color: '#fff', whiteSpace: 'nowrap', lineHeight: 1.3, maxWidth: 68, overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.playerName.split(' ').slice(-1)[0]}</div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-              <span className={posClass(p.position)} style={{ fontSize: 7, padding: '1px 3px' }}>{p.position}</span>
-              <span style={{ fontFamily: 'var(--font-display)', fontSize: 11, color: 'var(--gold)', lineHeight: 1 }}>{p.rating.toFixed(1)}</span>
+          <div className={styles.totwNameplate}>
+            <div className={styles.totwPlayerName}>{p.playerName.split(' ').slice(-1)[0]}</div>
+            <div className={styles.totwPlayerMeta}>
+              <span className={`${posClass(p.position)} ${styles.totwPlayerPos}`}>{p.position}</span>
+              <span className={styles.totwPlayerRating}>{p.rating.toFixed(1)}</span>
             </div>
             {(p.goals > 0 || p.assists > 0) && (
-              <div style={{ fontSize: 8, color: 'rgba(255,255,255,0.8)', lineHeight: 1.2 }}>
-                {p.goals > 0 && <span style={{ color: '#7effa0' }}>⚽{p.goals} </span>}
-                {p.assists > 0 && <span style={{ color: '#7dd3fc' }}>🅰{p.assists}</span>}
+              <div className={styles.totwPlayerStats}>
+                {p.goals > 0 && <span className={styles.totwGoalStat}>⚽{p.goals} </span>}
+                {p.assists > 0 && <span className={styles.totwAssistStat}>🅰{p.assists}</span>}
               </div>
             )}
           </div>
         </div>
       ))}
+    </div>
+  )
+}
+
+// ─── Overlay primitives ───────────────────────────────────────────────────────
+
+function MangaOverlay({ title, badge, onClose, children }: {
+  title: string; badge?: string; onClose: () => void; children: ReactNode
+}) {
+  useEffect(() => {
+    const fn = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', fn)
+    return () => window.removeEventListener('keydown', fn)
+  }, [onClose])
+
+  return (
+    <div className="mg-overlay" onClick={onClose}>
+      <div className="mg-overlay__panel" onClick={e => e.stopPropagation()}>
+        <div className="mg-overlay__header">
+          <span className="mg-overlay__title">{title}</span>
+          {badge && <span className={styles.overlayBadgeText}>{badge}</span>}
+          <button onClick={onClose} className="mg-overlay__close">✕</button>
+        </div>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+function OnboardingNote({ children }: { children: ReactNode }) {
+  return (
+    <div className="mg-onboarding">
+      <span className="mg-onboarding__icon">ℹ</span>
+      <span className="mg-onboarding__text">{children}</span>
     </div>
   )
 }
@@ -79,12 +118,12 @@ export default function Overview({ league, matches, myClub, awards, onPhysioUpgr
   onRefresh: () => void
   onSwitchTab?: (tab: Tab) => void
 }) {
-  const isMobile = useIsMobile()
   const clubMap = Object.fromEntries(league.clubs.map(c => [c.id, c]))
 
   const [sponsorData, setSponsorData] = useState<{ available: AvailableDeal[]; active: ActiveDeal[]; history: ActiveDeal[] } | null>(null)
   const [signingDeal, setSigningDeal] = useState<number | null>(null)
   const [sponsorMsg, setSponsorMsg] = useState('')
+  const [overlay, setOverlay] = useState<'sponsors' | 'physio' | 'condition' | null>(null)
 
   useEffect(() => {
     if (!myClub || league.status !== 'ACTIVE') return
@@ -130,12 +169,10 @@ export default function Overview({ league, matches, myClub, awards, onPhysioUpgr
 
   const isHome = nextMatch && myClub ? nextMatch.homeClubId === myClub.id : false
 
-  // Rival opponent for rival watch panel
   const oppClub = nextMatch
     ? clubMap[isHome ? nextMatch.awayClubId : nextMatch.homeClubId]
     : null
 
-  // Form points
   const formPts = last5.reduce((s, m) => {
     const ih = m.homeClubId === myClub?.id
     const ms = ih ? m.homeScore! : m.awayScore!
@@ -156,47 +193,318 @@ export default function Overview({ league, matches, myClub, awards, onPhysioUpgr
     return `${isHome ? 'Home' : 'Away'} vs ${oppClub.name}. Three points change everything.`
   })()
 
+  const statColor = (v: number) => v >= 75 ? '#2f6b46' : v >= 55 ? '#cf9438' : '#e5202f'
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div className={styles.root}>
+
+      {/* ══════════════════════════════ OVERLAYS ══════════════════════════════ */}
+
+      {overlay === 'sponsors' && myClub && league.status === 'ACTIVE' && (
+        <MangaOverlay
+          title="SPONSORS"
+          badge={sponsorData ? `${sponsorData.active.length}/3 Active` : undefined}
+          onClose={() => setOverlay(null)}
+        >
+          <OnboardingNote>
+            Sign deals with sponsors to earn bonus income. Each deal sets a target goal — reach it by the target matchday and the reward is added to your budget. Signing a deal costs a fee upfront. You can hold up to 3 active deals at once.
+          </OnboardingNote>
+          <div className={styles.overlayBody}>
+            {sponsorData ? (
+              <>
+                {/* Active deals */}
+                {sponsorData.active.length > 0 && (
+                  <div className={styles.overlayActiveDealBlock}>
+                    <div className={styles.overlaySectionLabel}>Active Deals</div>
+                    {sponsorData.active.map(deal => (
+                      <div key={deal.id} className={styles.overlayDealRow}>
+                        <span className={styles.overlayDealEmojiActive}>{deal.sponsorEmoji}</span>
+                        <div className={styles.overlayDealInfo}>
+                          <div className={styles.overlayDealName}>{deal.sponsorName}</div>
+                          <div className={styles.overlayDealDeadline}>Complete by Matchday {deal.targetMatchday}</div>
+                        </div>
+                        <div className={styles.overlayDealRight}>
+                          <div className={styles.overlayDealRewardLg}>+€{(deal.reward / 1000).toFixed(1)}k</div>
+                          <div className={styles.overlayDealActiveLabel}>Active</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Available deals */}
+                {sponsorData.active.length < 3 && sponsorData.available.length > 0 && (
+                  <div className={styles.overlayAvailDealsBlock}>
+                    <div className={styles.overlaySectionLabel}>
+                      Available Deals · {3 - sponsorData.active.length} slot{3 - sponsorData.active.length !== 1 ? 's' : ''} open
+                    </div>
+                    {sponsorData.available.map((deal, i) => (
+                      <div key={i} className={styles.overlayDealRow}>
+                        <span className={styles.overlayDealEmojiAvailable}>{deal.sponsorEmoji}</span>
+                        <div className={styles.overlayDealInfo}>
+                          <div className={styles.overlayDealName}>{deal.sponsorName}</div>
+                          <div className={styles.overlayDealDeadline}>
+                            Reward: +€{(deal.reward / 1000).toFixed(1)}k
+                          </div>
+                        </div>
+                        <div className={styles.overlayDealRight}>
+                          <div className={styles.overlayDealCost}>-€{(deal.cost / 1000).toFixed(1)}k</div>
+                          <button
+                            className={styles.overlayDealSignBtn}
+                            style={{
+                              color: myClub.budget < deal.cost ? 'var(--ash)' : 'var(--accent)',
+                              border: `2px solid ${myClub.budget < deal.cost ? 'rgba(244,241,234,.15)' : 'var(--accent)'}`,
+                              cursor: myClub.budget < deal.cost ? 'not-allowed' : 'pointer',
+                            }}
+                            disabled={signingDeal !== null || myClub.budget < deal.cost}
+                            onClick={() => handleSignDeal(i)}
+                            title={myClub.budget < deal.cost ? 'Not enough budget' : undefined}
+                          >
+                            {signingDeal === i ? '…' : myClub.budget < deal.cost ? "Can't afford" : 'Sign Deal'}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {sponsorData.active.length >= 3 && (
+                  <div className={styles.overlaySlotsLabel}>
+                    All 3 deal slots filled. Complete or wait for a deal to free a slot.
+                  </div>
+                )}
+
+                {sponsorMsg && (
+                  <div className={`${styles.overlaySponsorMsg} ${sponsorMsg.includes('signed') ? styles.overlaySponsorMsgSuccess : styles.overlaySponsorMsgError}`}>
+                    {sponsorMsg}
+                  </div>
+                )}
+
+                {/* History */}
+                {sponsorData.history.length > 0 && (
+                  <div className={styles.overlayHistoryBlock}>
+                    <div className={styles.overlaySectionLabel}>History</div>
+                    {sponsorData.history.map(deal => (
+                      <div key={deal.id} className={styles.overlayHistoryRow}>
+                        <span className={styles.overlayHistoryEmoji}>{deal.sponsorEmoji}</span>
+                        <span className={styles.overlayHistoryName}>{deal.sponsorName}</span>
+                        <span className={deal.status === 'COMPLETED' ? styles.overlayHistoryCompleted : styles.overlayHistoryFailed}>
+                          {deal.status === 'COMPLETED' ? `+€${(deal.reward / 1000).toFixed(1)}k` : 'Failed'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className={styles.overlayLoadingNote}>Loading sponsors…</div>
+            )}
+          </div>
+        </MangaOverlay>
+      )}
+
+      {overlay === 'physio' && myClub && (
+        <MangaOverlay
+          title="PHYSIO FACILITY"
+          badge={`LVL ${myClub.physioLevel} / 2`}
+          onClose={() => setOverlay(null)}
+        >
+          <OnboardingNote>
+            Your Physio Facility determines how much it costs to heal injured players and how available treatment is. <strong style={{ color: 'var(--paper)' }}>Level 1</strong> — basic treatment, standard costs. <strong style={{ color: 'var(--paper)' }}>Level 2</strong> — faster recovery, reduced fees. Injured players cannot play in matches until healed from the Squad tab.
+          </OnboardingNote>
+          <div className={styles.overlayBody}>
+            {/* Upgrade level bar */}
+            <div className={styles.physioOverlayLevelBlock}>
+              <div className={styles.physioOverlayLevelHeader}>
+                <span className={styles.physioOverlayLevelLabel}>Facility Level</span>
+                <span className={styles.physioOverlayLevelValue}>LVL {myClub.physioLevel} / 2</span>
+              </div>
+              <div className={styles.physioOverlayLevelBar}>
+                {[0,1].map(i => (
+                  <div
+                    key={i}
+                    className={`${styles.physioOverlayLevelSegment} ${i < myClub.physioLevel ? styles.physioOverlayLevelSegmentActive : ''}`}
+                  >
+                    {i < myClub.physioLevel && <div className={styles.physioOverlaySegmentStripe} />}
+                  </div>
+                ))}
+              </div>
+              {myClub.physioLevel < 2 && (
+                <div className={styles.physioOverlayUpgradeWrap}>
+                  <button
+                    className="btn"
+                    style={{
+                      background: myClub.budget >= [15_000, 30_000][myClub.physioLevel] ? 'rgba(229,32,47,0.12)' : 'transparent',
+                      color: 'var(--paper)',
+                      border: `2px solid ${myClub.budget >= [15_000, 30_000][myClub.physioLevel] ? 'var(--accent)' : 'rgba(244,241,234,.2)'}`,
+                      width: '100%',
+                      fontSize: 13,
+                      letterSpacing: '.06em',
+                    }}
+                    onClick={() => { onPhysioUpgrade(); setOverlay(null) }}
+                    disabled={myClub.budget < [15_000, 30_000][myClub.physioLevel]}
+                  >
+                    {myClub.budget < [15_000, 30_000][myClub.physioLevel]
+                      ? `Not enough budget · Need €${[15, 30][myClub.physioLevel]}k`
+                      : `Upgrade to Level ${myClub.physioLevel + 1} · €${[15, 30][myClub.physioLevel]}k`}
+                  </button>
+                  <div className={styles.physioOverlayUpgradeNote}>
+                    {myClub.physioLevel === 0 ? 'Unlock basic treatment for injured players' : 'Unlock advanced recovery — lower costs, faster return'}
+                  </div>
+                </div>
+              )}
+              {myClub.physioLevel >= 2 && (
+                <div className={styles.physioOverlayMaxLevel}>
+                  ✓ Max Level — Full recovery support active
+                </div>
+              )}
+            </div>
+
+            {/* Treatment room */}
+            <div>
+              <div className={styles.physioOverlayTreatmentLabel}>
+                Treatment Room · {squad.filter(p => p.injured).length} player{squad.filter(p => p.injured).length !== 1 ? 's' : ''}
+              </div>
+              {squad.filter(p => p.injured).length === 0 ? (
+                <div className={styles.physioOverlayAllClear}>
+                  ✓ All Clear — no injuries in the squad
+                </div>
+              ) : (
+                squad.filter(p => p.injured).map(p => (
+                  <div key={p.id} className={styles.physioOverlayPatientRow}>
+                    <span className={styles.physioOverlayPatientBar} />
+                    <span className={`${posClass(p.player.position)} ${styles.posIconSm}`}>{p.player.position}</span>
+                    <div className={styles.physioOverlayPatientInfo}>
+                      <div className={styles.physioOverlayPatientName}>{p.player.name}</div>
+                      <div className={styles.physioOverlayPatientStatus}>Injured · Cannot play</div>
+                    </div>
+                    <div className={styles.physioOverlayPatientFitness}>
+                      <div className={styles.physioOverlayFitnessValue}>{p.fitness}</div>
+                      <div className={styles.physioOverlayFitnessLabel}>fit</div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Fitness rundown — all squad sorted by fitness */}
+            <div className={styles.physioOverlayFitnessBlock}>
+              <div className={styles.physioOverlayFullFitnessLabel}>
+                Full Squad — Fitness
+              </div>
+              <div className={styles.physioOverlayFitnessRows}>
+                {[...squad].sort((a, b) => a.fitness - b.fitness).map(p => {
+                  const c = statColor(p.fitness)
+                  return (
+                    <div key={p.id} className={styles.physioOverlayFitnessRow}>
+                      <span className={`${posClass(p.player.position)} ${styles.posIconSm}`}>{p.player.position}</span>
+                      <div>
+                        <div className={styles.physioOverlayFitnessPlayerName}>
+                          {p.player.name}
+                          {p.injured && <span className={styles.physioOverlayInjTag}>INJ</span>}
+                        </div>
+                        <div className={styles.physioOverlayBarTrack}>
+                          <div className="mg-bar__fill" style={{ width: `${p.fitness}%`, background: c }} />
+                        </div>
+                      </div>
+                      <div className={styles.physioOverlayFitnessNumber} style={{ color: c }}>{p.fitness}</div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            <button
+              onClick={() => { setOverlay(null); onSwitchTab?.('squad') }}
+              className={styles.physioOverlaySquadBtn}
+            >
+              Go to Squad tab to heal players →
+            </button>
+          </div>
+        </MangaOverlay>
+      )}
+
+      {overlay === 'condition' && myClub && (
+        <MangaOverlay
+          title="SQUAD CONDITION"
+          onClose={() => setOverlay(null)}
+        >
+          <OnboardingNote>
+            <strong style={{ color: 'var(--paper)' }}>Fitness</strong> drops after matches and recovers during rest days — players below 35 risk injury. <strong style={{ color: 'var(--paper)' }}>Morale</strong> rises with wins and drops with losses — it affects how well players perform. <strong style={{ color: 'var(--paper)' }}>Sharpness</strong> measures tactical familiarity and builds over time as your squad plays together.
+          </OnboardingNote>
+          <div className={styles.overlayBody}>
+            {/* Header row */}
+            <div className={styles.conditionOverlayHeaderRow}>
+              <span />
+              <span className={styles.conditionOverlayColHeader}>Player</span>
+              {['Fitness', 'Morale', 'Sharp'].map(h => (
+                <span key={h} className={styles.conditionOverlayColHeaderCenter}>{h}</span>
+              ))}
+            </div>
+            {[...squad].sort((a, b) => a.fitness - b.fitness).map(p => {
+              const fitC = statColor(p.fitness)
+              const morC = statColor(p.morale)
+              const frmC = p.form >= 75 ? '#08080a' : p.form >= 55 ? '#cf9438' : '#e5202f'
+              return (
+                <div key={p.id} className={styles.conditionOverlayRow}>
+                  <span className={`${posClass(p.player.position)} ${styles.posIconSm}`}>{p.player.position}</span>
+                  <div className={styles.conditionOverlayPlayerName}>
+                    {p.player.name.split(' ').slice(-1)[0]}
+                    {p.injured && <span className={styles.conditionOverlayInjTag}>INJ</span>}
+                  </div>
+                  {[{ v: p.fitness, c: fitC }, { v: p.morale, c: morC }, { v: p.form, c: frmC }].map(({ v, c }, idx) => (
+                    <div key={idx} className={styles.conditionOverlayStatCell}>
+                      <span className={styles.conditionOverlayStatValue} style={{ color: c }}>{v}</span>
+                      <div className={styles.conditionOverlayBarTrack}>
+                        <div className="mg-bar__fill" style={{ width: `${v}%`, background: c }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
+            })}
+          </div>
+        </MangaOverlay>
+      )}
 
       {/* ══════════════════════════════ HERO: MATCHDAY / SEASON ══════════════════════════════ */}
       {myClub && league.status !== 'SETUP' && league.status !== 'DRAFTING' && (
-        <section style={{ position: 'relative', border: '3px solid var(--paper)', background: 'var(--steel)', overflow: 'hidden', minHeight: 340, animation: 'mgSlam .5s cubic-bezier(.2,.8,.3,1) both' }}>
+        <section className={styles.heroSection}>
           <div className="hero-speed-lines" />
 
           {/* LEFT */}
-          <div style={{ position: 'relative', padding: '30px 30px 28px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', zIndex: 2 }}>
+          <div className={styles.heroContent}>
             <div>
               {/* Badge */}
-              <div style={{ display: 'inline-flex', alignItems: 'center', background: 'var(--accent)', padding: '5px 13px', transform: 'skewX(-9deg)' }}>
-                <span style={{ fontFamily: 'var(--font-narrow)', fontSize: 11, fontWeight: 700, letterSpacing: '.24em', textTransform: 'uppercase', transform: 'skewX(9deg)', color: '#fff' }}>
+              <div className={styles.heroBadge}>
+                <span className={styles.heroBadgeText}>
                   {nextMatch
                     ? `Matchday ${nextMatch.matchday} · ${isHome ? 'Home' : 'Away'}`
                     : league.status === 'FINISHED' ? 'Season Complete · Final'
                     : 'All Fixtures Played'}
                 </span>
               </div>
-              {/* Club name — 88px matching manga */}
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: 88, lineHeight: .82, marginTop: 18, letterSpacing: '-.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {/* Club name */}
+              <div className={styles.heroClubName}>
                 {myClub.name.toUpperCase()}
               </div>
               {/* VS + opponent OR final standing */}
               {nextMatch ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 2, overflow: 'hidden' }}>
-                  <span style={{ fontFamily: 'var(--font-display)', fontSize: 34, color: 'var(--accent)', transform: 'skewX(-8deg)', flexShrink: 0 }}>VS</span>
-                  <span style={{ fontFamily: 'var(--font-display)', fontSize: 62, lineHeight: .82, WebkitTextStroke: '2px var(--paper)', color: 'transparent', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div className={styles.heroVsRow}>
+                  <span className={styles.heroVs}>VS</span>
+                  <span className={styles.heroOpponent}>
                     {(oppClub?.name ?? '???').toUpperCase()}
                   </span>
                 </div>
               ) : (
-                <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, marginTop: 2 }}>
-                  <span style={{ fontFamily: 'var(--font-display)', fontSize: 34, color: 'var(--accent)', transform: 'skewX(-8deg)', flexShrink: 0 }}>FINAL</span>
-                  <span style={{ fontFamily: 'var(--font-display)', fontSize: 78, lineHeight: .82 }}>{myPosition ?? '–'}</span>
-                  {myPosition && <span style={{ fontFamily: 'var(--font-display)', fontSize: 34, marginBottom: 10 }}>{myOrdinal}</span>}
+                <div className={styles.heroFinalRow}>
+                  <span className={styles.heroFinalLabel}>FINAL</span>
+                  <span className={styles.heroFinalPos}>{myPosition ?? '–'}</span>
+                  {myPosition && <span className={styles.heroFinalOrdinal}>{myOrdinal}</span>}
                 </div>
               )}
               {/* Tagline */}
-              <div style={{ fontFamily: 'var(--font-narrow)', fontSize: 13, letterSpacing: '.16em', textTransform: 'uppercase', color: 'var(--ash)', marginTop: 16, lineHeight: 1.5, maxWidth: 420 }}>
+              <div className={styles.heroTagline}>
                 {nextMatch ? heroTagline : (() => {
                   const p = myPosition ?? sorted.length
                   if (p === 1) return 'Champions. The title is yours.'
@@ -207,43 +515,35 @@ export default function Overview({ league, matches, myClub, awards, onPhysioUpgr
               </div>
             </div>
             {/* Buttons */}
-            <div style={{ display: 'flex', alignItems: 'stretch', gap: 12, marginTop: 24 }}>
+            <div className={styles.heroButtons}>
               {nextMatch ? (
                 <>
                   <Link
                     to={`/league/${league.id}/match/${nextMatch.id}`}
-                    style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--accent)', color: '#fff', padding: '15px 24px', textDecoration: 'none', clipPath: 'polygon(0 0, 100% 0, 92% 100%, 0 100%)', transition: 'transform .2s' }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.transform = 'translateX(4px)' }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.transform = '' }}
+                    className={styles.heroBtnAccent}
                   >
-                    <span style={{ fontFamily: 'var(--font-body)', fontSize: 14, fontWeight: 900, letterSpacing: '.1em', textTransform: 'uppercase' }}>Enter Match</span>
+                    <span className={styles.heroBtnText}>Enter Match</span>
                   </Link>
                   <button
                     onClick={() => onSwitchTab?.('tactics')}
-                    style={{ display: 'flex', alignItems: 'center', gap: 10, border: '2px solid var(--paper)', padding: '15px 22px', background: 'transparent', color: 'var(--paper)', cursor: 'pointer', transition: 'background .2s, color .2s' }}
-                    onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.background = 'var(--paper)'; b.style.color = 'var(--ink)' }}
-                    onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.background = 'transparent'; b.style.color = 'var(--paper)' }}
+                    className={styles.heroBtnGhost}
                   >
-                    <span style={{ fontFamily: 'var(--font-body)', fontSize: 14, fontWeight: 900, letterSpacing: '.1em', textTransform: 'uppercase' }}>Team Sheet</span>
+                    <span className={styles.heroBtnText}>Team Sheet</span>
                   </button>
                 </>
               ) : (
                 <>
                   <button
                     onClick={() => onSwitchTab?.('fixtures')}
-                    style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--accent)', color: '#fff', padding: '15px 24px', border: 'none', clipPath: 'polygon(0 0, 100% 0, 92% 100%, 0 100%)', cursor: 'pointer', transition: 'transform .2s' }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'translateX(4px)' }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform = '' }}
+                    className={styles.heroBtnAccent}
                   >
-                    <span style={{ fontFamily: 'var(--font-body)', fontSize: 14, fontWeight: 900, letterSpacing: '.1em', textTransform: 'uppercase' }}>View Results</span>
+                    <span className={styles.heroBtnText}>View Results</span>
                   </button>
                   <button
                     onClick={() => onSwitchTab?.('stats')}
-                    style={{ display: 'flex', alignItems: 'center', gap: 10, border: '2px solid var(--paper)', padding: '15px 22px', background: 'transparent', color: 'var(--paper)', cursor: 'pointer', transition: 'background .2s, color .2s' }}
-                    onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.background = 'var(--paper)'; b.style.color = 'var(--ink)' }}
-                    onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.background = 'transparent'; b.style.color = 'var(--paper)' }}
+                    className={styles.heroBtnGhost}
                   >
-                    <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 900, letterSpacing: '.1em', textTransform: 'uppercase' }}>Season Stats</span>
+                    <span className={styles.heroBtnTextSm}>Season Stats</span>
                   </button>
                 </>
               )}
@@ -253,7 +553,7 @@ export default function Overview({ league, matches, myClub, awards, onPhysioUpgr
         </section>
       )}
 
-      {/* ══════════════════════ ROW A: BUDGET (2fr) + SQUAD CONDITION (1fr) ══════════════════════ */}
+      {/* ══════════════════ ROW A: BUDGET (2fr) + SQUAD CONDITION (1fr) ══════════════════ */}
       {myClub && (() => {
         const wages = myClub.squad.reduce((s, p) => s + p.wage, 0)
         const mdRunway = wages > 0 ? Math.floor(myClub.budget / wages) : null
@@ -261,46 +561,46 @@ export default function Overview({ league, matches, myClub, awards, onPhysioUpgr
         const isLow = mdRunway !== null && mdRunway < remaining
         const netSpend = league.startingBudget - myClub.budget
         return (
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '2fr 1fr', gap: 14, animation: 'mgInL .5s .1s both' }}>
+          <div className={styles.rowA}>
 
             {/* ── Transfer Budget ── */}
-            <section style={{ border: '3px solid var(--paper)', background: 'var(--steel)', overflow: 'hidden' }}>
-              <div style={{ background: 'var(--ink)', padding: '9px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '3px solid var(--paper)' }}>
-                <span style={{ fontFamily: 'var(--font-display)', fontSize: 18, letterSpacing: '.02em' }}>TRANSFER BUDGET</span>
-                <span style={{ fontFamily: 'var(--font-narrow)', fontSize: 10, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--accent)' }}>
+            <section className={styles.budgetPanel}>
+              <div className={styles.budgetHeader}>
+                <span className={styles.budgetHeaderTitle}>TRANSFER BUDGET</span>
+                <span className={styles.budgetHeaderBadge}>
                   {isLow ? 'Low ↓' : 'Stable ↑'}
                 </span>
               </div>
-              <div style={{ padding: 18 }}>
-                <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+              <div className={styles.budgetBody}>
+                <div className={styles.budgetMainRow}>
                   <div>
-                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 60, lineHeight: .8 }}>
-                      €{(myClub.budget / 1_000_000).toFixed(1)}<span style={{ fontSize: 32 }}>M</span>
+                    <div className={styles.budgetBigNumber}>
+                      €{(myClub.budget / 1_000_000).toFixed(1)}<span className={styles.budgetBigNumberUnit}>M</span>
                     </div>
-                    <div style={{ fontFamily: 'var(--font-narrow)', fontSize: 10, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--ash)', marginTop: 6 }}>Available to spend</div>
+                    <div className={styles.budgetAvailableLabel}>Available to spend</div>
                   </div>
                   {wages > 0 && (
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontFamily: 'var(--font-display)', fontSize: 28, color: netSpend > 0 ? 'var(--accent)' : '#2f6b46', lineHeight: .9 }}>
+                    <div className={styles.budgetNetSpend}>
+                      <div className={`${styles.budgetNetSpendValue} ${netSpend > 0 ? styles.budgetNetSpendPositive : styles.budgetNetSpendNegative}`}>
                         {netSpend >= 0 ? '-' : '+'}€{(Math.abs(netSpend) / 1000).toFixed(0)}k
                       </div>
-                      <div style={{ fontFamily: 'var(--font-narrow)', fontSize: 10, letterSpacing: '.16em', textTransform: 'uppercase', color: 'var(--ash)' }}>Net spend</div>
+                      <div className={styles.budgetNetSpendLabel}>Net spend</div>
                     </div>
                   )}
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 18 }}>
+                <div className={styles.budgetStats}>
                   {([
                     ['Transfer kitty', `€${(myClub.budget / 1_000_000).toFixed(1)}M`, Math.min(100, (myClub.budget / Math.max(league.startingBudget, 1)) * 100), 'var(--paper)'],
                     ['Wage bill / md', wages > 0 ? `€${(wages / 1000).toFixed(1)}k` : '—', wages > 0 ? Math.min(100, (wages / (myClub.budget / 10 + 1)) * 100) : 0, 'var(--ash)'],
                     ['Runway', mdRunway !== null ? `${mdRunway}md` : '—', mdRunway !== null ? Math.min(100, (mdRunway / Math.max(remaining, 1)) * 100) : 0, mdRunway !== null && mdRunway < 5 ? 'var(--accent)' : 'var(--ash)'],
                   ] as [string, string, number, string][]).map(([k, v, pct, c]) => (
-                    <div key={k}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
-                        <span style={{ fontFamily: 'var(--font-narrow)', fontSize: 11, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--ash)' }}>{k}</span>
-                        <span style={{ fontFamily: 'var(--font-display)', fontSize: 17 }}>{v}</span>
+                    <div key={k} className={styles.budgetStatRow}>
+                      <div className={styles.budgetStatMeta}>
+                        <span className={styles.budgetStatKey}>{k}</span>
+                        <span className={styles.budgetStatValue}>{v}</span>
                       </div>
-                      <div style={{ height: 6, background: '#0c0c0e' }}>
-                        <div style={{ height: '100%', width: `${pct}%`, background: c, transformOrigin: 'left', animation: 'mgGrow 1s .3s cubic-bezier(.2,.8,.3,1) both' }} />
+                      <div className="mg-bar">
+                        <div className="mg-bar__fill" style={{ width: `${pct}%`, background: c }} />
                       </div>
                     </div>
                   ))}
@@ -308,24 +608,28 @@ export default function Overview({ league, matches, myClub, awards, onPhysioUpgr
               </div>
             </section>
 
-            {/* ── Squad Condition ── */}
-            <section style={{ border: '3px solid var(--paper)', background: 'var(--paper)', color: 'var(--ink)', overflow: 'hidden' }}>
-              <div style={{ background: 'var(--ink)', color: 'var(--paper)', padding: '9px 16px', borderBottom: '3px solid var(--paper)' }}>
-                <span style={{ fontFamily: 'var(--font-display)', fontSize: 18, letterSpacing: '.02em' }}>SQUAD CONDITION</span>
+            {/* ── Squad Condition (clickable) ── */}
+            <section
+              onClick={() => setOverlay('condition')}
+              className={`${styles.conditionPanel} mg-clickable`}
+            >
+              <div className={styles.conditionHeader}>
+                <span className={styles.conditionHeaderTitle}>SQUAD CONDITION</span>
+                <span className={styles.conditionHeaderBadge}>Details →</span>
               </div>
-              <div style={{ padding: '16px 18px 18px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div className={styles.conditionBody}>
                 {([
                   ['Fitness',   avgFitness, avgFitness >= 75 ? '#2f6b46' : avgFitness >= 55 ? '#cf9438' : '#e5202f'],
-                  ['Morale',    avgMorale,  avgMorale  >= 75 ? '#cf9438' : avgMorale  >= 55 ? '#cf9438' : '#e5202f'],
+                  ['Morale',    avgMorale,  avgMorale  >= 75 ? '#2f6b46' : avgMorale  >= 55 ? '#cf9438' : '#e5202f'],
                   ['Sharpness', avgForm,    avgForm    >= 75 ? '#08080a' : avgForm    >= 55 ? '#cf9438' : '#e5202f'],
                 ] as [string, number, string][]).map(([k, v, c]) => (
-                  <div key={k}>
-                    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 5 }}>
-                      <span style={{ fontFamily: 'var(--font-narrow)', fontSize: 11, letterSpacing: '.16em', textTransform: 'uppercase', color: '#666' }}>{k}</span>
-                      <span style={{ fontFamily: 'var(--font-display)', fontSize: 30, lineHeight: .8, color: c }}>{v}</span>
+                  <div key={k} className={styles.conditionStat}>
+                    <div className={styles.conditionStatMeta}>
+                      <span className={styles.conditionStatKey}>{k}</span>
+                      <span className={styles.conditionStatValue} style={{ color: c }}>{v}</span>
                     </div>
-                    <div style={{ height: 6, background: 'rgba(8,8,10,.12)' }}>
-                      <div style={{ height: '100%', width: `${v}%`, background: c, transformOrigin: 'left', animation: 'mgGrow 1s .3s cubic-bezier(.2,.8,.3,1) both' }} />
+                    <div className={styles.conditionBarWrap}>
+                      <div className="mg-bar__fill" style={{ width: `${v}%`, background: c }} />
                     </div>
                   </div>
                 ))}
@@ -337,142 +641,128 @@ export default function Overview({ league, matches, myClub, awards, onPhysioUpgr
 
       {/* ══════════════════ ROW B: SPONSORS + PHYSIO + STANDING ══════════════════ */}
       {myClub && (
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.15fr 1.15fr .9fr', gap: 14, animation: 'mgUp .5s .14s both' }}>
+        <div className={styles.rowB}>
 
-          {/* ── Sponsors ── */}
-          <section style={{ border: '3px solid var(--paper)', background: 'var(--steel)', overflow: 'hidden' }}>
-            <div style={{ background: 'var(--ink)', padding: '9px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '3px solid var(--paper)' }}>
-              <span style={{ fontFamily: 'var(--font-display)', fontSize: 18 }}>SPONSORS</span>
-              {sponsorData && <span style={{ fontFamily: 'var(--font-narrow)', fontSize: 10, letterSpacing: '.18em', textTransform: 'uppercase', color: 'var(--accent)' }}>{sponsorData.active.length}/3 Active</span>}
+          {/* ── Sponsors (clickable summary) ── */}
+          <section
+            onClick={() => league.status === 'ACTIVE' ? setOverlay('sponsors') : undefined}
+            className={`${styles.sponsorsPanel} ${league.status === 'ACTIVE' ? styles.sponsorsPanelClickable : ''}`}
+          >
+            <div className={styles.sponsorsPanelHeader}>
+              <span className={styles.sponsorsPanelTitle}>SPONSORS</span>
+              <span className={styles.sponsorsPanelBadge}>
+                {league.status === 'ACTIVE' ? (sponsorData ? `${sponsorData.active.length}/3 Active` : '…') : 'Not started'}
+              </span>
             </div>
-            <div style={{ padding: '14px 16px 16px' }}>
+            <div className={styles.sponsorsPanelBody}>
               {league.status === 'ACTIVE' ? (
                 <>
-                  {sponsorData?.active.map(deal => (
-                    <div key={deal.id} style={{ display: 'flex', alignItems: 'center', gap: 13, padding: '11px 0', borderBottom: '2px solid rgba(244,241,234,.08)' }}>
-                      <span style={{ width: 30, height: 30, flexShrink: 0, background: 'var(--accent)', clipPath: 'polygon(0 0,100% 0,100% 100%,22% 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>
-                        {deal.sponsorEmoji}
-                      </span>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontFamily: 'var(--font-body)', fontSize: 14, fontWeight: 800, textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{deal.sponsorName}</div>
-                        <div style={{ fontFamily: 'var(--font-narrow)', fontSize: 10, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--ash)' }}>by MD{deal.targetMatchday} · Active</div>
-                      </div>
-                      <span style={{ fontFamily: 'var(--font-display)', fontSize: 18, flexShrink: 0, color: '#2f6b46' }}>+€{(deal.reward / 1000).toFixed(1)}k</span>
-                    </div>
-                  ))}
-                  {sponsorData && sponsorData.active.length < 3 && sponsorData.available.slice(0, 3 - sponsorData.active.length).map((deal, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 13, padding: '11px 0', borderBottom: '2px solid rgba(244,241,234,.08)', opacity: .6 }}>
-                      <span style={{ width: 30, height: 30, flexShrink: 0, background: '#2a2a2e', clipPath: 'polygon(0 0,100% 0,100% 100%,22% 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>
-                        {deal.sponsorEmoji}
-                      </span>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontFamily: 'var(--font-body)', fontSize: 14, fontWeight: 800, textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{deal.sponsorName}</div>
-                        <div style={{ fontFamily: 'var(--font-narrow)', fontSize: 10, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--ash)' }}>Available · -€{(deal.cost / 1000).toFixed(1)}k</div>
-                      </div>
-                      <button
-                        style={{ fontFamily: 'var(--font-display)', fontSize: 13, color: '#2f6b46', background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0, padding: 0 }}
-                        disabled={signingDeal !== null || myClub.budget < deal.cost}
-                        onClick={() => handleSignDeal(sponsorData.available.indexOf(deal))}
-                      >
-                        {signingDeal === sponsorData.available.indexOf(deal) ? '…' : 'Sign'}
-                      </button>
-                    </div>
-                  ))}
-                  {!sponsorData && <div style={{ fontFamily: 'var(--font-narrow)', fontSize: 11, color: 'var(--ash)', padding: '8px 0' }}>Loading...</div>}
-                  {sponsorData && sponsorData.active.length >= 3 && (
-                    <div style={{ fontFamily: 'var(--font-narrow)', fontSize: 11, color: 'var(--ash)', padding: '8px 0', letterSpacing: '.08em', textTransform: 'uppercase' }}>3/3 slots filled.</div>
-                  )}
-                  {sponsorMsg && <div style={{ fontSize: 12, textAlign: 'center', marginTop: 8, color: sponsorMsg.includes('signed') ? '#2f6b46' : 'var(--accent)' }}>{sponsorMsg}</div>}
-                  {sponsorData && sponsorData.history.length > 0 && (
-                    <div style={{ marginTop: 10, paddingTop: 10, borderTop: '2px solid rgba(244,241,234,.08)' }}>
-                      <div style={{ fontFamily: 'var(--font-narrow)', fontSize: 10, fontWeight: 700, color: 'var(--ash)', textTransform: 'uppercase', letterSpacing: '.14em', marginBottom: 6 }}>Recent</div>
-                      {sponsorData.history.slice(0, 2).map(deal => (
-                        <div key={deal.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0' }}>
-                          <span style={{ fontSize: 13 }}>{deal.sponsorEmoji}</span>
-                          <span style={{ fontFamily: 'var(--font-narrow)', fontSize: 11, color: 'var(--ash)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{deal.sponsorName}</span>
-                          <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, color: deal.status === 'COMPLETED' ? '#2f6b46' : 'var(--accent)' }}>
-                            {deal.status === 'COMPLETED' ? `+€${(deal.reward / 1000).toFixed(1)}k` : 'Failed'}
-                          </span>
+                  {sponsorData ? (
+                    sponsorData.active.length > 0 ? (
+                      sponsorData.active.slice(0, 2).map(deal => (
+                        <div key={deal.id} className={styles.sponsorDealRow}>
+                          <span className={styles.sponsorDealEmoji}>{deal.sponsorEmoji}</span>
+                          <div className={styles.sponsorDealInfo}>
+                            <div className={styles.sponsorDealName}>{deal.sponsorName}</div>
+                            <div className={styles.sponsorDealDeadline}>by MD{deal.targetMatchday}</div>
+                          </div>
+                          <span className={styles.sponsorDealReward}>+€{(deal.reward / 1000).toFixed(1)}k</span>
                         </div>
-                      ))}
+                      ))
+                    ) : (
+                      <div className={styles.sponsorsEmptyNote}>
+                        No active deals — tap to browse available sponsors.
+                      </div>
+                    )
+                  ) : (
+                    <div className={styles.sponsorsLoadingNote}>Loading…</div>
+                  )}
+                  {sponsorData && sponsorData.available.length > 0 && sponsorData.active.length < 3 && (
+                    <div className={styles.sponsorsAvailableNote}>
+                      {sponsorData.available.length} deal{sponsorData.available.length !== 1 ? 's' : ''} available to sign
                     </div>
                   )}
+                  <div className={styles.sponsorsManageLink}>
+                    Manage →
+                  </div>
                 </>
               ) : (
-                <div style={{ fontFamily: 'var(--font-narrow)', fontSize: 11, color: 'var(--ash)', letterSpacing: '.1em', textTransform: 'uppercase', padding: '8px 0' }}>
+                <div className={styles.sponsorsNotStarted}>
                   Opens once the season starts.
                 </div>
               )}
             </div>
           </section>
 
-          {/* ── Physio Facility ── */}
-          <section style={{ border: '3px solid var(--paper)', background: 'var(--steel)', overflow: 'hidden' }}>
-            <div style={{ background: 'var(--ink)', padding: '9px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '3px solid var(--paper)' }}>
-              <span style={{ fontFamily: 'var(--font-display)', fontSize: 18 }}>PHYSIO FACILITY</span>
-              <span style={{ fontFamily: 'var(--font-narrow)', fontSize: 10, letterSpacing: '.16em', textTransform: 'uppercase', color: 'var(--accent)' }}>LVL {myClub.physioLevel} / 2</span>
+          {/* ── Physio Facility (clickable summary) ── */}
+          <section
+            onClick={() => setOverlay('physio')}
+            className={`${styles.physioPanel} mg-clickable`}
+          >
+            <div className={styles.physioPanelHeader}>
+              <span className={styles.physioPanelTitle}>PHYSIO FACILITY</span>
+              <span className={styles.physioPanelBadge}>LVL {myClub.physioLevel} / 2</span>
             </div>
-            <div style={{ padding: '14px 16px 16px' }}>
-              <div style={{ display: 'flex', gap: 5, marginBottom: 14 }}>
+            <div className={styles.physioPanelBody}>
+              <div className={styles.physioLevelBarRow}>
                 {[0, 1].map(i => (
-                  <span key={i} style={{ flex: 1, height: 8, background: i < myClub.physioLevel ? 'var(--accent)' : '#2a2a2e' }} />
+                  <span
+                    key={i}
+                    className={`${styles.physioLevelSegment} ${i < myClub.physioLevel ? styles.physioLevelSegmentActive : ''}`}
+                  />
                 ))}
               </div>
               {squad.filter(p => p.injured).length > 0 ? (
                 <>
-                  <div style={{ fontFamily: 'var(--font-narrow)', fontSize: 10, letterSpacing: '.18em', textTransform: 'uppercase', color: 'var(--ash)', marginBottom: 8 }}>
-                    Treatment Room · {squad.filter(p => p.injured).length}
+                  <div className={styles.physioInjuredLabel}>
+                    {squad.filter(p => p.injured).length} injured player{squad.filter(p => p.injured).length !== 1 ? 's' : ''}
                   </div>
-                  {squad.filter(p => p.injured).slice(0, 3).map(p => (
-                    <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '9px 0', borderBottom: '2px solid rgba(244,241,234,.08)' }}>
-                      <span style={{ width: 7, height: 26, flexShrink: 0, background: 'var(--accent)' }} />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 800, textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.player.name.split(' ').slice(-1)[0]}</div>
-                        <div style={{ fontFamily: 'var(--font-narrow)', fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--ash)' }}>Injured</div>
+                  {squad.filter(p => p.injured).slice(0, 2).map(p => (
+                    <div key={p.id} className={styles.physioInjuredRow}>
+                      <span className={styles.physioInjuredBar} />
+                      <div className={styles.physioInjuredInfo}>
+                        <div className={styles.physioInjuredName}>{p.player.name.split(' ').slice(-1)[0]}</div>
                       </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, color: 'var(--accent)', lineHeight: .9 }}>{p.fitness}</div>
-                        <div style={{ fontFamily: 'var(--font-narrow)', fontSize: 8, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--ash)' }}>fit</div>
-                      </div>
+                      <div className={styles.physioInjuredFitness}>{p.fitness}</div>
                     </div>
                   ))}
+                  {squad.filter(p => p.injured).length > 2 && (
+                    <div className={styles.physioMoreNote}>+{squad.filter(p => p.injured).length - 2} more</div>
+                  )}
                 </>
               ) : (
-                <div style={{ fontFamily: 'var(--font-narrow)', fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--ash)', marginBottom: 8 }}>All Clear</div>
+                <div className={styles.physioAllClear}>✓ All Clear</div>
               )}
-              {myClub.physioLevel < 2 ? (
-                <button
-                  className="btn"
-                  style={{ background: 'transparent', color: 'var(--paper)', border: '2px solid rgba(244,241,234,.4)', width: '100%', fontSize: 11, marginTop: 10 }}
-                  onClick={onPhysioUpgrade}
-                  disabled={myClub.budget < [15_000, 30_000][myClub.physioLevel]}
-                >
-                  Upgrade Lv {myClub.physioLevel + 1} · €{[15, 30][myClub.physioLevel]}k
-                </button>
-              ) : (
-                <div style={{ fontFamily: 'var(--font-narrow)', fontSize: 11, textAlign: 'center', padding: '6px 0', fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--ash)' }}>Max Level</div>
+              {myClub.physioLevel < 2 && (
+                <div className={styles.physioUpgradeNote}>
+                  Upgrade available →
+                </div>
               )}
+              <div className={styles.physioManageLink}>
+                Manage →
+              </div>
             </div>
           </section>
 
           {/* ── Standing ── */}
-          <section style={{ border: '3px solid var(--accent)', background: 'var(--accent)', color: '#fff', position: 'relative', overflow: 'hidden', padding: '18px 18px 16px' }}>
-            <div style={{ position: 'absolute', right: -20, bottom: -30, opacity: .18, fontFamily: 'var(--font-display)', fontSize: 200, lineHeight: .7, pointerEvents: 'none', userSelect: 'none' }}>
-              {myPosition ?? '?'}
+          <section className={styles.standingPanel}>
+            <div className={styles.standingGhostNumber}>{myPosition ?? '?'}</div>
+            <div className={styles.standingLabel}>Standing</div>
+            <div className={styles.standingPosRow}>
+              <span className={styles.standingPosNumber}>{myPosition ?? '–'}</span>
+              {myPosition && <span className={styles.standingPosOrdinal}>{myOrdinal}</span>}
             </div>
-            <div style={{ fontFamily: 'var(--font-narrow)', fontSize: 10, letterSpacing: '.24em', textTransform: 'uppercase', position: 'relative' }}>Standing</div>
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, position: 'relative', marginTop: 2 }}>
-              <span style={{ fontFamily: 'var(--font-display)', fontSize: 78, lineHeight: .78 }}>{myPosition ?? '–'}</span>
-              {myPosition && <span style={{ fontFamily: 'var(--font-display)', fontSize: 30, marginBottom: 12 }}>{myOrdinal}</span>}
+            <div className={styles.standingBarWrap}>
+              <div
+                className={styles.standingBarFill}
+                style={{ width: `${myPosition ? (1 - (myPosition - 1) / Math.max(sorted.length - 1, 1)) * 100 : 50}%` }}
+              />
             </div>
-            <div style={{ height: 3, background: 'rgba(255,255,255,.4)', margin: '8px 0 12px', position: 'relative', overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${myPosition ? (1 - (myPosition - 1) / Math.max(sorted.length - 1, 1)) * 100 : 50}%`, background: '#fff', transformOrigin: 'left', animation: 'mgGrow 1s .4s cubic-bezier(.2,.8,.3,1) both' }} />
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', position: 'relative' }}>
+            <div className={styles.standingStatsRow}>
               {[['Pts', String(myClub.points)], ['GD', (myClub.goalsFor - myClub.goalsAgainst > 0 ? '+' : '') + (myClub.goalsFor - myClub.goalsAgainst)], ['Won', String(myClub.wins)]].map(([k, v]) => (
-                <div key={k}>
-                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, lineHeight: 1 }}>{v}</div>
-                  <div style={{ fontFamily: 'var(--font-narrow)', fontSize: 9, letterSpacing: '.14em', textTransform: 'uppercase', opacity: .85 }}>{k}</div>
+                <div key={k} className={styles.standingStatItem}>
+                  <div className={styles.standingStatValue}>{v}</div>
+                  <div className={styles.standingStatKey}>{k}</div>
                 </div>
               ))}
             </div>
@@ -482,34 +772,37 @@ export default function Overview({ league, matches, myClub, awards, onPhysioUpgr
 
       {/* ══════════════════════════════ RECENT ARCS ══════════════════════════════ */}
       {last5.length > 0 && myClub && (
-        <div style={{ animation: 'mgUp .4s .18s both' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span style={{ fontFamily: 'var(--font-display)', fontSize: 22 }}>RECENT ARCS</span>
-            <span style={{ flex: 1, height: 3, background: 'var(--paper)' }} />
-            <span style={{ fontFamily: 'var(--font-narrow)', fontSize: 11, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--accent)' }}>
+        <div className={styles.recentArcs}>
+          <div className={styles.recentArcsHeading}>
+            <span className={styles.recentArcsTitle}>RECENT ARCS</span>
+            <span className={styles.recentArcsRule} />
+            <span className={styles.recentArcsSummary}>
               {last5.map(m => { const ih = m.homeClubId === myClub.id; const ms = ih ? m.homeScore! : m.awayScore!; const os = ih ? m.awayScore! : m.homeScore!; return ms > os ? 'W' : ms === os ? 'D' : 'L' }).join(' ')} · {formPts} pts
             </span>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${last5.length}, 1fr)`, gap: 12, marginTop: 13 }}>
+          <div
+            className={styles.recentArcsGrid}
+            style={{ gridTemplateColumns: `repeat(${last5.length}, 1fr)` }}
+          >
             {last5.map((m, i) => {
               const ih = m.homeClubId === myClub.id
               const ms = ih ? m.homeScore! : m.awayScore!
               const os = ih ? m.awayScore! : m.homeScore!
               const r = ms > os ? 'W' : ms === os ? 'D' : 'L'
               const opp = clubMap[ih ? m.awayClubId : m.homeClubId]
-              const bg = r === 'W' ? 'var(--paper)' : r === 'D' ? 'var(--steel)' : 'var(--accent)'
-              const fg = r === 'W' ? 'var(--ink)' : 'var(--paper)'
               return (
                 <Link
                   key={m.id}
                   to={`/league/${league.id}/match/${m.id}`}
                   state={{ tab: 'overview' }}
-                  style={{ textDecoration: 'none', position: 'relative', border: '3px solid var(--paper)', background: bg, color: fg, padding: '15px 16px', overflow: 'hidden', animation: `mgUp .45s ${(0.06 * i).toFixed(2)}s both` }}
+                  className={styles.recentArcCard}
+                  data-result={r}
+                  style={{ animation: `mgUp .45s ${(0.06 * i).toFixed(2)}s both` }}
                 >
-                  <div style={{ position: 'absolute', inset: 0, opacity: .1, background: 'repeating-linear-gradient(115deg, currentColor 0 2px, transparent 2px 9px)', pointerEvents: 'none' }} />
-                  <div style={{ fontFamily: 'var(--font-narrow)', fontSize: 9, letterSpacing: '.16em', textTransform: 'uppercase', opacity: .75, position: 'relative' }}>{opp?.name ?? '?'}</div>
-                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 34, lineHeight: .84, marginTop: 5, position: 'relative' }}>{ms}–{os}</div>
-                  <div style={{ fontFamily: 'var(--font-display)', position: 'absolute', right: 10, bottom: 6, fontSize: 30, opacity: .9 }}>{r}</div>
+                  <div className={styles.recentArcCardStripe} />
+                  <div className={styles.recentArcOpp}>{opp?.name ?? '?'}</div>
+                  <div className={styles.recentArcScore}>{ms}–{os}</div>
+                  <div className={styles.recentArcResult}>{r}</div>
                 </Link>
               )
             })}
@@ -519,36 +812,36 @@ export default function Overview({ league, matches, myClub, awards, onPhysioUpgr
 
       {/* ══════════════════════════════ AWARDS ══════════════════════════════ */}
       {awards && (
-        <div style={{ border: '2px solid rgba(244,241,234,0.14)', background: 'var(--steel)', overflow: 'hidden' }}>
-          <div style={{ background: 'var(--bg-card-2)', padding: '9px 16px', borderBottom: '2px solid rgba(244,241,234,0.08)', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div className={styles.awardsPanel}>
+          <div className={styles.awardsPanelHeader}>
             <span className="accent-bar accent-bar-gold" />
-            <span style={{ fontFamily: 'var(--font-narrow)', fontSize: 11, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--text-2)' }}>Matchday {awards.matchday} Awards</span>
+            <span className={styles.awardsPanelTitle}>MATCHDAY {awards.matchday} AWARDS</span>
           </div>
-          <div style={{ padding: 20 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 16 }}>
+          <div className={styles.awardsBody}>
+            <div className={styles.awardsGrid}>
               {[
                 { label: '⭐ MOTM',       entry: awards.motm, value: awards.motm?.rating.toFixed(1) },
                 { label: '⚽ Top Scorer', entry: awards.topScorer ? { ...awards.topScorer, rating: 0, goals: awards.topScorer.goals, assists: 0, position: '', clubKitConfig: null, photoUrl: null } as AwardEntry : null, value: awards.topScorer ? String(awards.topScorer.goals) : null },
                 { label: '🎯 Top Assist', entry: awards.topAssist ? { ...awards.topAssist, rating: 0, goals: 0, assists: awards.topAssist.assists, position: '', clubKitConfig: null, photoUrl: null } as AwardEntry : null, value: awards.topAssist ? String(awards.topAssist.assists) : null },
               ].map(item => item.entry ? (
-                <div key={item.label} style={{ background: 'var(--bg-card-2)', border: '2px solid rgba(244,241,234,0.10)', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start' }}>
-                  <div style={{ fontFamily: 'var(--font-narrow)', fontSize: 9, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.12em' }}>{item.label}</div>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <div key={item.label} className={styles.awardCard}>
+                  <div className={styles.awardCardLabel}>{item.label}</div>
+                  <div className={styles.awardCardPhotos}>
                     <PlayerPhoto url={item.entry.photoUrl} name={item.entry.playerName} size={36} style={{ borderRadius: '50%', border: '2px solid var(--border)' }} />
                     <KitSvg config={item.entry.clubKitConfig as KitConfig | null} size={32} uid={`award-${item.label}-kit`} />
                   </div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)', lineHeight: 1.3 }}>{item.entry.playerName}</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div className={styles.awardCardName}>{item.entry.playerName}</div>
+                  <div className={styles.awardCardClub}>
                     <ClubBadge name={item.entry.clubName} size={16} logoConfig={item.entry.clubLogoConfig} />
-                    <span style={{ fontSize: 10, color: 'var(--text-2)' }}>{item.entry.clubName}</span>
+                    <span className={styles.awardCardClubName}>{item.entry.clubName}</span>
                   </div>
-                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--gold)' }}>{item.value}</div>
+                  <div className={styles.awardCardValue}>{item.value}</div>
                 </div>
               ) : null)}
             </div>
             {awards.teamOfTheWeek.length > 0 && (
               <>
-                <div style={{ fontFamily: 'var(--font-narrow)', fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.12em', marginBottom: 10 }}>Team of the Week</div>
+                <div className={styles.totwLabel}>Team of the Week</div>
                 <TOTWPitch players={awards.teamOfTheWeek} />
               </>
             )}
@@ -558,12 +851,18 @@ export default function Overview({ league, matches, myClub, awards, onPhysioUpgr
 
       {/* ══════════════════════════════ LEAGUE TABLE ══════════════════════════════ */}
       {myClub && (
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
-            <span style={{ fontFamily: 'var(--font-display)', fontSize: 22 }}>LEAGUE TABLE</span>
-            <span style={{ flex: 1, height: 3, background: 'var(--paper)' }} />
+        <div className={styles.leagueTableSection}>
+          <div className={styles.leagueTableHeading}>
+            <span className={styles.leagueTableTitle}>LEAGUE TABLE</span>
+            <span className={styles.leagueTableRule} />
+            <button
+              onClick={() => onSwitchTab?.('standings')}
+              className={styles.leagueTableFullBtn}
+            >
+              Full Table →
+            </button>
           </div>
-          <div style={{ border: '3px solid var(--paper)', background: 'var(--steel)', overflow: 'hidden' }}>
+          <div className={styles.leagueTableWrap}>
             {sorted.slice(0, 6).map((club, i) => {
               const isMe = club.id === myClub.id
               const gd = club.goalsFor - club.goalsAgainst
@@ -572,28 +871,28 @@ export default function Overview({ league, matches, myClub, awards, onPhysioUpgr
                 <Link
                   key={club.id}
                   to={`/league/${league.id}/club/${club.id}`}
-                  style={{
-                    textDecoration: 'none', display: 'grid',
-                    gridTemplateColumns: '40px 1fr 70px 60px 50px',
-                    gap: 10, alignItems: 'center', padding: '10px 12px',
-                    background: isMe ? 'rgba(229,32,47,.12)' : 'transparent',
-                    borderBottom: '2px solid rgba(244,241,234,.06)',
-                    transition: 'background .12s',
-                  }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.background = isMe ? 'rgba(229,32,47,0.2)' : 'rgba(244,241,234,0.03)' }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = isMe ? 'rgba(229,32,47,.12)' : 'transparent' }}
+                  className={styles.leagueTableRow}
+                  data-me={isMe ? 'true' : 'false'}
                 >
-                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: posColor, textAlign: 'center' }}>{i + 1}</div>
-                  <div style={{ fontFamily: 'var(--font-body)', fontSize: 15, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.01em', color: isMe ? 'var(--accent)' : 'var(--paper)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{club.name}</div>
-                  <div style={{ fontFamily: 'var(--font-narrow)', fontSize: 12, color: 'var(--ash)', textAlign: 'center' }}>{gd > 0 ? `+${gd}` : gd}</div>
-                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, textAlign: 'right', color: isMe ? 'var(--accent)' : 'var(--paper)' }}>{club.points}</div>
+                  <div className={styles.leagueTablePos} style={{ color: posColor }}>{i + 1}</div>
+                  <div className={styles.leagueTableClub}>{club.name}</div>
+                  <div className={styles.leagueTableWDL}>
+                    <span className={styles.leagueTableW}>{club.wins}W</span>
+                    <span className={styles.leagueTableD}>{club.draws}D</span>
+                    <span className={styles.leagueTableL}>{club.losses}L</span>
+                  </div>
+                  <div className={styles.leagueTableGd}>{gd > 0 ? `+${gd}` : gd}</div>
+                  <div className={styles.leagueTablePts}>{club.points}</div>
                 </Link>
               )
             })}
             {sorted.length > 6 && (
-              <div style={{ fontFamily: 'var(--font-narrow)', fontSize: 11, color: 'var(--ash)', textAlign: 'center', padding: '10px', borderTop: '1px solid rgba(244,241,234,0.06)', letterSpacing: '.08em', textTransform: 'uppercase' }}>
-                +{sorted.length - 6} more clubs
-              </div>
+              <button
+                onClick={() => onSwitchTab?.('standings')}
+                className={styles.leagueTableMoreBtn}
+              >
+                +{sorted.length - 6} more clubs — View full table
+              </button>
             )}
           </div>
         </div>

@@ -1,0 +1,406 @@
+/* ── Club detail modal overlay ───────────────────────────────────────────── */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+@media (max-width: 767px) {
+  .modalOverlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+}
+
+.modalPanel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  width: 90%;
+  max-width: 520px;
+  max-height: 85vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+@media (max-width: 767px) {
+  .modalPanel {
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    max-height: 100%;
+    border-radius: 0;
+  }
+}
+
+.modalHeader {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.modalHeaderInfo {
+  flex: 1;
+}
+.modalClubName {
+  font-weight: 800;
+  font-size: 16px;
+  color: var(--text-1);
+}
+.modalClubType {
+  font-size: 11px;
+  color: var(--text-2);
+  margin-top: 2px;
+}
+.modalCloseBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-2);
+  font-size: 20px;
+  padding: 4px;
+  line-height: 1;
+}
+
+/* ── W/D/L + points bar ──────────────────────────────────────────────────── */
+.wdlBar {
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 24px;
+  align-items: center;
+}
+.wdlItem {
+  text-align: center;
+}
+.wdlValue {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 800;
+}
+.wdlValue[data-type="W"] { color: var(--green); }
+.wdlValue[data-type="D"] { color: var(--text-2); }
+.wdlValue[data-type="L"] { color: var(--red); }
+.wdlLabel {
+  font-size: 10px;
+  color: var(--text-2);
+  font-weight: 700;
+}
+.ptsItem {
+  margin-left: auto;
+  text-align: center;
+}
+.ptsValue {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 900;
+  color: var(--text-1);
+}
+.ptsLabel {
+  font-size: 10px;
+  color: var(--text-2);
+  font-weight: 700;
+}
+
+/* ── Top players list ────────────────────────────────────────────────────── */
+.playerListBody {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 20px;
+}
+.playerListTitle {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+.playerRow {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 7px;
+}
+.playerName {
+  font-size: 12px;
+  color: var(--text-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.playerOvr {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 800;
+}
+.playerOvr[data-tier="gold"]  { color: var(--gold); }
+.playerOvr[data-tier="green"] { color: var(--green); }
+.playerOvr[data-tier="dim"]   { color: var(--text-2); }
+.emptySquad {
+  font-size: 12px;
+  color: var(--text-2);
+  text-align: center;
+  padding: 16px 0;
+}
+
+/* ── Standings table wrapper ─────────────────────────────────────────────── */
+.tableWrap {
+  overflow-x: auto;
+}
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+/* ── Table header ────────────────────────────────────────────────────────── */
+.thead tr {
+  border-bottom: 1px solid var(--border);
+}
+.th {
+  padding: 10px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.th[data-align="left"]   { text-align: left; }
+.th[data-align="center"] { text-align: center; }
+/* Hide certain columns on mobile */
+@media (max-width: 767px) {
+  .thHideMobile { display: none; }
+}
+
+/* ── Table body rows ─────────────────────────────────────────────────────── */
+.clubRow {
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  border-left: 3px solid transparent;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.clubRow[data-mine="true"] {
+  background: rgba(54, 226, 126, 0.05);
+  border-left-color: var(--green);
+}
+.clubRow:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+.clubRow[data-mine="true"]:hover {
+  background: rgba(54, 226, 126, 0.08);
+}
+
+/* ── Position cell ───────────────────────────────────────────────────────── */
+.tdPos {
+  padding: 12px;
+  text-align: center;
+}
+.posNumber {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 800;
+}
+.posDelta {
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  margin-top: 1px;
+}
+.posDelta[data-up="true"]  { color: var(--green); }
+.posDelta[data-up="false"] { color: var(--red); }
+
+/* ── Club name cell ──────────────────────────────────────────────────────── */
+.tdClub {
+  padding: 12px;
+}
+.clubCellInner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.clubNameText {
+  font-size: 14px;
+  color: var(--text-1);
+}
+.clubNameText[data-mine="true"] { font-weight: 700; }
+.clubNameText[data-mine="false"] { font-weight: 500; }
+.clubUserText {
+  font-size: 11px;
+  color: var(--text-2);
+  margin-top: 1px;
+}
+
+/* ── Regular stat cells ──────────────────────────────────────────────────── */
+.tdStat {
+  padding: 12px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-2);
+}
+.tdWins {
+  padding: 12px;
+  text-align: center;
+  color: var(--green);
+  font-weight: 700;
+  font-family: var(--font-display);
+  font-size: 15px;
+}
+.tdLosses {
+  padding: 12px;
+  text-align: center;
+  color: var(--red);
+  font-size: 13px;
+}
+.tdGd {
+  padding: 12px;
+  text-align: center;
+  font-size: 13px;
+}
+.tdGd[data-pos="true"]  { color: var(--green); }
+.tdGd[data-pos="false"][data-neg="true"] { color: var(--red); }
+.tdGd[data-pos="false"][data-neg="false"] { color: var(--text-2); }
+.tdPts {
+  padding: 12px;
+  text-align: center;
+}
+.ptsDisplay {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 800;
+}
+.ptsDisplay[data-mine="true"]  { color: var(--green); }
+.ptsDisplay[data-mine="false"] { color: var(--text-1); }
+
+/* Hide on mobile */
+@media (max-width: 767px) {
+  .tdHideMobile { display: none; }
+}
+
+/* ── Form dots cell ──────────────────────────────────────────────────────── */
+.tdForm {
+  padding: 10px 12px;
+}
+@media (max-width: 767px) {
+  .tdForm { display: none; }
+}
+.formDots {
+  display: flex;
+  gap: 3px;
+  justify-content: center;
+}
+.formDot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  font-weight: 800;
+  color: #000;
+}
+.formDot[data-result="W"] { background: var(--green); }
+.formDot[data-result="D"] { background: var(--gold); }
+.formDot[data-result="L"] { background: var(--red); }
+
+/* ── Legend ──────────────────────────────────────────────────────────────── */
+.legend {
+  display: flex;
+  gap: 20px;
+  margin-top: 16px;
+  font-size: 11px;
+  color: var(--text-2);
+  padding-left: 4px;
+}
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.legendDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+/* ── Past seasons section ────────────────────────────────────────────────── */
+.historySection {
+  margin-top: 36px;
+}
+.historyTitle {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-2);
+  margin-bottom: 16px;
+}
+.historyList {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.historySeasonHeader {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.historyTopLabel {
+  font-size: 10px;
+  color: var(--text-3);
+  font-weight: 400;
+}
+.historyRows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.historyRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border);
+  background: var(--bg-card-2);
+}
+.historyRow[data-winner="true"] {
+  background: rgba(54, 226, 126, 0.06);
+  border-color: rgba(54, 226, 126, 0.2);
+}
+.historyRank {
+  font-size: 11px;
+  font-weight: 700;
+  width: 20px;
+  text-align: center;
+}
+.historyRank[data-winner="true"]  { color: var(--gold); }
+.historyRank[data-winner="false"] { color: var(--text-3); }
+.historyClubName {
+  font-size: 13px;
+  color: var(--text-1);
+  flex: 1;
+}
+.historyRecord {
+  font-size: 11px;
+  color: var(--text-2);
+}
+.historyPoints {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 14px;
+}
+.historyPoints[data-winner="true"]  { color: var(--green); }
+.historyPoints[data-winner="false"] { color: var(--text-1); }

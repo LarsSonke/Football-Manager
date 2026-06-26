@@ -1,0 +1,317 @@
+/* ─── Page layout ────────────────────────────────────────────────────────── */
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 780px;
+}
+
+/* ─── Toast / feedback ───────────────────────────────────────────────────── */
+.toast {
+  padding: 10px 14px;
+  background: rgba(54, 226, 126, 0.08);
+  border: 1px solid rgba(54, 226, 126, 0.2);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  color: var(--green);
+}
+
+.boostMsg {
+  margin-bottom: 10px;
+  font-size: 12px;
+}
+
+/* ─── Budget display ─────────────────────────────────────────────────────── */
+.budgetBar {
+  padding: 12px 16px;
+  background: var(--bg-card-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.budgetLabel {
+  font-size: 10px;
+  color: var(--text-2);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.budgetValue {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--green);
+}
+
+/* ─── Section card ───────────────────────────────────────────────────────── */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.cardGold {
+  composes: card;
+  border-color: rgba(245, 166, 35, 0.2);
+}
+
+.cardHeaderGold {
+  border-color: rgba(245, 166, 35, 0.15) !important;
+}
+
+.accentBarGold {
+  background: var(--gold) !important;
+}
+
+.secLabel {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+
+.secLabelGold {
+  composes: secLabel;
+  color: var(--gold);
+}
+
+/* ─── Upgrade grid ───────────────────────────────────────────────────────── */
+.upgradeGrid {
+  padding: 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+/* ─── Upgrade card ───────────────────────────────────────────────────────── */
+.upgradeCard {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+
+.upgradeCardMaxed {
+  composes: upgradeCard;
+  border-color: rgba(54, 226, 126, 0.25);
+}
+
+.upgradeCardHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.upgradeIcon {
+  font-size: 24px;
+}
+
+.upgradeMeta {
+  flex: 1;
+}
+
+.upgradeLabel {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--text-1);
+}
+
+.upgradeDesc {
+  font-size: 11px;
+  color: var(--text-2);
+  margin-top: 1px;
+}
+
+/* Level pips */
+.upgradePips {
+  display: flex;
+  gap: 3px;
+}
+
+.pip {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.pipFilled {
+  composes: pip;
+  background: var(--green);
+}
+
+.pipEmpty {
+  composes: pip;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* Upgrade error */
+.upgradeErr {
+  font-size: 11px;
+  color: var(--red);
+  margin-bottom: 6px;
+}
+
+/* Max level label */
+.maxLevel {
+  text-align: center;
+  font-size: 11px;
+  color: var(--green);
+  font-weight: 700;
+  padding: 6px 0;
+}
+
+/* Upgrade button affordance (opacity lives in TSX via disabled prop) */
+.upgradeBtn {
+  width: 100%;
+  font-size: 11px;
+  padding: 7px 0;
+}
+
+/* ─── Scout / coach report ───────────────────────────────────────────────── */
+.reportSection {
+  padding: 16px;
+}
+
+.reportControls {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.reportSelect {
+  flex: 1;
+  padding: 8px 12px;
+  background: var(--bg-base);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-1);
+  font-size: 13px;
+}
+
+.reportJson {
+  padding: 12px;
+  background: var(--bg-base);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  color: var(--text-1);
+}
+
+.reportPre {
+  margin: 0;
+  font-family: inherit;
+  white-space: pre-wrap;
+}
+
+/* ─── Stat boosts ────────────────────────────────────────────────────────── */
+.boostList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.boostPlayerCard {
+  padding: 10px 12px;
+  background: var(--bg-base);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+.boostPlayerHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.boostPlayerName {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-1);
+}
+
+.boostPlayerOvr {
+  font-size: 11px;
+  color: var(--text-2);
+  margin-left: auto;
+}
+
+.boostButtons {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.boostBtn {
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.boostBtnActive {
+  composes: boostBtn;
+  background: rgba(54, 226, 126, 0.15);
+  border-color: rgba(54, 226, 126, 0.4);
+  color: var(--green);
+  cursor: default;
+}
+
+/* ─── Transfer window toggle ─────────────────────────────────────────────── */
+.windowBody {
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.windowStatus {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+
+.windowStatusOpen {
+  color: var(--green);
+}
+
+.windowStatusClosed {
+  color: var(--red);
+}
+
+.windowSubtext {
+  font-size: 11px;
+  color: var(--text-2);
+  margin-top: 2px;
+}
+
+.windowOpenBtn {
+  background: rgba(54, 226, 126, 0.15);
+  color: var(--green);
+  border: 1px solid rgba(54, 226, 126, 0.4);
+  white-space: nowrap;
+}
+
+.windowCloseBtn {
+  background: rgba(232, 128, 106, 0.15);
+  color: var(--red);
+  border: 1px solid rgba(232, 128, 106, 0.4);
+  white-space: nowrap;
+}
+
+.windowMsg {
+  padding: 0 16px 12px;
+  font-size: 12px;
+  color: var(--gold);
+}

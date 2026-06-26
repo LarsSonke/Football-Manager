@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { useParams, useNavigate, Link, useLocation } from 'react-router-dom'
+import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { io, type Socket } from 'socket.io-client'
 import { useAuth } from '../../stores/auth.store'
 import { api } from '../../api/client'
@@ -28,6 +28,7 @@ import {
   type LiveMatchState,
   type Tab,
 } from './types'
+import styles from './index.module.css'
 
 // ─── Season End Overlay ───────────────────────────────────────────────────────
 
@@ -61,62 +62,45 @@ function SeasonEndOverlay({ league, myClub, isCreator, startingNewSeason, onNewS
     : []
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 200,
-      background: 'rgba(0,0,0,0.88)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: 24,
-    }}>
-      <div style={{
-        background: 'var(--bg-card)', border: '1px solid var(--border)',
-        borderRadius: 'var(--radius)', maxWidth: 560, width: '100%',
-        maxHeight: '90vh', overflowY: 'auto',
-        display: 'flex', flexDirection: 'column', gap: 0,
-      }}>
+    <div className={styles.seasonEndOverlay}>
+      <div className={styles.seasonEndPanel}>
         {/* Champion banner */}
-        <div style={{ padding: '36px 32px 28px', textAlign: 'center', borderBottom: '1px solid var(--border)' }}>
-          <div style={{ fontSize: 48, marginBottom: 12 }}>🏆</div>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', color: 'var(--text-2)', marginBottom: 8 }}>
+        <div className={styles.seasonEndBanner}>
+          <div className={styles.seasonEndTrophy}>🏆</div>
+          <div className={styles.seasonEndEyebrow}>
             Season Complete · {league.name}
           </div>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 900, color: 'var(--green)', lineHeight: 1.1, marginBottom: 4 }}>
+          <div className={styles.seasonEndChampion}>
             {champion?.name}
           </div>
-          <div style={{ fontSize: 13, color: 'var(--text-2)' }}>
+          <div className={styles.seasonEndChampionStats}>
             {champion?.points} pts · {champion?.goalsFor} scored · {champion?.goalsAgainst} conceded
           </div>
         </div>
 
         {/* Final standings */}
-        <div style={{ padding: '20px 32px' }}>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--text-2)', marginBottom: 12 }}>
-            Final Standings
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <div className={styles.seasonEndStandings}>
+          <div className={styles.seasonEndStandingsLabel}>Final Standings</div>
+          <div className={styles.seasonEndTableList}>
             {sorted.map((club, i) => {
               const gd = club.goalsFor - club.goalsAgainst
               const isChamp = i === 0
               return (
-                <div key={club.id} style={{
-                  display: 'grid', gridTemplateColumns: '28px 1fr 32px 32px 32px 32px 40px',
-                  alignItems: 'center', gap: 6, padding: '7px 10px',
-                  background: isChamp ? 'rgba(54,226,126,0.08)' : 'transparent',
-                  border: `1px solid ${isChamp ? 'rgba(54,226,126,0.25)' : 'var(--border)'}`,
-                  borderRadius: 'var(--radius-sm)',
-                }}>
-                  <span style={{ fontSize: 11, color: isChamp ? 'var(--green)' : 'var(--text-3)', fontWeight: 700, textAlign: 'center' }}>
+                <div key={club.id} className={styles.seasonEndRow} data-champ={isChamp ? 'true' : 'false'}>
+                  <span className={styles.seasonEndPos}>
                     {isChamp ? '🏆' : i + 1}
                   </span>
-                  <span style={{ fontSize: 13, fontWeight: isChamp ? 700 : 400 }}>{club.name}</span>
-                  <span style={{ fontSize: 11, color: 'var(--text-2)', textAlign: 'center' }}>{club.wins}W</span>
-                  <span style={{ fontSize: 11, color: 'var(--text-2)', textAlign: 'center' }}>{club.draws}D</span>
-                  <span style={{ fontSize: 11, color: 'var(--text-2)', textAlign: 'center' }}>{club.losses}L</span>
-                  <span style={{ fontSize: 11, color: gd > 0 ? 'var(--green)' : gd < 0 ? 'var(--red)' : 'var(--text-2)', textAlign: 'center' }}>
+                  <span className={styles.seasonEndClubName}>{club.name}</span>
+                  <span className={styles.seasonEndStat}>{club.wins}W</span>
+                  <span className={styles.seasonEndStat}>{club.draws}D</span>
+                  <span className={styles.seasonEndStat}>{club.losses}L</span>
+                  <span
+                    className={styles.seasonEndGd}
+                    style={{ color: gd > 0 ? 'var(--green)' : gd < 0 ? 'var(--red)' : 'var(--text-2)' }}
+                  >
                     {gd > 0 ? '+' : ''}{gd}
                   </span>
-                  <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 14, color: isChamp ? 'var(--green)' : 'var(--text-1)', textAlign: 'right' }}>
-                    {club.points}
-                  </span>
+                  <span className={styles.seasonEndPts}>{club.points}</span>
                 </div>
               )
             })}
@@ -125,21 +109,19 @@ function SeasonEndOverlay({ league, myClub, isCreator, startingNewSeason, onNewS
 
         {/* Development outlook */}
         {(prospects.length > 0 || veterans.length > 0) && (
-          <div style={{ padding: '12px 32px', borderTop: '1px solid var(--border)' }}>
-            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--text-2)', marginBottom: 10 }}>
-              Development Outlook
-            </div>
+          <div className={styles.seasonEndOutlook}>
+            <div className={styles.seasonEndOutlookLabel}>Development Outlook</div>
             {prospects.length > 0 && (
-              <div style={{ marginBottom: 10 }}>
-                <div style={{ fontSize: 10, color: 'var(--green)', fontWeight: 700, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>Rising Talent</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <div>
+                <div className={styles.seasonEndRisingLabel}>Rising Talent</div>
+                <div className={styles.seasonEndProspectList}>
                   {prospects.map(p => (
-                    <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
-                      <span className={posClass(p.player.position)} style={{ fontSize: 9 }}>{p.player.position}</span>
-                      <span style={{ flex: 1, color: 'var(--text-1)' }}>{p.player.name}</span>
-                      <span style={{ color: 'var(--text-3)' }}>Age {p.player.age}</span>
-                      <span style={{ color: 'var(--text-2)' }}>{p.player.overall} OVR</span>
-                      <span style={{ color: 'var(--green)', fontWeight: 700 }}>→ {p.player.potential} POT</span>
+                    <div key={p.id} className={styles.seasonEndPlayerRow}>
+                      <span className={`${posClass(p.player.position)} ${styles.seasonEndPosIcon}`}>{p.player.position}</span>
+                      <span className={styles.seasonEndPlayerName}>{p.player.name}</span>
+                      <span className={styles.seasonEndPlayerAge}>Age {p.player.age}</span>
+                      <span className={styles.seasonEndPlayerOvr}>{p.player.overall} OVR</span>
+                      <span className={styles.seasonEndPlayerPot}>→ {p.player.potential} POT</span>
                     </div>
                   ))}
                 </div>
@@ -147,14 +129,14 @@ function SeasonEndOverlay({ league, myClub, isCreator, startingNewSeason, onNewS
             )}
             {veterans.length > 0 && (
               <div>
-                <div style={{ fontSize: 10, color: 'var(--gold)', fontWeight: 700, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>Aging Players</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div className={styles.seasonEndAgingLabel}>Aging Players</div>
+                <div className={styles.seasonEndVeteranList}>
                   {veterans.map(p => (
-                    <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
-                      <span className={posClass(p.player.position)} style={{ fontSize: 9 }}>{p.player.position}</span>
-                      <span style={{ flex: 1, color: 'var(--text-1)' }}>{p.player.name}</span>
-                      <span style={{ color: 'var(--gold)' }}>Age {p.player.age}</span>
-                      <span style={{ color: 'var(--text-2)' }}>{p.player.overall} OVR</span>
+                    <div key={p.id} className={styles.seasonEndPlayerRow}>
+                      <span className={`${posClass(p.player.position)} ${styles.seasonEndPosIcon}`}>{p.player.position}</span>
+                      <span className={styles.seasonEndPlayerName}>{p.player.name}</span>
+                      <span className={styles.seasonEndPlayerAgeGold}>Age {p.player.age}</span>
+                      <span className={styles.seasonEndPlayerOvr}>{p.player.overall} OVR</span>
                     </div>
                   ))}
                 </div>
@@ -165,18 +147,18 @@ function SeasonEndOverlay({ league, myClub, isCreator, startingNewSeason, onNewS
 
         {/* Player development note */}
         {isCreator && (
-          <div style={{ padding: '12px 32px', background: 'rgba(54,226,126,0.05)', borderTop: '1px solid var(--border)', fontSize: 12, color: 'var(--text-2)' }}>
+          <div className={styles.seasonEndDevNote}>
             Starting a new season will age all players by 1 year — young players with high potential will grow, veterans may begin to decline.
           </div>
         )}
 
         {/* Actions */}
         {!isCreator && (
-          <div style={{ padding: '10px 32px', background: 'rgba(39,205,255,0.06)', borderTop: '1px solid var(--border)', fontSize: 12, color: 'var(--cyan)', textAlign: 'center' }}>
+          <div className={styles.seasonEndWaitingNote}>
             Waiting for the league creator to start the next season…
           </div>
         )}
-        <div style={{ padding: '16px 32px 28px', display: 'flex', gap: 12, justifyContent: 'flex-end', borderTop: '1px solid var(--border)' }}>
+        <div className={styles.seasonEndActions}>
           <button className="btn btn-ghost" onClick={onDismiss}>View Final Table</button>
           {isCreator && (
             <button className="btn btn-primary" onClick={onNewSeason} disabled={startingNewSeason}>
@@ -220,41 +202,41 @@ function LiveTicker({ matches, myClubId, onDismiss }: { matches: Map<string, Liv
       ? (d?.outName ?? '?')
       : (d?.playerName ?? d?.name ?? '?')
     return (
-      <div key={`${evt.minute}-${evt.eventType}`} style={{ fontSize: 11, color: 'var(--text-2)', display: 'flex', gap: 6, alignItems: 'center' }}>
-        <span style={{ color: 'var(--text-3)', minWidth: 28 }}>{evt.minute}'</span>
+      <div key={`${evt.minute}-${evt.eventType}`} className={styles.liveTickerEvent}>
+        <span className={styles.liveTickerEventMinute}>{evt.minute}'</span>
         <span>{EVENT_ICON[evt.eventType] ?? '•'}</span>
-        <span style={{ color: evt.eventType === 'GOAL' ? 'var(--green)' : evt.eventType === 'RED_CARD' ? 'var(--red)' : 'var(--text-1)' }}>{name}</span>
-        <span style={{ color: 'var(--text-3)' }}>({isHome ? m.homeClub.name : m.awayClub.name})</span>
+        <span className={
+          evt.eventType === 'GOAL' ? styles.liveTickerEventNameGoal
+          : evt.eventType === 'RED_CARD' ? styles.liveTickerEventNameRed
+          : styles.liveTickerEventName
+        }>{name}</span>
+        <span className={styles.liveTickerEventClub}>({isHome ? m.homeClub.name : m.awayClub.name})</span>
       </div>
     )
   }
 
   return (
-    <div style={{
-      position: 'fixed', bottom: 16, right: 16, zIndex: 300,
-      display: 'flex', flexDirection: 'column', gap: 8,
-      maxWidth: 360, width: '100%',
-    }}>
+    <div className={styles.liveTickerWrap}>
       {/* My match — prominent */}
       {myMatch && (
-        <div style={{ background: 'var(--bg-card)', border: `1px solid ${myMatch.status === 'live' ? 'rgba(232,128,106,0.5)' : 'var(--border)'}`, borderRadius: 'var(--radius)', overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,0.4)' }}>
-          <div style={{ padding: '8px 14px', background: myMatch.status === 'live' ? 'rgba(232,128,106,0.1)' : 'rgba(54,226,126,0.08)', display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid var(--border)' }}>
-            <span style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1, color: myMatch.status === 'live' ? 'var(--red)' : 'var(--green)' }}>
+        <div className={`${styles.liveTickerCard} ${myMatch.status === 'live' ? styles.liveTickerCardLive : ''}`}>
+          <div className={`${styles.liveTickerHeader} ${myMatch.status === 'live' ? styles.liveTickerHeaderLive : ''}`}>
+            <span className={`${styles.liveTickerStatus} ${myMatch.status === 'live' ? styles.liveTickerStatusLive : ''}`}>
               {myMatch.status === 'live' ? '● LIVE' : '✓ FT'}
             </span>
-            <span style={{ flex: 1 }} />
-            <button onClick={onDismiss} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: 16, lineHeight: 1, padding: 0 }}>×</button>
+            <span className={styles.liveTickerHeaderSpacer} />
+            <button onClick={onDismiss} className={styles.liveTickerCloseBtn}>×</button>
           </div>
-          <div style={{ padding: '12px 14px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)' }}>{myMatch.homeClub.name}</div>
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 900, color: 'var(--text-1)', textAlign: 'center', minWidth: 60 }}>
+          <div className={styles.liveTickerBody}>
+            <div className={styles.liveTickerScore}>
+              <div className={styles.liveTickerHomeClub}>{myMatch.homeClub.name}</div>
+              <div className={styles.liveTickerScoreDisplay}>
                 {myMatch.homeScore} – {myMatch.awayScore}
               </div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)', textAlign: 'right' }}>{myMatch.awayClub.name}</div>
+              <div className={styles.liveTickerAwayClub}>{myMatch.awayClub.name}</div>
             </div>
             {myMatch.events.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 3, maxHeight: 120, overflowY: 'auto' }}>
+              <div className={styles.liveTickerEvents}>
                 {[...myMatch.events].reverse().slice(0, 8).reverse().map(evt => renderEvent(evt, myMatch))}
               </div>
             )}
@@ -264,14 +246,14 @@ function LiveTicker({ matches, myClubId, onDismiss }: { matches: Map<string, Liv
 
       {/* Other matches — compact */}
       {otherMatches.length > 0 && (
-        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,0.4)' }}>
-          <div style={{ padding: '6px 14px', borderBottom: '1px solid var(--border)', fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1, color: 'var(--text-3)' }}>Other Matches</div>
-          <div style={{ padding: '6px 0' }}>
+        <div className={styles.liveTickerCard}>
+          <div className={styles.liveTickerOtherHeader}>Other Matches</div>
+          <div className={styles.liveTickerOtherList}>
             {otherMatches.map(m => (
-              <div key={m.matchId} style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 8, padding: '4px 14px' }}>
-                <div style={{ fontSize: 11, color: 'var(--text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.homeClub.name}</div>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 800, color: 'var(--text-1)', minWidth: 40, textAlign: 'center' }}>{m.homeScore}–{m.awayScore}</div>
-                <div style={{ fontSize: 11, color: 'var(--text-2)', textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.awayClub.name}</div>
+              <div key={m.matchId} className={styles.liveTickerOtherRow}>
+                <div className={styles.liveTickerOtherHome}>{m.homeClub.name}</div>
+                <div className={styles.liveTickerOtherScore}>{m.homeScore}–{m.awayScore}</div>
+                <div className={styles.liveTickerOtherAway}>{m.awayClub.name}</div>
               </div>
             ))}
           </div>
@@ -279,7 +261,7 @@ function LiveTicker({ matches, myClubId, onDismiss }: { matches: Map<string, Liv
       )}
 
       {allEnded && (
-        <button className="btn btn-ghost" style={{ fontSize: 11, padding: '6px 12px', alignSelf: 'flex-end' }} onClick={onDismiss}>
+        <button className={`btn btn-ghost ${styles.liveTickerDismissBtn}`} onClick={onDismiss}>
           Dismiss
         </button>
       )}
@@ -294,16 +276,15 @@ export default function League() {
   const { id } = useParams<{ id: string }>()
   const { user } = useAuth()
   const navigate = useNavigate()
-  const location = useLocation()
+  const [searchParams, setSearchParams] = useSearchParams()
 
   const [league, setLeague] = useState<LeagueData | null>(null)
   const [matches, setMatches] = useState<MatchData[]>([])
   const [awards, setAwards] = useState<MatchdayAwards | null>(null)
-  const [tab, setTab] = useState<Tab>(() => {
-    const t = (location.state as any)?.tab as Tab | undefined
-    const valid: Tab[] = ['overview','squad','fixtures','standings','stats','tactics','transfers','messages','manage','management','cup']
-    return t && valid.includes(t) ? t : 'overview'
-  })
+  const validTabs: Tab[] = ['overview','squad','fixtures','standings','stats','tactics','transfers','messages','manage','management','cup']
+  const rawTab = searchParams.get('tab') as Tab | null
+  const tab: Tab = rawTab && validTabs.includes(rawTab) ? rawTab : 'overview'
+  const setTab = (t: Tab) => setSearchParams(p => { const n = new URLSearchParams(p); n.set('tab', t); return n }, { replace: true })
   const [notification, setNotification] = useState<string | null>(null)
   const [startingDraft, setStartingDraft] = useState(false)
   const [draftType, setDraftType] = useState<'SNAKE' | 'AUCTION'>('SNAKE')
@@ -354,7 +335,6 @@ export default function League() {
   }, [league?.status])
 
   // Save standings positions to localStorage on matchday change.
-  // Two keys: "curr" = latest positions, "prev" = snapshot before last matchday (used for arrows).
   const isFirstStandingsRun = useRef(true)
   useEffect(() => {
     if (!league || !id) return
@@ -517,8 +497,8 @@ export default function League() {
 
   if (!league) {
     return (
-      <div style={{ minHeight: '100vh', background: 'var(--bg-base)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ color: 'var(--text-2)' }}>Loading...</div>
+      <div className={styles.loadingWrap}>
+        <div className={styles.loadingText}>Loading...</div>
       </div>
     )
   }
@@ -527,6 +507,7 @@ export default function League() {
   myClubIdRef.current = myClub?.id
   myClubWagesRef.current = myClub?.squad.reduce((s, p) => s + p.wage, 0) ?? 0
   const isCreator = league.clubs.filter(c => !c.isAI)[0]?.user?.id === user?.id
+  const creatorName = league.clubs.filter(c => !c.isAI)[0]?.user?.username ?? 'the league creator'
   const starterIds = new Set(myClub?.tactic?.lineup?.map(s => s.instanceId) ?? [])
   const nextMatchday = league.currentDay + 1
   const injuredStarters = myClub?.squad.filter(p => starterIds.has(p.id) && p.injured) ?? []
@@ -558,7 +539,7 @@ export default function League() {
   }
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-base)' }}>
+    <div className={styles.pageRoot}>
 
       {/* ── Logo maker modal ─────────────────────────────────────────────── */}
       {showLogoMaker && myClub && (
@@ -610,29 +591,29 @@ export default function League() {
 
       {/* ── Growth Report Modal ──────────────────────────────────────────── */}
       {showGrowthReport && growthChanges.length > 0 && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 210, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', maxWidth: 500, width: '100%', maxHeight: '80vh', overflowY: 'auto' }}>
-            <div style={{ padding: '24px 28px 16px', borderBottom: '1px solid var(--border)' }}>
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 800, color: 'var(--text-1)', marginBottom: 4 }}>Player Development</div>
-              <div style={{ fontSize: 12, color: 'var(--text-2)' }}>Changes after the off-season</div>
+        <div className={styles.growthOverlay}>
+          <div className={styles.growthPanel}>
+            <div className={styles.growthHeader}>
+              <div className={styles.growthTitle}>Player Development</div>
+              <div className={styles.growthSubtitle}>Changes after the off-season</div>
             </div>
-            <div style={{ padding: '16px 28px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div className={styles.growthList}>
               {[...growthChanges].sort((a, b) => (b.overallNow - b.overallWas) - (a.overallNow - a.overallWas)).map(c => {
                 const delta = c.overallNow - c.overallWas
                 const color = delta > 0 ? 'var(--green)' : delta < 0 ? 'var(--red)' : 'var(--text-3)'
                 return (
-                  <div key={c.playerId} style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto auto', alignItems: 'center', gap: 8, padding: '7px 10px', background: 'var(--bg-card-2)', borderRadius: 'var(--radius-xs)' }}>
-                    <span className={posClass(c.position)} style={{ fontSize: 9 }}>{c.position}</span>
-                    <span style={{ fontSize: 13, color: 'var(--text-1)' }}>{c.playerName}</span>
-                    <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Age {c.ageWas + 1}</span>
-                    <span style={{ fontSize: 13, fontWeight: 700, color, minWidth: 48, textAlign: 'right' }}>
+                  <div key={c.playerId} className={styles.growthRow}>
+                    <span className={`${posClass(c.position)} ${styles.posIconSm}`}>{c.position}</span>
+                    <span className={styles.growthPlayerName}>{c.playerName}</span>
+                    <span className={styles.growthPlayerAge}>Age {c.ageWas + 1}</span>
+                    <span className={styles.growthDelta} style={{ color }}>
                       {delta > 0 ? `+${delta}` : delta === 0 ? '±0' : delta} ({c.overallNow})
                     </span>
                   </div>
                 )
               })}
             </div>
-            <div style={{ padding: '14px 28px 20px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end' }}>
+            <div className={styles.growthFooter}>
               <button className="btn btn-primary" onClick={() => setShowGrowthReport(false)}>Got It</button>
             </div>
           </div>
@@ -652,78 +633,69 @@ export default function League() {
       )}
 
       {/* ── Sidebar ──────────────────────────────────────────────────────── */}
-      <aside style={{
-        width: 220, background: 'var(--steel)', borderRight: '3px solid rgba(244,241,234,0.12)',
-        position: 'fixed', top: 0, bottom: 0, left: 0,
-        display: isMobile ? 'none' : 'flex', flexDirection: 'column', zIndex: 50,
-      }}>
+      <aside className={styles.sidebar}>
         {/* Logo */}
-        <div style={{ padding: '18px 20px', borderBottom: '3px solid var(--paper)' }}>
-          <Link to="/" className="nav-logo"><img src="/tactixlogo.png" alt="Tactix" style={{ height: 28, display: 'block' }} /></Link>
+        <div className={styles.sidebarLogo}>
+          <Link to="/" className="nav-logo">
+            <img src="/tactixlogo.png" alt="Tactix" className={styles.sidebarLogoImg} />
+          </Link>
         </div>
 
         {/* Club identity */}
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(244,241,234,0.1)' }}>
+        <div className={styles.clubIdentity}>
           {myClub ? (
             <>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+              <div className={styles.clubIdentityRow}>
                 <ClubBadge name={myClub.name} size={44} logoConfig={myClub.logoConfig} />
-                <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
+                <div className={styles.clubActions}>
                   <button
                     onClick={() => setShowLogoMaker(true)}
                     title="Customize club logo"
-                    style={{ background: 'none', border: '1px solid rgba(244,241,234,0.2)', borderRadius: 0, cursor: 'pointer', padding: '3px 7px', fontSize: 11, color: 'var(--text-2)', lineHeight: 1.4 }}
+                    className={styles.clubActionBtn}
                   >
                     ✎ Logo
                   </button>
                   <button
                     onClick={() => setShowKitDesigner(true)}
                     title="Design club kit"
-                    style={{ background: 'none', border: '1px solid rgba(244,241,234,0.2)', borderRadius: 0, cursor: 'pointer', padding: '3px 7px', fontSize: 11, color: 'var(--text-2)', lineHeight: 1.4 }}
+                    className={styles.clubActionBtn}
                   >
                     ✎ Kit
                   </button>
                 </div>
               </div>
-              <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-1)', marginTop: 10, lineHeight: 1.3 }}>{myClub.name}</div>
-              <div style={{ fontSize: 11, color: 'var(--text-2)', marginTop: 3 }}>{league.name}</div>
-              <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span className={`badge badge-${league.status.toLowerCase()}`} style={{ fontSize: 9 }}>{league.status}</span>
+              <div className={styles.clubName}>{myClub.name}</div>
+              <div className={styles.clubLeagueName}>{league.name}</div>
+              <div className={styles.clubStatusRow}>
+                <span className={`badge badge-${league.status.toLowerCase()} ${styles.clubStatusBadge}`}>{league.status}</span>
                 {(league.status === 'ACTIVE' || league.status === 'FINISHED') && (
-                  <span style={{ fontSize: 10, color: 'var(--text-2)' }}>MD {league.currentDay}/{league.seasonLength}</span>
+                  <span className={styles.clubMatchday}>MD {league.currentDay}/{league.seasonLength}</span>
                 )}
               </div>
             </>
           ) : (
             <>
-              <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-1)', lineHeight: 1.3 }}>{league.name}</div>
-              <div style={{ fontSize: 11, color: 'var(--text-2)', marginTop: 4 }}>Spectating</div>
+              <div className={styles.spectatorName}>{league.name}</div>
+              <div className={styles.spectatorLabel}>Spectating</div>
             </>
           )}
         </div>
 
         {/* Nav */}
-        <nav style={{ flex: 1, padding: '8px 12px', overflowY: 'auto' }}>
+        <nav className={styles.sidebarNav}>
           {navItems.map(item => {
             const active = tab === item.key
             return (
-              <button key={item.key} onClick={() => setTab(item.key)} style={{
-                width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-                padding: '10px 12px', marginBottom: 2,
-                background: active ? 'rgba(229,32,47,0.08)' : 'transparent',
-                border: 'none', borderRadius: 0,
-                borderLeft: `3px solid ${active ? 'var(--accent)' : 'transparent'}`,
-                color: active ? 'var(--paper)' : 'var(--text-2)',
-                cursor: 'pointer', textAlign: 'left', fontSize: 13, fontWeight: active ? 700 : 500,
-                transition: 'all 0.15s',
-              }}
-                onMouseEnter={e => { if (!active) { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-1)'; (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.04)' } }}
-                onMouseLeave={e => { if (!active) { (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-2)'; (e.currentTarget as HTMLButtonElement).style.background = 'transparent' } }}
+              <button
+                key={item.key}
+                onClick={() => setTab(item.key)}
+                className={styles.navItem}
+                data-active={active ? 'true' : 'false'}
               >
-                <span style={{ fontFamily: 'monospace', fontSize: 15, lineHeight: 1, opacity: active ? 1 : 0.6 }}>{item.icon}</span>
+                <span className={styles.navIcon}>{item.icon}</span>
                 {item.label}
                 {item.key === 'tactics' && hasLineupWarnings && (
-                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--red)', marginLeft: 'auto', flexShrink: 0 }} />
+                  <span className={styles.navDot} />
                 )}
               </button>
             )
@@ -732,82 +704,78 @@ export default function League() {
 
         {/* Budget */}
         {myClub && (
-          <div style={{ padding: '14px 20px', borderTop: '1px solid rgba(244,241,234,0.1)' }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--ash)', textTransform: 'uppercase', letterSpacing: '.14em', marginBottom: 3, fontFamily: 'var(--font-narrow)' }}>Budget</div>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 400, color: 'var(--accent)' }}>€{(myClub.budget / 1_000).toFixed(1)}M</div>
+          <div className={styles.budgetSection}>
+            <div className={styles.budgetLabel}>Budget</div>
+            <div className={styles.budgetValue}>€{(myClub.budget / 1_000).toFixed(1)}M</div>
           </div>
         )}
 
         {/* User + back */}
-        <div style={{ padding: '12px 20px', borderTop: '1px solid rgba(244,241,234,0.1)', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <button className="btn btn-ghost" style={{ fontSize: 11, padding: '4px 8px' }} onClick={() => navigate('/')}>← Back</button>
-          <span style={{ flex: 1 }} />
-          <span style={{ fontSize: 12, color: 'var(--text-2)' }}>{user?.username}</span>
+        <div className={styles.sidebarFooter}>
+          <button className={`btn btn-ghost ${styles.backBtn}`} onClick={() => navigate('/')}>← Back</button>
+          <span className={styles.sidebarFooterSpacer} />
+          <span className={styles.sidebarUsername}>{user?.username}</span>
         </div>
       </aside>
 
       {/* ── Mobile bottom nav ────────────────────────────────────────────── */}
-      {isMobile && (
-        <nav style={{
-          position: 'fixed', bottom: 0, left: 0, right: 0, height: 56,
-          background: 'var(--ink)', borderTop: '3px solid var(--paper)',
-          display: 'flex', zIndex: 200, paddingBottom: 'env(safe-area-inset-bottom)',
-        }}>
-          {navItems.map(item => {
-            const active = tab === item.key
-            const showDot = item.key === 'tactics' && hasLineupWarnings
-            return (
-              <button key={item.key} onClick={() => setTab(item.key)} style={{
-                flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
-                justifyContent: 'center', gap: 2, background: 'none', border: 'none',
-                cursor: 'pointer', color: active ? 'var(--paper)' : 'var(--text-3)',
-                position: 'relative', padding: '4px 0',
-              }}>
-                <span style={{ fontSize: 18, lineHeight: 1 }}>{item.icon}</span>
-                <span style={{ fontSize: 9, fontWeight: active ? 700 : 500 }}>{item.label}</span>
-                {showDot && <span style={{ position: 'absolute', top: 4, right: '20%', width: 6, height: 6, borderRadius: '50%', background: 'var(--red)' }} />}
-                {active && <span style={{ position: 'absolute', bottom: 0, left: '25%', right: '25%', height: 3, background: 'var(--accent)' }} />}
-              </button>
-            )
-          })}
-        </nav>
-      )}
+      <nav className={styles.mobileBottomNav}>
+        {navItems.map(item => {
+          const active = tab === item.key
+          const showDot = item.key === 'tactics' && hasLineupWarnings
+          return (
+            <button
+              key={item.key}
+              onClick={() => setTab(item.key)}
+              className={styles.mobileNavItem}
+              data-active={active ? 'true' : 'false'}
+            >
+              <span className={styles.mobileNavIcon}>{item.icon}</span>
+              <span className={styles.mobileNavLabel}>{item.label}</span>
+              {showDot && <span className={styles.mobileNavDot} />}
+              {active && <span className={styles.mobileNavUnderline} />}
+            </button>
+          )
+        })}
+      </nav>
 
       {/* ── Main content ─────────────────────────────────────────────────── */}
-      <main style={{ marginLeft: isMobile ? 0 : 220, flex: 1, paddingBottom: isMobile ? 56 : 0, display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      <main className={styles.mainContent}>
 
         {/* Top bar */}
-        <div style={{ background: 'var(--ink)', borderBottom: '3px solid var(--paper)', padding: isMobile ? '12px 16px' : '16px 28px', display: 'flex', alignItems: 'center', gap: 16, position: 'sticky', top: 0, zIndex: 40 }}>
-          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, letterSpacing: 0.5, margin: 0, color: 'var(--text-1)' }}>
+        <div className={styles.topBar}>
+          <h1 className={styles.topBarTitle}>
             {PAGE_TITLES[tab]}
           </h1>
           {isMobile && myClub && (
-            <span style={{ fontSize: 12, color: 'var(--text-2)', fontWeight: 500 }}>{myClub.name}</span>
+            <span className={styles.topBarClubName}>{myClub.name}</span>
           )}
-          <div style={{ flex: 1 }} />
+          <div className={styles.topBarSpacer} />
 
-          {error && <span className="error-text" style={{ fontSize: 12 }}>{error}</span>}
+          {error && <span className={`error-text ${styles.topBarErrorText}`}>{error}</span>}
 
           {notification && (
-            <div style={{ padding: '7px 14px', background: 'rgba(229,32,47,0.1)', border: '2px solid var(--accent)', fontSize: 12, color: 'var(--paper)', display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-narrow)', letterSpacing: '.06em' }}>
+            <div className={styles.notifBanner}>
               {notification}
-              <button onClick={() => setNotification(null)} style={{ background: 'none', border: 'none', color: 'var(--paper)', cursor: 'pointer', fontSize: 14, lineHeight: 1 }}>×</button>
+              <button onClick={() => setNotification(null)} className={styles.notifCloseBtn}>×</button>
             </div>
           )}
 
+          {league.status === 'SETUP' && !isCreator && (
+            <div className={styles.setupWaiting}>
+              <span className={styles.setupWaitingAccent}>⏳</span>
+              Waiting for <strong className={styles.setupWaitingStrong}>&nbsp;{creatorName}&nbsp;</strong> to start the draft
+            </div>
+          )}
           {league.status === 'SETUP' && isCreator && (
             <div>
-              <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+              <div className={styles.draftTypeRow}>
                 {(['SNAKE', 'AUCTION'] as const).map(t => (
                   <button
                     key={t}
                     onClick={() => setDraftType(t)}
-                    style={{
-                      padding: '6px 16px', borderRadius: 0, cursor: 'pointer', fontSize: 12, fontWeight: 700,
-                      background: draftType === t ? 'rgba(229,32,47,0.12)' : 'transparent',
-                      border: `2px solid ${draftType === t ? 'var(--accent)' : 'rgba(244,241,234,0.2)'}`,
-                      color: draftType === t ? 'var(--paper)' : 'var(--text-2)',
-                    }}
+                    className={styles.draftTypeBtn}
+                    data-active={draftType === t ? 'true' : 'false'}
                   >
                     {t === 'SNAKE' ? '🐍 Snake' : '🏷️ Auction'}
                   </button>
@@ -824,7 +792,7 @@ export default function League() {
             </button>
           )}
           {!isMobile && (
-            <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => navigator.clipboard.writeText(window.location.origin + '/?join=' + league.id)} title="Copy invite link">
+            <button className={`btn btn-ghost ${styles.inviteBtn}`} onClick={() => navigator.clipboard.writeText(window.location.origin + '/?join=' + league.id)} title="Copy invite link">
               Copy invite link
             </button>
           )}
@@ -832,25 +800,27 @@ export default function League() {
 
         {/* Injury/fitness banner */}
         {league.status === 'ACTIVE' && !bannerDismissed && (injuredStarters.length > 0 || lowFitnessStarters.length > 0) && (
-          <div style={{ background: 'rgba(255,60,60,0.08)', borderBottom: '1px solid rgba(255,60,60,0.25)', padding: '10px 28px', display: 'flex', alignItems: 'center', gap: 12, fontSize: 12, flexWrap: 'wrap' }}>
-            <span style={{ color: 'var(--red)', fontWeight: 700 }}>⚠ Lineup alert:</span>
-            {injuredStarters.map(p => <span key={p.id} style={{ color: 'var(--red)' }}>{p.player.name} (injured)</span>)}
-            {suspendedStarters.map(p => <span key={p.id} style={{ color: 'var(--red)' }}>{p.player.name} (suspended)</span>)}
-            {lowFitnessStarters.map(p => <span key={p.id} style={{ color: 'var(--gold)' }}>{p.player.name} (low fitness)</span>)}
-            <button onClick={() => setBannerDismissed(true)} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-2)', fontSize: 16 }}>✕</button>
+          <div className={styles.injuryBanner}>
+            <span className={styles.injuryBannerLabel}>⚠ Lineup alert:</span>
+            {injuredStarters.map(p => <span key={p.id} className={styles.injuryPlayerRed}>{p.player.name} (injured)</span>)}
+            {suspendedStarters.map(p => <span key={p.id} className={styles.injuryPlayerRed}>{p.player.name} (suspended)</span>)}
+            {lowFitnessStarters.map(p => <span key={p.id} className={styles.injuryPlayerGold}>{p.player.name} (low fitness)</span>)}
+            <button onClick={() => setBannerDismissed(true)} className={styles.injuryDismissBtn}>✕</button>
           </div>
         )}
 
         {/* Page content */}
-        <div style={{ padding: isMobile ? '16px 12px' : '24px 28px', flex: 1 }}>
+        <div className={styles.pageBody}>
           {tab === 'overview'  && <Overview league={league} matches={matches} myClub={myClub} awards={awards} onPhysioUpgrade={handlePhysioUpgrade} onRefresh={refresh} onSwitchTab={setTab} />}
-          {tab === 'squad'     && (myClub ? <Squad squad={myClub.squad} physioLevel={myClub.physioLevel} budget={myClub.budget} nextMatchday={nextMatchday} onHeal={handleHeal} onTrain={handleTrain} /> : <p style={{ color: 'var(--text-2)' }}>You don't have a club in this league.</p>)}
-          {tab === 'fixtures'  && (matches.length === 0 ? <div style={{ textAlign: 'center', padding: '64px 0', color: 'var(--text-2)' }}><div style={{ fontSize: 36, marginBottom: 10 }}>📅</div><p>Fixtures will appear after the draft.</p></div> : <Fixtures matches={matches} clubs={league.clubs} myClubId={myClub?.id} currentDay={league.currentDay} leagueId={league.id} />)}
+          {tab === 'squad'     && (myClub ? <Squad squad={myClub.squad} physioLevel={myClub.physioLevel} budget={myClub.budget} nextMatchday={nextMatchday} onHeal={handleHeal} onTrain={handleTrain} /> : <p className={styles.noClubText}>You don't have a club in this league.</p>)}
+          {tab === 'fixtures'  && (matches.length === 0
+            ? <div className={styles.emptyStateWrap}><div className={styles.emptyStateIcon}>📅</div><p>Fixtures will appear after the draft.</p></div>
+            : <Fixtures matches={matches} clubs={league.clubs} myClubId={myClub?.id} currentDay={league.currentDay} leagueId={league.id} />)}
           {tab === 'standings' && <Standings clubs={league.clubs} myClubId={myClub?.id} leagueId={league.id} prevPositions={prevPositions} matches={matches} history={league.history} />}
           {tab === 'stats'     && <Stats leagueId={league.id} status={league.status} />}
           {tab === 'tactics'   && myClub && (
             myClub.squad.length === 0
-              ? <div style={{ textAlign: 'center', padding: '64px 0', color: 'var(--text-2)' }}><div style={{ fontSize: 36, marginBottom: 10 }}>⊞</div><p>Set your tactics after the draft.</p></div>
+              ? <div className={styles.emptyStateWrap}><div className={styles.emptyStateIcon}>⊞</div><p>Set your tactics after the draft.</p></div>
               : <Tactics leagueId={id!} myClub={myClub} nextMatchday={league.currentDay + 1} onSaved={tactic => setLeague(prev => {
                   if (!prev) return prev
                   return { ...prev, clubs: prev.clubs.map(c => c.id === myClub.id ? { ...c, tactic } : c) }

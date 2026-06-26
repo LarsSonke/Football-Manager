@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { api } from '../../api/client'
 import type { LeagueData, ClubData } from './types'
+import styles from './Management.module.css'
 
 // ─── Types & Constants ────────────────────────────────────────────────────────
 
@@ -62,31 +63,31 @@ function UpgradeCard({ label, icon, currentLevel, type, desc, startingBudget, bu
   }
 
   return (
-    <div style={{ background: 'var(--bg-card)', border: `1px solid ${maxed ? 'rgba(54,226,126,0.25)' : 'var(--border)'}`, borderRadius: 'var(--radius)', padding: 16 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-        <span style={{ fontSize: 24 }}>{icon}</span>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-1)' }}>{label}</div>
-          <div style={{ fontSize: 11, color: 'var(--text-2)', marginTop: 1 }}>{desc(currentLevel)}</div>
+    <div className={maxed ? styles.upgradeCardMaxed : styles.upgradeCard}>
+      <div className={styles.upgradeCardHeader}>
+        <span className={styles.upgradeIcon}>{icon}</span>
+        <div className={styles.upgradeMeta}>
+          <div className={styles.upgradeLabel}>{label}</div>
+          <div className={styles.upgradeDesc}>{desc(currentLevel)}</div>
         </div>
-        <div style={{ display: 'flex', gap: 3 }}>
+        <div className={styles.upgradePips}>
           {[1,2,3].map(i => (
-            <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: i <= currentLevel ? 'var(--green)' : 'rgba(255,255,255,0.12)' }} />
+            <div key={i} className={i <= currentLevel ? styles.pipFilled : styles.pipEmpty} />
           ))}
         </div>
       </div>
-      {err && <div style={{ fontSize: 11, color: 'var(--red)', marginBottom: 6 }}>{err}</div>}
+      {err && <div className={styles.upgradeErr}>{err}</div>}
       {!maxed ? (
         <button
-          className="btn btn-green"
-          style={{ width: '100%', fontSize: 11, padding: '7px 0', opacity: canAfford ? 1 : 0.5 }}
+          className={`btn btn-green ${styles.upgradeBtn}`}
           onClick={handleUpgrade}
           disabled={loading || !canAfford}
+          style={{ opacity: canAfford ? 1 : 0.5 }}
         >
           {loading ? '...' : `Upgrade → L${currentLevel + 1}  (€${(cost / 1000).toFixed(1)}k)`}
         </button>
       ) : (
-        <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--green)', fontWeight: 700, padding: '6px 0' }}>MAX LEVEL</div>
+        <div className={styles.maxLevel}>MAX LEVEL</div>
       )}
     </div>
   )
@@ -174,25 +175,23 @@ export default function Management({ league, myClub, isCreator, onRefresh }: {
 
   const boostCost = Math.round(league.startingBudget * BOOST_COST_PCT)
   const otherClubs = league.clubs.filter(c => c.id !== myClub.id)
-  const cardStyle: React.CSSProperties = { background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 0, overflow: 'hidden' }
-  const secLabel: React.CSSProperties = { fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase' as const, color: 'var(--text-2)' }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 780 }}>
-      {upgradeMsg && <div style={{ padding: '10px 14px', background: 'rgba(54,226,126,0.08)', border: '1px solid rgba(54,226,126,0.2)', borderRadius: 'var(--radius-sm)', fontSize: 12, color: 'var(--green)' }}>✓ {upgradeMsg}</div>}
+    <div className={styles.root}>
+      {upgradeMsg && <div className={styles.toast}>✓ {upgradeMsg}</div>}
 
       {/* Budget display */}
-      <div style={{ padding: '12px 16px', background: 'var(--bg-card-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', display: 'flex', alignItems: 'center', gap: 16 }}>
+      <div className={styles.budgetBar}>
         <div>
-          <div style={{ fontSize: 10, color: 'var(--text-2)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>Available Budget</div>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, color: 'var(--green)' }}>€{(budget / 1000).toFixed(1)}k</div>
+          <div className={styles.budgetLabel}>Available Budget</div>
+          <div className={styles.budgetValue}>€{(budget / 1000).toFixed(1)}k</div>
         </div>
       </div>
 
       {/* Staff */}
-      <div style={cardStyle}>
-        <div className="card-header"><span className="accent-bar" /><span style={secLabel}>Staff</span></div>
-        <div style={{ padding: 16, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
+      <div className={styles.card}>
+        <div className="card-header"><span className="accent-bar" /><span className={styles.secLabel}>Staff</span></div>
+        <div className={styles.upgradeGrid}>
           {STAFF_UPGRADES.map(u => (
             <UpgradeCard key={u.type}
               label={u.label} icon={u.icon}
@@ -206,9 +205,9 @@ export default function Management({ league, myClub, isCreator, onRefresh }: {
       </div>
 
       {/* Facilities */}
-      <div style={cardStyle}>
-        <div className="card-header"><span className="accent-bar" /><span style={secLabel}>Facilities</span></div>
-        <div style={{ padding: 16, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
+      <div className={styles.card}>
+        <div className="card-header"><span className="accent-bar" /><span className={styles.secLabel}>Facilities</span></div>
+        <div className={styles.upgradeGrid}>
           {FACILITY_UPGRADES.map(u => (
             <UpgradeCard key={u.type}
               label={u.label} icon={u.icon}
@@ -223,12 +222,11 @@ export default function Management({ league, myClub, isCreator, onRefresh }: {
 
       {/* Scout report */}
       {clubLevels.scoutLevel > 0 && (
-        <div style={cardStyle}>
-          <div className="card-header"><span className="accent-bar" /><span style={secLabel}>Scout Report</span></div>
-          <div style={{ padding: 16 }}>
-            <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
-              <select value={scoutClubId} onChange={e => setScoutClubId(e.target.value)}
-                style={{ flex: 1, padding: '8px 12px', background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text-1)', fontSize: 13 }}>
+        <div className={styles.card}>
+          <div className="card-header"><span className="accent-bar" /><span className={styles.secLabel}>Scout Report</span></div>
+          <div className={styles.reportSection}>
+            <div className={styles.reportControls}>
+              <select value={scoutClubId} onChange={e => setScoutClubId(e.target.value)} className={styles.reportSelect}>
                 <option value="">Select opponent...</option>
                 {otherClubs.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
@@ -237,8 +235,8 @@ export default function Management({ league, myClub, isCreator, onRefresh }: {
               </button>
             </div>
             {scoutReport && (
-              <div style={{ padding: 12, background: 'var(--bg-base)', borderRadius: 'var(--radius-sm)', fontSize: 12, color: 'var(--text-1)' }}>
-                <pre style={{ margin: 0, fontFamily: 'inherit', whiteSpace: 'pre-wrap' }}>{JSON.stringify(scoutReport, null, 2)}</pre>
+              <div className={styles.reportJson}>
+                <pre className={styles.reportPre}>{JSON.stringify(scoutReport, null, 2)}</pre>
               </div>
             )}
           </div>
@@ -247,15 +245,15 @@ export default function Management({ league, myClub, isCreator, onRefresh }: {
 
       {/* Coach advice */}
       {clubLevels.coachLevel > 0 && (
-        <div style={cardStyle}>
-          <div className="card-header"><span className="accent-bar" /><span style={secLabel}>Coach Advice</span></div>
-          <div style={{ padding: 16 }}>
+        <div className={styles.card}>
+          <div className="card-header"><span className="accent-bar" /><span className={styles.secLabel}>Coach Advice</span></div>
+          <div className={styles.reportSection}>
             <button className="btn btn-green" onClick={handleCoachAdvice} disabled={coachLoading} style={{ marginBottom: 12 }}>
               {coachLoading ? '...' : 'Get Advice'}
             </button>
             {coachAdvice && (
-              <div style={{ padding: 12, background: 'var(--bg-base)', borderRadius: 'var(--radius-sm)', fontSize: 12, color: 'var(--text-1)' }}>
-                <pre style={{ margin: 0, fontFamily: 'inherit', whiteSpace: 'pre-wrap' }}>{JSON.stringify(coachAdvice, null, 2)}</pre>
+              <div className={styles.reportJson}>
+                <pre className={styles.reportPre}>{JSON.stringify(coachAdvice, null, 2)}</pre>
               </div>
             )}
           </div>
@@ -263,34 +261,28 @@ export default function Management({ league, myClub, isCreator, onRefresh }: {
       )}
 
       {/* Stat boosts */}
-      <div style={cardStyle}>
-        <div className="card-header"><span className="accent-bar" /><span style={secLabel}>Stat Boosts · €{(boostCost / 1000).toFixed(1)}k each · 5 matchdays</span></div>
-        <div style={{ padding: 16 }}>
-          {boostMsg && <div style={{ marginBottom: 10, fontSize: 12, color: boostMsg.startsWith('Boost') ? 'var(--green)' : 'var(--red)' }}>{boostMsg}</div>}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div className={styles.card}>
+        <div className="card-header"><span className="accent-bar" /><span className={styles.secLabel}>Stat Boosts · €{(boostCost / 1000).toFixed(1)}k each · 5 matchdays</span></div>
+        <div className={styles.reportSection}>
+          {boostMsg && <div className={styles.boostMsg} style={{ color: boostMsg.startsWith('Boost') ? 'var(--green)' : 'var(--red)' }}>{boostMsg}</div>}
+          <div className={styles.boostList}>
             {myClub.squad.slice().sort((a, b) => b.player.overall - a.player.overall).map(p => (
-              <div key={p.id} style={{ padding: '10px 12px', background: 'var(--bg-base)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+              <div key={p.id} className={styles.boostPlayerCard}>
+                <div className={styles.boostPlayerHeader}>
                   <span className={`pos ${p.player.position === 'GK' ? 'pos-gk' : ['CB','LB','RB'].includes(p.player.position) ? 'pos-def' : ['CDM','CM','CAM','LM','RM'].includes(p.player.position) ? 'pos-mid' : 'pos-att'}`} style={{ fontSize: 9, padding: '2px 5px' }}>{p.player.position}</span>
-                  <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-1)' }}>{p.player.name}</span>
-                  <span style={{ fontSize: 11, color: 'var(--text-2)', marginLeft: 'auto' }}>OVR {p.player.overall}</span>
+                  <span className={styles.boostPlayerName}>{p.player.name}</span>
+                  <span className={styles.boostPlayerOvr}>OVR {p.player.overall}</span>
                 </div>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                <div className={styles.boostButtons}>
                   {BOOST_STATS.map(stat => {
                     const active = (p.boosts ?? []).some(b => b.stat === stat)
                     const key = p.id + stat
                     return (
                       <button key={stat}
+                        className={active ? styles.boostBtnActive : styles.boostBtn}
                         onClick={() => !active && handleBoost(p.id, stat)}
                         disabled={active || boostLoading === key || budget < boostCost}
-                        style={{
-                          padding: '4px 10px', borderRadius: 4, fontSize: 11, fontWeight: 600,
-                          background: active ? 'rgba(54,226,126,0.15)' : 'rgba(255,255,255,0.06)',
-                          border: `1px solid ${active ? 'rgba(54,226,126,0.4)' : 'var(--border)'}`,
-                          color: active ? 'var(--green)' : 'var(--text-2)',
-                          cursor: active ? 'default' : 'pointer',
-                          opacity: !active && budget < boostCost ? 0.4 : 1,
-                        }}
+                        style={{ opacity: !active && budget < boostCost ? 0.4 : 1 }}
                       >
                         {active ? `✓ ${stat}` : boostLoading === key ? '...' : stat}
                       </button>
@@ -305,24 +297,26 @@ export default function Management({ league, myClub, isCreator, onRefresh }: {
 
       {/* Transfer window (creator only) */}
       {isCreator && (
-        <div style={{ ...cardStyle, border: '1px solid rgba(245,166,35,0.2)' }}>
-          <div className="card-header" style={{ borderColor: 'rgba(245,166,35,0.15)' }}><span className="accent-bar" style={{ background: 'var(--gold)' }} /><span style={{ ...secLabel, color: 'var(--gold)' }}>Transfer Window</span></div>
-          <div style={{ padding: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+        <div className={styles.cardGold}>
+          <div className={`card-header ${styles.cardHeaderGold}`}><span className={`accent-bar ${styles.accentBarGold}`} /><span className={styles.secLabelGold}>Transfer Window</span></div>
+          <div className={styles.windowBody}>
             <div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-1)' }}>
-                Window is currently <span style={{ color: (league.transferWindowOpen ?? true) ? 'var(--green)' : 'var(--red)' }}>{(league.transferWindowOpen ?? true) ? 'OPEN' : 'CLOSED'}</span>
+              <div className={styles.windowStatus}>
+                Window is currently{' '}
+                <span className={(league.transferWindowOpen ?? true) ? styles.windowStatusOpen : styles.windowStatusClosed}>
+                  {(league.transferWindowOpen ?? true) ? 'OPEN' : 'CLOSED'}
+                </span>
               </div>
-              <div style={{ fontSize: 11, color: 'var(--text-2)', marginTop: 2 }}>Controls whether players can be transferred between clubs</div>
+              <div className={styles.windowSubtext}>Controls whether players can be transferred between clubs</div>
             </div>
             <button
-              className="btn"
-              style={{ background: (league.transferWindowOpen ?? true) ? 'rgba(232,128,106,0.15)' : 'rgba(54,226,126,0.15)', color: (league.transferWindowOpen ?? true) ? 'var(--red)' : 'var(--green)', border: `1px solid ${(league.transferWindowOpen ?? true) ? 'rgba(232,128,106,0.4)' : 'rgba(54,226,126,0.4)'}`, whiteSpace: 'nowrap' }}
+              className={`btn ${(league.transferWindowOpen ?? true) ? styles.windowCloseBtn : styles.windowOpenBtn}`}
               onClick={handleToggleWindow} disabled={windowLoading}
             >
               {windowLoading ? '...' : (league.transferWindowOpen ?? true) ? 'Close Window' : 'Open Window'}
             </button>
           </div>
-          {windowMsg && <div style={{ padding: '0 16px 12px', fontSize: 12, color: 'var(--gold)' }}>✓ {windowMsg}</div>}
+          {windowMsg && <div className={styles.windowMsg}>✓ {windowMsg}</div>}
         </div>
       )}
     </div>

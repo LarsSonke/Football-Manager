@@ -4,6 +4,7 @@ import { posClass } from '../../utils/helpers'
 import { PlayerPhoto } from '../../components/PlayerPhoto'
 import type { SquadPlayer, PlayerData } from './types'
 import { POS_ORDER } from './types'
+import styles from './Squad.module.css'
 
 // ─── Manga helpers ────────────────────────────────────────────────────────────
 
@@ -55,27 +56,26 @@ function ModalStatBar({ label, value, dark }: { label: string; value: number; da
   const pct = Math.min(100, Math.max(0, value))
   const color = rc(pct)
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
-      <span style={{ fontSize: 10, color: dark ? 'var(--ash)' : '#666', width: 110, textAlign: 'right', flexShrink: 0 }}>{label}</span>
-      <div style={{ flex: 1, height: 5, background: dark ? 'rgba(255,255,255,0.07)' : 'rgba(8,8,10,.1)', overflow: 'hidden' }}>
-        <div style={{ width: `${pct}%`, height: '100%', background: color, transition: 'width 0.3s' }} />
+    <div className={styles.statBarRow}>
+      <span className={styles.statBarLabel} data-dark={String(dark)}>{label}</span>
+      <div className={styles.statBarTrack} data-dark={String(dark)}>
+        <div className={styles.statBarFill} style={{ width: `${pct}%`, background: color }} />
       </div>
-      <span style={{ fontFamily: 'var(--font-display)', fontSize: 12, color, width: 24, textAlign: 'right', flexShrink: 0 }}>{value}</span>
+      <span className={styles.statBarValue} style={{ color }}>{value}</span>
     </div>
   )
 }
 
 function Stars({ value, max = 5 }: { value: number; max?: number }) {
   return (
-    <span style={{ color: '#cf9438', letterSpacing: 1, fontSize: 13 }}>
+    <span className={styles.stars}>
       {'★'.repeat(Math.max(0, Math.min(max, value)))}
-      <span style={{ color: 'rgba(255,255,255,0.15)' }}>{'★'.repeat(Math.max(0, max - Math.min(max, value)))}</span>
+      <span className={styles.starsEmpty}>{'★'.repeat(Math.max(0, max - Math.min(max, value)))}</span>
     </span>
   )
 }
 
 function PlayerDetailModal({ player, slotPos, onClose }: { player: SquadPlayer; slotPos: string; onClose: () => void }) {
-  const isMobile = window.innerWidth < 768
   const p = player.player
   const mainStats = [
     { label: 'Pace', value: p.pace },
@@ -139,53 +139,53 @@ function PlayerDetailModal({ player, slotPos, onClose }: { player: SquadPlayer; 
 
   return (
     <div
-      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.82)', zIndex: 1000, display: 'flex', alignItems: isMobile ? 'flex-end' : 'center', justifyContent: 'center', padding: isMobile ? 0 : 20 }}
+      className={styles.modalOverlay}
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div style={{ border: '3px solid var(--paper)', background: 'var(--steel)', width: '100%', maxWidth: isMobile ? '100%' : 680, height: isMobile ? '92vh' : '82vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', animation: 'mgSlam .35s cubic-bezier(.2,.8,.3,1) both' }}>
+      <div className={styles.modalPanel}>
 
         {/* Ink header */}
-        <div style={{ background: 'var(--ink)', padding: '10px 20px', borderBottom: '3px solid var(--paper)', display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
+        <div className={styles.modalHeader}>
           <PlayerPhoto url={p.photoUrl} name={p.name} size={52} style={{ border: '2px solid var(--paper)' }} />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontFamily: 'var(--font-display)', fontSize: 22, lineHeight: .9, letterSpacing: '-.01em', textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
+          <div className={styles.modalHeaderInfo}>
+            <div className={styles.modalNameRow}>
+              <span className={styles.modalPlayerName}>{p.name}</span>
               <span className={posClass(slotPos)} style={{ fontSize: 10, flexShrink: 0 }}>{slotPos}</span>
             </div>
-            <div style={{ display: 'flex', gap: 16, marginTop: 5, flexWrap: 'wrap' }}>
+            <div className={styles.modalStats}>
               <div>
-                <span style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: rc(p.overall) }}>{p.overall}</span>
-                <span style={{ fontFamily: 'var(--font-narrow)', fontSize: 9, color: 'var(--ash)', textTransform: 'uppercase', letterSpacing: '.14em', marginLeft: 4 }}>OVR</span>
+                <span className={styles.modalOvrValue} style={{ color: rc(p.overall) }}>{p.overall}</span>
+                <span className={styles.modalStatLabel}>OVR</span>
               </div>
               <div>
-                <span style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--ash)' }}>{p.potential}</span>
-                <span style={{ fontFamily: 'var(--font-narrow)', fontSize: 9, color: 'var(--ash)', textTransform: 'uppercase', letterSpacing: '.14em', marginLeft: 4 }}>POT</span>
+                <span className={styles.modalOvrValue} style={{ color: 'var(--ash)' }}>{p.potential}</span>
+                <span className={styles.modalStatLabel}>POT</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div className={styles.modalStatItem}>
                 <Stars value={p.skillMoves} />
-                <span style={{ fontFamily: 'var(--font-narrow)', fontSize: 9, color: 'var(--ash)', textTransform: 'uppercase', letterSpacing: '.1em' }}>Skill</span>
+                <span className={styles.modalStatLabel}>Skill</span>
               </div>
               {p.nationality && (
-                <span style={{ fontFamily: 'var(--font-narrow)', fontSize: 11, color: 'var(--ash)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                  {flagUrl(p.nationality) && <img src={flagUrl(p.nationality)!} alt="" style={{ width: 16, height: 12, border: '1px solid rgba(244,241,234,.2)' }} />}
+                <span className={styles.modalNationality}>
+                  {flagUrl(p.nationality) && <img src={flagUrl(p.nationality)!} alt="" className={styles.modalFlag} />}
                   {p.nationality} · {p.age}y
                 </span>
               )}
             </div>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: '2px solid rgba(244,241,234,.3)', cursor: 'pointer', color: 'var(--paper)', fontSize: 16, padding: '4px 10px', lineHeight: 1, flexShrink: 0, fontFamily: 'var(--font-display)' }}>✕</button>
+          <button onClick={onClose} className={styles.modalCloseBtn}>✕</button>
         </div>
 
         {/* Body */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
-          <div style={{ fontFamily: 'var(--font-narrow)', fontSize: 10, fontWeight: 700, color: 'var(--ash)', textTransform: 'uppercase', letterSpacing: '.18em', marginBottom: 10 }}>Main Stats</div>
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '0 24px', marginBottom: 20 }}>
+        <div className={styles.modalBody}>
+          <div className={styles.modalSectionLabel}>Main Stats</div>
+          <div className={styles.modalMainStatsGrid}>
             {mainStats.map(s => <ModalStatBar key={s.label} label={s.label} value={s.value} dark />)}
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '0 24px' }}>
+          <div className={styles.modalSubStatsGrid}>
             {subStatGroups.map(group => (
-              <div key={group.title} style={{ marginBottom: 16 }}>
-                <div style={{ fontFamily: 'var(--font-narrow)', fontSize: 10, fontWeight: 700, color: 'var(--ash)', textTransform: 'uppercase', letterSpacing: '.18em', marginBottom: 8 }}>{group.title}</div>
+              <div key={group.title} className={styles.modalStatGroup}>
+                <div className={styles.modalStatGroupTitle}>{group.title}</div>
                 {group.stats.map(s => <ModalStatBar key={s.label} label={s.label} value={s.value} dark />)}
               </div>
             ))}
@@ -211,9 +211,9 @@ export default function Squad({ squad, physioLevel, budget, nextMatchday, onHeal
 
   if (squad.length === 0) {
     return (
-      <div style={{ padding: '64px 0', textAlign: 'center', animation: 'mgUp .4s both' }}>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 36, color: 'var(--ash)', letterSpacing: '-.01em' }}>NO SQUAD YET</div>
-        <div style={{ fontFamily: 'var(--font-narrow)', fontSize: 11, color: 'var(--ash)', letterSpacing: '.18em', textTransform: 'uppercase', marginTop: 8 }}>Players will appear here after the draft</div>
+      <div className={styles.emptyState}>
+        <div className={styles.emptyTitle}>NO SQUAD YET</div>
+        <div className={styles.emptySubtitle}>Players will appear here after the draft</div>
       </div>
     )
   }
@@ -234,13 +234,9 @@ export default function Squad({ squad, physioLevel, budget, nextMatchday, onHeal
         />
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: 13 }}>
+      <div className={styles.grid}>
         {sorted.map((inst, idx) => {
           const dark = idx % 2 === 0
-          const cardBg = dark ? 'var(--steel)' : 'var(--paper)'
-          const cardFg = dark ? 'var(--paper)' : 'var(--ink)'
-          const dimC = dark ? 'var(--ash)' : '#666'
-          const rule = dark ? 'rgba(244,241,234,.12)' : 'rgba(8,8,10,.12)'
           const stats = keyStats(inst.player)
           const bars = formBars(inst.form)
           const role = inst.player.preferredRoles?.[0] ?? inst.player.position
@@ -248,7 +244,7 @@ export default function Squad({ squad, physioLevel, budget, nextMatchday, onHeal
           const healCost = calcHealCost(inst.injuryDaysLeft, physioLevel)
 
           return (
-            <div key={inst.id} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div key={inst.id} className={styles.cardSlot}>
 
               {/* ── Manga card ── */}
               <div
@@ -256,89 +252,76 @@ export default function Squad({ squad, physioLevel, budget, nextMatchday, onHeal
                 tabIndex={0}
                 onClick={() => setDetailPlayer(inst)}
                 onKeyDown={e => e.key === 'Enter' && setDetailPlayer(inst)}
-                style={{
-                  position: 'relative', border: '3px solid var(--paper)',
-                  background: cardBg, color: cardFg, overflow: 'hidden',
-                  cursor: 'pointer', transition: 'transform .2s, box-shadow .2s',
-                  animation: `mgPop .4s ${(idx * 0.04).toFixed(2)}s both`,
-                }}
-                onMouseEnter={e => {
-                  const el = e.currentTarget as HTMLDivElement
-                  el.style.transform = 'translateY(-6px)'
-                  el.style.boxShadow = '0 16px 0 -8px var(--accent)'
-                }}
-                onMouseLeave={e => {
-                  const el = e.currentTarget as HTMLDivElement
-                  el.style.transform = ''
-                  el.style.boxShadow = ''
-                }}
+                className={styles.card}
+                data-dark={String(dark)}
+                style={{ animation: `mgPop .4s ${(idx * 0.04).toFixed(2)}s both` }}
               >
                 {/* Diagonal hatch overlay */}
-                <div style={{ position: 'absolute', inset: 0, opacity: .06, background: 'repeating-linear-gradient(120deg, currentColor 0 2px, transparent 2px 10px)', pointerEvents: 'none' }} />
+                <div className={styles.hatch} />
 
                 {/* Angled position tag — top right */}
-                <div style={{ position: 'absolute', right: 0, top: 0, background: 'var(--accent)', color: '#fff', padding: '3px 12px 5px', clipPath: 'polygon(16% 0,100% 0,100% 100%,0 100%)' }}>
-                  <span style={{ fontFamily: 'var(--font-display)', fontSize: 14 }}>{inst.player.position}</span>
+                <div className={styles.posTag}>
+                  <span className={styles.posTagLabel}>{inst.player.position}</span>
                 </div>
 
                 {/* Status stripe for injured */}
                 {inst.injured && (
-                  <div style={{ background: 'var(--accent)', color: '#fff', padding: '3px 16px', fontFamily: 'var(--font-narrow)', fontSize: 9, letterSpacing: '.2em', textTransform: 'uppercase', fontWeight: 700, textAlign: 'center' }}>
+                  <div className={styles.stripeInjured}>
                     INJURED · {inst.injuryDaysLeft}d left
                   </div>
                 )}
                 {!inst.injured && inst.suspendedMatchday === nextMatchday && (
-                  <div style={{ background: '#cf9438', color: 'var(--ink)', padding: '3px 16px', fontFamily: 'var(--font-narrow)', fontSize: 9, letterSpacing: '.2em', textTransform: 'uppercase', fontWeight: 700, textAlign: 'center' }}>
+                  <div className={styles.stripeSuspended}>
                     SUSPENDED
                   </div>
                 )}
 
                 {/* OVR block */}
-                <div style={{ padding: '16px 16px 0', position: 'relative' }}>
-                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 58, lineHeight: .78, color: rc(inst.player.overall) }}>
+                <div className={styles.ovrBlock}>
+                  <div className={styles.ovrValue} style={{ color: rc(inst.player.overall) }}>
                     {inst.player.overall}
                   </div>
-                  <div style={{ fontFamily: 'var(--font-narrow)', fontSize: 9, letterSpacing: '.2em', textTransform: 'uppercase', color: dimC, marginTop: 2 }}>Overall</div>
+                  <div className={styles.ovrLabel}>Overall</div>
                 </div>
 
                 {/* Name + role + stats */}
-                <div style={{ padding: '12px 16px 16px', position: 'relative' }}>
-                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 24, lineHeight: .86, textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div className={styles.nameBlock}>
+                  <div className={styles.playerName}>
                     {inst.player.name.split(' ').slice(-1)[0]}
                   </div>
-                  <div style={{ fontFamily: 'var(--font-narrow)', fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', color: dimC, marginTop: 2 }}>
+                  <div className={styles.playerMeta}>
                     {role} · {inst.player.age}
                   </div>
 
                   {/* Key stats + form bars */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 14, borderTop: `2px solid ${rule}`, paddingTop: 12 }}>
+                  <div className={styles.statsRow}>
                     {stats.map(([k, v]) => (
-                      <div key={k} style={{ textAlign: 'center' }}>
-                        <div style={{ fontFamily: 'var(--font-display)', fontSize: 19, color: rc(v) }}>{v}</div>
-                        <div style={{ fontFamily: 'var(--font-narrow)', fontSize: 8, letterSpacing: '.14em', textTransform: 'uppercase', color: dimC }}>{k}</div>
+                      <div key={k} className={styles.statItem}>
+                        <div className={styles.statValue} style={{ color: rc(v) }}>{v}</div>
+                        <div className={styles.statKey}>{k}</div>
                       </div>
                     ))}
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-                      <div style={{ display: 'flex', gap: 2 }}>
+                    <div className={styles.formGroup}>
+                      <div className={styles.formBars}>
                         {bars.map((c, i) => (
-                          <span key={i} style={{ width: 6, height: 15, background: c, display: 'block' }} />
+                          <span key={i} className={styles.formBar} style={{ background: c }} />
                         ))}
                       </div>
-                      <div style={{ fontFamily: 'var(--font-narrow)', fontSize: 8, letterSpacing: '.14em', textTransform: 'uppercase', color: dimC }}>Form</div>
+                      <div className={styles.formLabel}>Form</div>
                     </div>
                   </div>
                 </div>
 
                 {/* Yellow card warning strip */}
                 {inst.yellowCards > 0 && inst.suspendedMatchday !== nextMatchday && inst.yellowCards % 5 === 4 && (
-                  <div style={{ background: 'rgba(207,148,56,.15)', borderTop: `2px solid rgba(207,148,56,.4)`, padding: '4px 16px', fontFamily: 'var(--font-narrow)', fontSize: 9, letterSpacing: '.12em', textTransform: 'uppercase', color: '#cf9438', fontWeight: 700 }}>
+                  <div className={styles.stripYellowCard}>
                     {inst.yellowCards % 5}/5 yellows — next = ban
                   </div>
                 )}
 
                 {/* Prospect / Veteran tag */}
                 {inst.player.age <= 22 && inst.player.potential - inst.player.overall >= 6 && (
-                  <div style={{ background: 'rgba(47,107,70,.25)', borderTop: `2px solid rgba(47,107,70,.4)`, padding: '4px 16px', fontFamily: 'var(--font-narrow)', fontSize: 9, letterSpacing: '.12em', textTransform: 'uppercase', color: '#2f6b46', fontWeight: 700 }}>
+                  <div className={styles.stripProspect}>
                     Prospect · Pot {inst.player.potential}
                   </div>
                 )}
@@ -347,12 +330,8 @@ export default function Squad({ squad, physioLevel, budget, nextMatchday, onHeal
               {/* ── Action strip below card ── */}
               {inst.injured ? (
                 <button
-                  style={{
-                    padding: '8px', border: '2px solid var(--accent)', background: budget >= healCost ? 'var(--accent)' : 'transparent',
-                    color: budget >= healCost ? '#fff' : 'var(--accent)', cursor: budget >= healCost ? 'pointer' : 'not-allowed',
-                    fontFamily: 'var(--font-narrow)', fontSize: 10, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase',
-                    opacity: budget >= healCost ? 1 : .5, transition: 'all .15s',
-                  }}
+                  className={styles.healBtn}
+                  data-affordable={String(budget >= healCost)}
                   disabled={budget < healCost}
                   onClick={() => onHeal(inst.id)}
                 >
@@ -360,40 +339,30 @@ export default function Squad({ squad, physioLevel, budget, nextMatchday, onHeal
                 </button>
               ) : !isTraining ? (
                 <button
-                  style={{
-                    padding: '8px', border: '2px solid rgba(244,241,234,.2)', background: 'transparent',
-                    color: 'var(--ash)', cursor: 'pointer',
-                    fontFamily: 'var(--font-narrow)', fontSize: 10, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase',
-                    transition: 'border-color .15s, color .15s',
-                  }}
-                  onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = 'var(--paper)'; b.style.color = 'var(--paper)' }}
-                  onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = 'rgba(244,241,234,.2)'; b.style.color = 'var(--ash)' }}
+                  className={styles.trainBtn}
                   onClick={() => setTrainingFor(inst.id)}
                 >
                   {inst.trainedPosition ? `Retrain (${inst.trainedPosition})` : 'Train Position'}
                 </button>
               ) : (
-                <div style={{ border: '2px solid rgba(244,241,234,.2)', background: 'var(--steel)', padding: 10 }}>
-                  <div style={{ fontFamily: 'var(--font-narrow)', fontSize: 10, fontWeight: 700, color: 'var(--ash)', textTransform: 'uppercase', letterSpacing: '.14em', marginBottom: 8 }}>Train to position</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 8 }}>
+                <div className={styles.trainMenu}>
+                  <div className={styles.trainMenuTitle}>Train to position</div>
+                  <div className={styles.trainPositions}>
                     {ALL_POSITIONS.filter(p => p !== inst.player.position).map(p => {
                       const cost = calcTrainCost(inst.player.position, p)
                       const canAfford = cost !== null && budget >= cost
+                      const isRestricted = cost === null
+                      const isActive = inst.trainedPosition === p
                       return (
                         <button
                           key={p}
-                          disabled={cost === null || !canAfford}
+                          disabled={isRestricted || !canAfford}
                           onClick={() => { onTrain(inst.id, p); setTrainingFor(null) }}
-                          style={{
-                            padding: '4px 8px', fontSize: 10, fontWeight: 700,
-                            cursor: cost !== null && canAfford ? 'pointer' : 'not-allowed',
-                            background: inst.trainedPosition === p ? 'rgba(39,205,255,0.15)' : 'var(--ink)',
-                            color: cost === null ? 'var(--ash)' : !canAfford ? 'var(--ash)' : inst.trainedPosition === p ? 'var(--cyan)' : 'var(--paper)',
-                            border: `2px solid ${inst.trainedPosition === p ? 'rgba(39,205,255,0.4)' : 'rgba(244,241,234,.15)'}`,
-                            opacity: cost === null ? 0.4 : 1,
-                            fontFamily: 'var(--font-narrow)', letterSpacing: '.08em', textTransform: 'uppercase',
-                          }}
-                          title={cost === null ? 'GK restriction' : `€${(cost / 1000).toFixed(0)}k`}
+                          className={styles.trainPosBtn}
+                          data-active={String(isActive)}
+                          data-affordable={String(!isRestricted && canAfford)}
+                          data-restricted={String(isRestricted)}
+                          title={isRestricted ? 'GK restriction' : `€${(cost! / 1000).toFixed(0)}k`}
                         >
                           {p}{cost !== null ? ` €${(cost / 1000).toFixed(0)}k` : ''}
                         </button>
@@ -401,7 +370,7 @@ export default function Squad({ squad, physioLevel, budget, nextMatchday, onHeal
                     })}
                   </div>
                   <button
-                    style={{ width: '100%', padding: '5px', border: '2px solid rgba(244,241,234,.2)', background: 'transparent', color: 'var(--ash)', cursor: 'pointer', fontFamily: 'var(--font-narrow)', fontSize: 10, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase' }}
+                    className={styles.cancelBtn}
                     onClick={() => setTrainingFor(null)}
                   >
                     Cancel

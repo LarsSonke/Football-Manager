@@ -1,0 +1,350 @@
+/* ── Page wrapper ─────────────────────────────────────────────────────────── */
+.pageRoot {
+  position: relative;
+}
+
+/* ── Chapter header ───────────────────────────────────────────────────────── */
+.chapterHeader {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.chapterEyebrow {
+  font-family: var(--font-narrow);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.chapterTitle {
+  font-family: var(--font-display);
+  font-size: 42px;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  line-height: 0.88;
+}
+
+.chapterSubtitle {
+  color: var(--text-2);
+  font-size: 12px;
+  margin-top: 8px;
+  font-family: var(--font-narrow);
+  letter-spacing: 0.06em;
+}
+
+.chapterRule {
+  flex: 1;
+  height: 2px;
+  background: var(--paper);
+  margin-top: 14px;
+}
+
+.chapterActions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* ── Error margin ─────────────────────────────────────────────────────────── */
+.errorMargin {
+  margin-bottom: 16px;
+}
+
+/* ── Form panels (create / join) ──────────────────────────────────────────── */
+.formPanel {
+  border: 3px solid var(--paper);
+  background: var(--steel);
+  margin-bottom: 24px;
+}
+
+.formPanelHeader {
+  background: var(--ink);
+  border-bottom: 3px solid var(--paper);
+  padding: 10px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.formPanelTitle {
+  font-family: var(--font-display);
+  font-size: 18px;
+  letter-spacing: 0.02em;
+}
+
+.formPanelBody {
+  padding: 24px;
+}
+
+/* ── Create form grid ─────────────────────────────────────────────────────── */
+.createGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.fullSpan {
+  grid-column: 1 / -1;
+}
+
+.fieldActions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+/* ── Form labels ──────────────────────────────────────────────────────────── */
+.fieldLabel {
+  font-family: var(--font-narrow);
+  font-size: 10px;
+  color: var(--text-2);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  display: block;
+  margin-bottom: 6px;
+}
+
+/* ── Slider value display ─────────────────────────────────────────────────── */
+.sliderValueAccent {
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 400;
+  margin-bottom: 8px;
+  line-height: 1;
+}
+
+.sliderValue {
+  color: var(--text-1);
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 400;
+  margin-bottom: 8px;
+  line-height: 1;
+}
+
+.rangeInput {
+  padding: 0;
+  height: 4px;
+  background: none;
+  border: none;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+/* ── Cup toggle row ───────────────────────────────────────────────────────── */
+.cupLabel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.cupCheckbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+
+.cupTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-1);
+  font-family: var(--font-narrow);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cupDescription {
+  font-size: 11px;
+  color: var(--text-2);
+  margin-top: 2px;
+}
+
+/* ── Join form ────────────────────────────────────────────────────────────── */
+.joinStack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.joinActions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* ── Empty state ──────────────────────────────────────────────────────────── */
+.emptyState {
+  border: 3px solid var(--paper);
+  padding: 60px 0;
+  text-align: center;
+  color: var(--text-2);
+  background: var(--steel);
+}
+
+.emptyGhost {
+  font-family: var(--font-display);
+  font-size: 64px;
+  line-height: 1;
+  color: rgba(244, 241, 234, 0.06);
+  margin-bottom: 12px;
+}
+
+.emptyTitle {
+  font-family: var(--font-display);
+  font-size: 20px;
+  color: var(--text-1);
+}
+
+.emptySubtitle {
+  font-size: 13px;
+  margin-top: 8px;
+  font-family: var(--font-narrow);
+  letter-spacing: 0.06em;
+}
+
+/* ── League card list ─────────────────────────────────────────────────────── */
+.leagueList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ── League card ──────────────────────────────────────────────────────────── */
+.leagueCard {
+  border: 3px solid rgba(244, 241, 234, 0.1);
+  background: var(--steel);
+  padding: 18px 22px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  position: relative;
+  overflow: hidden;
+}
+
+.leagueCard:hover {
+  border-color: var(--paper);
+  background: #1c1c22;
+}
+
+.ghostRank {
+  position: absolute;
+  right: -8px;
+  top: -10px;
+  font-family: var(--font-display);
+  font-size: 100px;
+  line-height: 1;
+  color: rgba(244, 241, 234, 0.04);
+  pointer-events: none;
+  user-select: none;
+}
+
+.cardInner {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  position: relative;
+}
+
+.cardLeft {
+  /* natural flow */
+}
+
+.cardTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.leagueName {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  line-height: 1;
+}
+
+.cardMeta {
+  font-family: var(--font-narrow);
+  color: var(--text-2);
+  font-size: 12px;
+  display: flex;
+  gap: 18px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.metaBudget {
+  color: var(--accent);
+}
+
+.cardRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* ── Copy invite button ───────────────────────────────────────────────────── */
+.copyBtn {
+  font-family: var(--font-narrow);
+  font-size: 11px;
+  padding: 5px 14px;
+  border: 2px solid rgba(244, 241, 234, 0.4);
+  background: transparent;
+  color: var(--paper);
+  cursor: pointer;
+  font-weight: 700;
+  white-space: nowrap;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  transition: all 0.15s;
+}
+
+.copyBtnCopied {
+  background: var(--paper);
+  border-color: var(--paper);
+  color: var(--ink);
+}
+
+.cardChevron {
+  font-family: var(--font-display);
+  color: var(--text-3);
+  font-size: 22px;
+  line-height: 1;
+}
+
+/* ── Season progress bar ──────────────────────────────────────────────────── */
+.progressWrap {
+  margin-top: 14px;
+}
+
+.progressTrack {
+  height: 3px;
+  background: rgba(244, 241, 234, 0.08);
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--accent);
+  transform-origin: left;
+  animation: mgGrow 0.8s 0.2s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+
+/* ── Sign-out button override ─────────────────────────────────────────────── */
+.signOutBtn {
+  font-size: 11px;
+  padding: 6px 14px;
+}

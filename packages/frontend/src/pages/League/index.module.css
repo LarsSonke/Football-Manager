@@ -1,0 +1,999 @@
+/* ── Layout ───────────────────────────────────────────────────────────────── */
+.pageRoot {
+  display: flex;
+  min-height: 100vh;
+  background: var(--bg-base);
+}
+
+/* ── Loading state ───────────────────────────────────────────────────────── */
+.loadingWrap {
+  min-height: 100vh;
+  background: var(--bg-base);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.loadingText {
+  color: var(--text-2);
+}
+
+/* ── Sidebar ─────────────────────────────────────────────────────────────── */
+.sidebar {
+  width: 220px;
+  background: var(--steel);
+  border-right: 3px solid rgba(244, 241, 234, 0.12);
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  z-index: 50;
+}
+
+.sidebarLogo {
+  padding: 18px 20px;
+  border-bottom: 3px solid var(--paper);
+}
+
+.sidebarLogoImg {
+  height: 28px;
+  display: block;
+}
+
+/* ── Sidebar club identity ───────────────────────────────────────────────── */
+.clubIdentity {
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(244, 241, 234, 0.1);
+}
+
+.clubIdentityRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.clubActions {
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+}
+
+.clubActionBtn {
+  background: none;
+  border: 1px solid rgba(244, 241, 234, 0.2);
+  border-radius: 0;
+  cursor: pointer;
+  padding: 3px 7px;
+  font-size: 11px;
+  color: var(--text-2);
+  line-height: 1.4;
+}
+
+.clubName {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text-1);
+  margin-top: 10px;
+  line-height: 1.3;
+}
+
+.clubLeagueName {
+  font-size: 11px;
+  color: var(--text-2);
+  margin-top: 3px;
+}
+
+.clubStatusRow {
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.clubStatusBadge {
+  font-size: 9px;
+}
+
+.clubMatchday {
+  font-size: 10px;
+  color: var(--text-2);
+}
+
+.spectatorName {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text-1);
+  line-height: 1.3;
+}
+
+.spectatorLabel {
+  font-size: 11px;
+  color: var(--text-2);
+  margin-top: 4px;
+}
+
+/* ── Sidebar nav ─────────────────────────────────────────────────────────── */
+.sidebarNav {
+  flex: 1;
+  padding: 8px 12px;
+  overflow-y: auto;
+}
+
+.navItem {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  margin-bottom: 2px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  border-left: 3px solid transparent;
+  color: var(--text-2);
+  cursor: pointer;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.15s;
+}
+
+.navItem:hover {
+  color: var(--text-1);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.navItem[data-active="true"] {
+  background: rgba(229, 32, 47, 0.08);
+  border-left-color: var(--accent);
+  color: var(--paper);
+  font-weight: 700;
+}
+
+.navIcon {
+  font-family: monospace;
+  font-size: 15px;
+  line-height: 1;
+  opacity: 0.6;
+}
+
+.navItem[data-active="true"] .navIcon {
+  opacity: 1;
+}
+
+.navDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--red);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* ── Sidebar budget ──────────────────────────────────────────────────────── */
+.budgetSection {
+  padding: 14px 20px;
+  border-top: 1px solid rgba(244, 241, 234, 0.1);
+}
+
+.budgetLabel {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ash);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  margin-bottom: 3px;
+  font-family: var(--font-narrow);
+}
+
+.budgetValue {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 400;
+  color: var(--accent);
+}
+
+/* ── Sidebar footer ──────────────────────────────────────────────────────── */
+.sidebarFooter {
+  padding: 12px 20px;
+  border-top: 1px solid rgba(244, 241, 234, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sidebarFooterSpacer {
+  flex: 1;
+}
+
+.sidebarUsername {
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+/* ── Small button overrides ──────────────────────────────────────────────── */
+.backBtn {
+  font-size: 11px;
+  padding: 4px 8px;
+}
+
+.inviteBtn {
+  font-size: 12px;
+}
+
+.posIconSm {
+  font-size: 9px;
+}
+
+/* ── Mobile bottom nav ───────────────────────────────────────────────────── */
+.mobileBottomNav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  background: var(--ink);
+  border-top: 3px solid var(--paper);
+  display: flex;
+  z-index: 200;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.mobileNavItem {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-3);
+  position: relative;
+  padding: 4px 0;
+}
+
+.mobileNavItem[data-active="true"] {
+  color: var(--paper);
+}
+
+.mobileNavIcon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.mobileNavLabel {
+  font-size: 9px;
+  font-weight: 500;
+}
+
+.mobileNavItem[data-active="true"] .mobileNavLabel {
+  font-weight: 700;
+}
+
+.mobileNavDot {
+  position: absolute;
+  top: 4px;
+  right: 20%;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--red);
+}
+
+.mobileNavUnderline {
+  position: absolute;
+  bottom: 0;
+  left: 25%;
+  right: 25%;
+  height: 3px;
+  background: var(--accent);
+}
+
+/* ── Main content ────────────────────────────────────────────────────────── */
+.mainContent {
+  margin-left: 220px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* ── Top bar ─────────────────────────────────────────────────────────────── */
+.topBar {
+  background: var(--ink);
+  border-bottom: 3px solid var(--paper);
+  padding: 16px 28px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
+.topBarTitle {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  margin: 0;
+  color: var(--text-1);
+}
+
+.topBarClubName {
+  font-size: 12px;
+  color: var(--text-2);
+  font-weight: 500;
+}
+
+.topBarSpacer {
+  flex: 1;
+}
+
+.topBarErrorText {
+  font-size: 12px;
+}
+
+/* ── Notification banner ─────────────────────────────────────────────────── */
+.notifBanner {
+  padding: 7px 14px;
+  background: rgba(229, 32, 47, 0.1);
+  border: 2px solid var(--accent);
+  font-size: 12px;
+  color: var(--paper);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-narrow);
+  letter-spacing: 0.06em;
+}
+
+.notifCloseBtn {
+  background: none;
+  border: none;
+  color: var(--paper);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+
+/* ── SETUP waiting message ───────────────────────────────────────────────── */
+.setupWaiting {
+  font-family: var(--font-narrow);
+  font-size: 12px;
+  color: var(--text-2);
+  letter-spacing: 0.06em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.setupWaitingAccent {
+  color: var(--accent);
+}
+
+.setupWaitingStrong {
+  color: var(--paper);
+  font-weight: 700;
+}
+
+/* ── Draft type selector ─────────────────────────────────────────────────── */
+.draftTypeRow {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.draftTypeBtn {
+  padding: 6px 16px;
+  border-radius: 0;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  background: transparent;
+  border: 2px solid rgba(244, 241, 234, 0.2);
+  color: var(--text-2);
+  transition: all 0.15s;
+}
+
+.draftTypeBtn[data-active="true"] {
+  background: rgba(229, 32, 47, 0.12);
+  border-color: var(--accent);
+  color: var(--paper);
+}
+
+/* ── Injury/fitness banner ───────────────────────────────────────────────── */
+.injuryBanner {
+  background: rgba(255, 60, 60, 0.08);
+  border-bottom: 1px solid rgba(255, 60, 60, 0.25);
+  padding: 10px 28px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+
+.injuryBannerLabel {
+  color: var(--red);
+  font-weight: 700;
+}
+
+.injuryPlayerRed {
+  color: var(--red);
+}
+
+.injuryPlayerGold {
+  color: var(--gold);
+}
+
+.injuryDismissBtn {
+  margin-left: auto;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-2);
+  font-size: 16px;
+}
+
+/* ── Page body ───────────────────────────────────────────────────────────── */
+.pageBody {
+  padding: 24px 28px;
+  flex: 1;
+}
+
+.noClubText {
+  color: var(--text-2);
+}
+
+.emptyStateWrap {
+  text-align: center;
+  padding: 64px 0;
+  color: var(--text-2);
+}
+
+.emptyStateIcon {
+  font-size: 36px;
+  margin-bottom: 10px;
+}
+
+/* ── Growth Report modal ─────────────────────────────────────────────────── */
+.growthOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 210;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.growthPanel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  max-width: 500px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.growthHeader {
+  padding: 24px 28px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.growthTitle {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-1);
+  margin-bottom: 4px;
+}
+
+.growthSubtitle {
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.growthList {
+  padding: 16px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.growthRow {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  background: var(--bg-card-2);
+  border-radius: var(--radius-xs);
+}
+
+.growthPlayerName {
+  font-size: 13px;
+  color: var(--text-1);
+}
+
+.growthPlayerAge {
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.growthDelta {
+  font-size: 13px;
+  font-weight: 700;
+  min-width: 48px;
+  text-align: right;
+}
+
+.growthFooter {
+  padding: 14px 28px 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ── Season End Overlay ──────────────────────────────────────────────────── */
+.seasonEndOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.88);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.seasonEndPanel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  max-width: 560px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.seasonEndBanner {
+  padding: 36px 32px 28px;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+}
+
+.seasonEndTrophy {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.seasonEndEyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-2);
+  margin-bottom: 8px;
+}
+
+.seasonEndChampion {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 900;
+  color: var(--green);
+  line-height: 1.1;
+  margin-bottom: 4px;
+}
+
+.seasonEndChampionStats {
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.seasonEndStandings {
+  padding: 20px 32px;
+}
+
+.seasonEndStandingsLabel {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-2);
+  margin-bottom: 12px;
+}
+
+.seasonEndTableList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.seasonEndRow {
+  display: grid;
+  grid-template-columns: 28px 1fr 32px 32px 32px 32px 40px;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+.seasonEndRow[data-champ="true"] {
+  background: rgba(54, 226, 126, 0.08);
+  border-color: rgba(54, 226, 126, 0.25);
+}
+
+.seasonEndPos {
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--text-3);
+}
+
+.seasonEndRow[data-champ="true"] .seasonEndPos {
+  color: var(--green);
+}
+
+.seasonEndClubName {
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.seasonEndRow[data-champ="true"] .seasonEndClubName {
+  font-weight: 700;
+}
+
+.seasonEndStat {
+  font-size: 11px;
+  color: var(--text-2);
+  text-align: center;
+}
+
+.seasonEndGd {
+  font-size: 11px;
+  text-align: center;
+}
+
+.seasonEndPts {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 14px;
+  text-align: right;
+  color: var(--text-1);
+}
+
+.seasonEndRow[data-champ="true"] .seasonEndPts {
+  color: var(--green);
+}
+
+.seasonEndOutlook {
+  padding: 12px 32px;
+  border-top: 1px solid var(--border);
+}
+
+.seasonEndOutlookLabel {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-2);
+  margin-bottom: 10px;
+}
+
+.seasonEndRisingLabel {
+  font-size: 10px;
+  color: var(--green);
+  font-weight: 700;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.seasonEndAgingLabel {
+  font-size: 10px;
+  color: var(--gold);
+  font-weight: 700;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.seasonEndProspectList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.seasonEndVeteranList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.seasonEndPlayerRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.seasonEndPlayerName {
+  flex: 1;
+  color: var(--text-1);
+}
+
+.seasonEndPlayerAge {
+  color: var(--text-3);
+}
+
+.seasonEndPlayerAgeGold {
+  color: var(--gold);
+}
+
+.seasonEndPlayerOvr {
+  color: var(--text-2);
+}
+
+.seasonEndPlayerPot {
+  color: var(--green);
+  font-weight: 700;
+}
+
+.seasonEndPosIcon {
+  font-size: 9px;
+}
+
+.seasonEndDevNote {
+  padding: 12px 32px;
+  background: rgba(54, 226, 126, 0.05);
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.seasonEndWaitingNote {
+  padding: 10px 32px;
+  background: rgba(39, 205, 255, 0.06);
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--cyan);
+  text-align: center;
+}
+
+.seasonEndActions {
+  padding: 16px 32px 28px;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  border-top: 1px solid var(--border);
+}
+
+/* ── Live Ticker ─────────────────────────────────────────────────────────── */
+.liveTickerWrap {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 360px;
+  width: 100%;
+}
+
+.liveTickerCard {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--border);
+}
+
+.liveTickerCardLive {
+  border-color: rgba(232, 128, 106, 0.5);
+}
+
+.liveTickerHeader {
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(54, 226, 126, 0.08);
+}
+
+.liveTickerHeaderLive {
+  background: rgba(232, 128, 106, 0.1);
+}
+
+.liveTickerStatus {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--green);
+}
+
+.liveTickerStatusLive {
+  color: var(--red);
+}
+
+.liveTickerHeaderSpacer {
+  flex: 1;
+}
+
+.liveTickerCloseBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-3);
+  font-size: 16px;
+  line-height: 1;
+  padding: 0;
+}
+
+.liveTickerBody {
+  padding: 12px 14px;
+}
+
+.liveTickerScore {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.liveTickerHomeClub {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-1);
+}
+
+.liveTickerAwayClub {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-1);
+  text-align: right;
+}
+
+.liveTickerScoreDisplay {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 900;
+  color: var(--text-1);
+  text-align: center;
+  min-width: 60px;
+}
+
+.liveTickerEvents {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.liveTickerEvent {
+  font-size: 11px;
+  color: var(--text-2);
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.liveTickerEventMinute {
+  color: var(--text-3);
+  min-width: 28px;
+}
+
+.liveTickerEventName {
+  color: var(--text-1);
+}
+
+.liveTickerEventNameGoal {
+  color: var(--green);
+}
+
+.liveTickerEventNameRed {
+  color: var(--red);
+}
+
+.liveTickerEventClub {
+  color: var(--text-3);
+}
+
+.liveTickerOtherHeader {
+  padding: 6px 14px;
+  border-bottom: 1px solid var(--border);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-3);
+}
+
+.liveTickerOtherList {
+  padding: 6px 0;
+}
+
+.liveTickerOtherRow {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 14px;
+}
+
+.liveTickerOtherHome {
+  font-size: 11px;
+  color: var(--text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.liveTickerOtherAway {
+  font-size: 11px;
+  color: var(--text-2);
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.liveTickerOtherScore {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-1);
+  min-width: 40px;
+  text-align: center;
+}
+
+.liveTickerDismissBtn {
+  font-size: 11px;
+  padding: 6px 12px;
+  align-self: flex-end;
+}
+
+/* ── Responsive: hide sidebar on mobile, show bottom nav ─────────────────── */
+@media (max-width: 767px) {
+  .sidebar {
+    display: none;
+  }
+
+  .mainContent {
+    margin-left: 0;
+    padding-bottom: 56px;
+  }
+
+  .topBar {
+    padding: 12px 16px;
+  }
+
+  .pageBody {
+    padding: 16px 12px;
+  }
+
+  .injuryBanner {
+    padding: 10px 16px;
+  }
+}
+
+@media (min-width: 768px) {
+  .mobileBottomNav {
+    display: none;
+  }
+}

@@ -1,0 +1,227 @@
+/* ── Loading / empty states ──────────────────────────────────────────────── */
+.loadingState {
+  padding: 64px 0;
+  text-align: center;
+  color: var(--text-2);
+}
+.setupState {
+  text-align: center;
+  padding: 64px 0;
+  color: var(--text-2);
+}
+.setupIcon {
+  font-size: 36px;
+  margin-bottom: 10px;
+}
+.setupTitle {
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.setupSubtitle {
+  font-size: 13px;
+  color: var(--text-3);
+}
+
+/* ── Page wrapper ────────────────────────────────────────────────────────── */
+.pageWrap {
+  max-width: 680px;
+}
+
+/* ── Category tab row ────────────────────────────────────────────────────── */
+.catTabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.catTab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 13px;
+  border-width: 1.5px;
+  border-style: solid;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.catTab[data-active="true"] {
+  font-weight: 700;
+  background: rgba(54, 226, 126, 0.12);
+  border-color: var(--green);
+  color: var(--green);
+}
+.catTab[data-active="false"] {
+  font-weight: 500;
+  background: var(--bg-card);
+  border-color: var(--border);
+  color: var(--text-2);
+}
+
+/* ── No-data messages ────────────────────────────────────────────────────── */
+.noData {
+  text-align: center;
+  padding: 40px 0;
+  color: var(--text-2);
+}
+
+/* ── Leaderboard table ───────────────────────────────────────────────────── */
+.leaderboard {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+/* ── Leaderboard row ─────────────────────────────────────────────────────── */
+.leaderRow {
+  display: grid;
+  grid-template-columns: 40px 1fr auto;
+  align-items: center;
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.leaderRow:last-child {
+  border-bottom: none;
+}
+.leaderRow[data-top="true"] {
+  background: rgba(255, 196, 0, 0.04);
+}
+
+/* ── Rank cell ───────────────────────────────────────────────────────────── */
+.rankCell {
+  font-family: var(--font-display);
+  font-weight: 800;
+  text-align: center;
+}
+.rankCell[data-top="true"]  { font-size: 20px; }
+.rankCell[data-top="false"] { font-size: 14px; }
+/* medal colour is set inline since it's computed (gold/silver/bronze/dim) */
+
+/* ── Player info cell ────────────────────────────────────────────────────── */
+.playerInfo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.playerDetails {
+  min-width: 0;
+}
+.playerNameText {
+  font-size: 14px;
+  color: var(--text-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.playerNameText[data-top="true"]  { font-weight: 700; }
+.playerNameText[data-top="false"] { font-weight: 600; }
+.playerMeta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+.playerClub {
+  font-size: 11px;
+  color: var(--text-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Stat value cell ─────────────────────────────────────────────────────── */
+.statValueCell {
+  text-align: right;
+}
+.statPrimary {
+  font-family: var(--font-display);
+  font-weight: 800;
+  line-height: 1;
+}
+.statPrimary[data-top="true"] {
+  font-size: 26px;
+  color: var(--gold);
+}
+.statPrimary[data-top="false"] {
+  font-size: 20px;
+  color: var(--text-1);
+}
+.statSecondary {
+  font-size: 10px;
+  color: var(--text-3);
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+/* ── TOTW Pitch ──────────────────────────────────────────────────────────── */
+.pitchWrap {
+  position: relative;
+  width: 100%;
+  padding-bottom: 62%;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #1a5c28;
+}
+.pitchSvg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.pitchPlayerPin {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 72px;
+}
+.pitchNameplate {
+  background: rgba(0, 0, 0, 0.72);
+  border-radius: 4px;
+  padding: 2px 6px;
+  text-align: center;
+  backdrop-filter: blur(4px);
+}
+.pitchLastName {
+  font-size: 9px;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  line-height: 1.3;
+  max-width: 68px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pitchRatingRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+.pitchPosLabel {
+  font-size: 7px;
+  padding: 1px 3px;
+}
+.pitchRating {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 900;
+  color: var(--gold);
+  line-height: 1;
+}
+.pitchContribRow {
+  font-size: 8px;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.2;
+}
+.pitchGoals {
+  color: #7effa0;
+}
+.pitchAssists {
+  color: #7dd3fc;
+}

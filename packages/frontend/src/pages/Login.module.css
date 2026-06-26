@@ -1,0 +1,125 @@
+/* ── Page centering ───────────────────────────────────────────────────────── */
+.pageRoot {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  position: relative;
+}
+
+/* ── Card container ───────────────────────────────────────────────────────── */
+.card {
+  width: 100%;
+  max-width: 420px;
+  position: relative;
+  animation: mgSlam 0.5s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+
+/* ── Logo link block ──────────────────────────────────────────────────────── */
+.logoWrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+/* ── Manga panel ──────────────────────────────────────────────────────────── */
+.panel {
+  border: 3px solid var(--paper);
+  background: var(--steel);
+  overflow: hidden;
+}
+
+/* ── Panel header ─────────────────────────────────────────────────────────── */
+.panelHeader {
+  background: var(--ink);
+  padding: 9px 20px;
+  border-bottom: 3px solid var(--paper);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.panelTitle {
+  font-family: var(--font-display);
+  font-size: 18px;
+  letter-spacing: 0.02em;
+}
+
+.modeTabs {
+  display: flex;
+}
+
+/* ── Mode tab buttons ─────────────────────────────────────────────────────── */
+.modeTab {
+  padding: 4px 14px;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-narrow);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  background: transparent;
+  color: var(--ash);
+  transition: all 0.15s;
+}
+
+.modeTabActive {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* ── Form body ────────────────────────────────────────────────────────────── */
+.form {
+  padding: 24px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ── Form inputs ──────────────────────────────────────────────────────────── */
+.input {
+  background: var(--ink);
+  border: 2px solid rgba(244, 241, 234, 0.2);
+  color: var(--paper);
+  font-family: var(--font-narrow);
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  border-radius: 0;
+}
+
+/* ── Error margin ─────────────────────────────────────────────────────────── */
+.errorNoMargin {
+  margin: 0;
+}
+
+/* ── Submit button ────────────────────────────────────────────────────────── */
+.submitBtn {
+  margin-top: 4px;
+  padding: 14px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  clip-path: polygon(0 0, 100% 0, 96% 100%, 0 100%);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  transition: transform 0.2s;
+}
+
+.submitBtn:not(:disabled) {
+  cursor: pointer;
+}
+
+.submitBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.submitBtn:not(:disabled):hover {
+  transform: translateX(4px);
+}

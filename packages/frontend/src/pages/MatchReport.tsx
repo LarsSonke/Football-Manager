@@ -3,6 +3,7 @@ import { useParams, Link, useLocation, useNavigate } from 'react-router-dom'
 import { api } from '../api/client'
 import { ClubBadge, type LogoConfig } from '../components/ClubBadge'
 import { getBadgeColor, ratingColor, posClass } from '../utils/helpers'
+import styles from './MatchReport.module.css'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -28,8 +29,8 @@ interface MatchEvent {
 interface PlayerPerf {
   instanceId: string
   playerName: string
-  position: string          // natural position (Player.position)
-  positionPlayed: string | null  // assigned position this match
+  position: string
+  positionPlayed: string | null
   rating: number
   goals: number
   assists: number
@@ -52,21 +53,20 @@ interface MatchDetail {
 
 // ─── Small helpers ────────────────────────────────────────────────────────────
 
-// Two-sided bar comparing home vs away value
 function StatRow({ label, home, away, format = (n: number) => String(n) }: {
   label: string; home: number; away: number; format?: (n: number) => string
 }) {
   const total = home + away || 1
   const homePct = (home / total) * 100
   return (
-    <div style={{ marginBottom: 12 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
-        <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: 'var(--text-1)' }}>{format(home)}</span>
-        <span style={{ color: 'var(--text-2)', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</span>
-        <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: 'var(--text-1)' }}>{format(away)}</span>
+    <div className={styles.statRowWrap}>
+      <div className={styles.statRowLabels}>
+        <span className={styles.statRowValue}>{format(home)}</span>
+        <span className={styles.statRowLabel}>{label}</span>
+        <span className={styles.statRowValue}>{format(away)}</span>
       </div>
-      <div style={{ height: 5, borderRadius: 3, overflow: 'hidden', display: 'flex', background: 'rgba(232,128,106,0.5)' }}>
-        <div style={{ width: `${homePct}%`, background: 'var(--green)', transition: 'width 0.6s ease' }} />
+      <div className={styles.statBarTrack}>
+        <div className={styles.statBarFill} style={{ width: `${homePct}%` }} />
       </div>
     </div>
   )
@@ -82,7 +82,7 @@ const REPLAY_SPEEDS = [
 
 function ReplayTicker({ match, onClose }: { match: MatchDetail; onClose: () => void }) {
   const allEvents = [...match.events].sort((a, b) => a.minute - b.minute)
-  const [shown, setShown] = useState<number>(0)  // index of next event to reveal
+  const [shown, setShown] = useState<number>(0)
   const [running, setRunning] = useState(true)
   const [speedIdx, setSpeedIdx] = useState(0)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -113,62 +113,61 @@ function ReplayTicker({ match, onClose }: { match: MatchDetail; onClose: () => v
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
-      onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 16, width: '100%', maxWidth: 520, maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div
+      className={styles.replayOverlay}
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div className={styles.replayPanel}>
         {/* Header */}
-        <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0, background: 'var(--bg-base)' }}>
-          <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-2)', flex: 1 }}>Match Replay</span>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-2)', fontSize: 18, lineHeight: 1, padding: '2px 6px' }}>✕</button>
+        <div className={styles.replayHeader}>
+          <span className={styles.replayTitle}>Match Replay</span>
+          <button onClick={onClose} className={styles.replayCloseBtn}>✕</button>
         </div>
+
         {/* Score */}
-        <div style={{ padding: '20px 24px 16px', textAlign: 'center', flexShrink: 0, borderBottom: '1px solid var(--border)' }}>
-          <div style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
+        <div className={styles.replayScore}>
+          <div className={styles.replayMinute}>
             {done ? 'Full Time' : `${currentMinute}'`}
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 16 }}>
-            <div style={{ textAlign: 'right', fontWeight: 700, fontSize: 14, color: 'var(--text-1)' }}>{match.homeClub.name}</div>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 42, fontWeight: 900, color: 'var(--text-1)', letterSpacing: 4, lineHeight: 1 }}>
-              {homeScore}<span style={{ color: 'var(--text-3)', margin: '0 4px' }}>–</span>{awayScore}
+          <div className={styles.replayScoreGrid}>
+            <div className={styles.replayTeamHome}>{match.homeClub.name}</div>
+            <div className={styles.replayScoreValue}>
+              {homeScore}<span className={styles.replayScoreSep}>–</span>{awayScore}
             </div>
-            <div style={{ textAlign: 'left', fontWeight: 700, fontSize: 14, color: 'var(--text-1)' }}>{match.awayClub.name}</div>
+            <div className={styles.replayTeamAway}>{match.awayClub.name}</div>
           </div>
         </div>
+
         {/* Events feed */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '12px 20px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div className={styles.replayFeed}>
           {shown === 0 && (
-            <div style={{ textAlign: 'center', color: 'var(--text-3)', fontSize: 13, padding: '24px 0' }}>
-              Kick off!
-            </div>
+            <div className={styles.replayKickoff}>Kick off!</div>
           )}
           {[...visibleEvents].reverse().map((e, i) => {
             const isHome = e.team === 'home'
             const isSub = e.type === 'SUBSTITUTION'
             const isGoal = e.type === 'GOAL' || e.type === 'OWN_GOAL'
+            const rowClass = i === 0
+              ? (isGoal ? styles.replayEventLatestGoal : styles.replayEventLatest)
+              : styles.replayEventOld
+            const sideClass = isGoal ? styles.replayEventGoal : styles.replayEventNormal
             return (
-              <div key={e.id} style={{
-                display: 'grid', gridTemplateColumns: '1fr 48px 1fr',
-                alignItems: 'center', gap: 8, fontSize: 12,
-                padding: '6px 8px', borderRadius: 6,
-                background: i === 0 ? (isGoal ? 'rgba(54,226,126,0.1)' : 'rgba(255,255,255,0.04)') : 'transparent',
-                border: i === 0 ? `1px solid ${isGoal ? 'rgba(54,226,126,0.25)' : 'rgba(255,255,255,0.08)'}` : '1px solid transparent',
-                transition: 'all 0.3s',
-              }}>
+              <div key={e.id} className={rowClass}>
                 {isHome ? (
-                  <div style={{ textAlign: 'right', fontWeight: isGoal ? 700 : 400, color: isGoal ? 'var(--text-1)' : 'var(--text-2)' }}>
+                  <div className={`${styles.replayEventHome} ${sideClass}`}>
                     <span>{e.playerName ?? '?'}</span>
-                    {isSub && <span style={{ color: 'var(--text-3)', margin: '0 3px' }}>▶</span>}
-                    {isSub && <span style={{ color: 'var(--green)', fontWeight: 600 }}>{e.assistName ?? '?'}</span>}
+                    {isSub && <span className={styles.replaySubArrow}>▶</span>}
+                    {isSub && <span className={styles.replaySubIn}>{e.assistName ?? '?'}</span>}
                   </div>
                 ) : <div />}
-                <div style={{ textAlign: 'center', fontWeight: 700, color: 'var(--text-3)', fontSize: 11, lineHeight: 1.3 }}>
+                <div className={styles.replayCenter}>
                   <div>{eventIcon(e.type)}</div>
                   <div>{e.minute}'</div>
                 </div>
                 {!isHome ? (
-                  <div style={{ textAlign: 'left', fontWeight: isGoal ? 700 : 400, color: isGoal ? 'var(--text-1)' : 'var(--text-2)' }}>
-                    {isSub && <span style={{ color: 'var(--green)', fontWeight: 600 }}>{e.assistName ?? '?'}</span>}
-                    {isSub && <span style={{ color: 'var(--text-3)', margin: '0 3px' }}>▶</span>}
+                  <div className={`${styles.replayEventAway} ${sideClass}`}>
+                    {isSub && <span className={styles.replaySubIn}>{e.assistName ?? '?'}</span>}
+                    {isSub && <span className={styles.replaySubArrow}>▶</span>}
                     <span>{e.playerName ?? '?'}</span>
                   </div>
                 ) : <div />}
@@ -176,39 +175,37 @@ function ReplayTicker({ match, onClose }: { match: MatchDetail; onClose: () => v
             )
           })}
           {done && allEvents.length === 0 && (
-            <div style={{ textAlign: 'center', color: 'var(--text-3)', fontSize: 13, padding: '16px 0' }}>No events recorded.</div>
+            <div className={styles.replayNoEvents}>No events recorded.</div>
           )}
         </div>
+
         {/* Controls */}
-        <div style={{ padding: '12px 20px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+        <div className={styles.replayControls}>
           {!done ? (
-            <button
-              onClick={() => setRunning(r => !r)}
-              style={{ background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: 'var(--text-1)', minWidth: 48 }}
-            >
+            <button onClick={() => setRunning(r => !r)} className={styles.replayPlayBtn}>
               {running ? '⏸' : '▶'}
             </button>
           ) : (
             <button
               onClick={() => { setShown(0); setRunning(true) }}
-              style={{ background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: 'var(--green)' }}
+              className={styles.replayRestartBtn}
             >
               ↺ Replay
             </button>
           )}
-          <div style={{ display: 'flex', gap: 4 }}>
+          <div className={styles.speedBtns}>
             {REPLAY_SPEEDS.map((s, i) => (
-              <button key={s.label} onClick={() => setSpeedIdx(i)} style={{
-                background: speedIdx === i ? 'rgba(54,226,126,0.15)' : 'var(--bg-base)',
-                border: `1px solid ${speedIdx === i ? 'rgba(54,226,126,0.4)' : 'var(--border)'}`,
-                borderRadius: 6, padding: '4px 10px', cursor: 'pointer',
-                fontSize: 11, fontWeight: 700,
-                color: speedIdx === i ? 'var(--green)' : 'var(--text-2)',
-              }}>{s.label}</button>
+              <button
+                key={s.label}
+                onClick={() => setSpeedIdx(i)}
+                className={speedIdx === i ? styles.speedBtnActive : styles.speedBtn}
+              >
+                {s.label}
+              </button>
             ))}
           </div>
-          <span style={{ flex: 1 }} />
-          {done && <span style={{ fontSize: 11, color: 'var(--green)', fontWeight: 700 }}>Full Time</span>}
+          <span className={styles.replayControlsSpacer} />
+          {done && <span className={styles.replayFtLabel}>Full Time</span>}
         </div>
       </div>
     </div>
@@ -249,16 +246,8 @@ export default function MatchReport() {
       .catch(() => {})
   }, [leagueId])
 
-  if (loading) return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-2)' }}>
-      Loading match…
-    </div>
-  )
-  if (error || !match) return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--red)' }}>
-      {error || 'Match not found'}
-    </div>
-  )
+  if (loading) return <div className={styles.loadingState}>Loading match…</div>
+  if (error || !match) return <div className={styles.errorState}>{error || 'Match not found'}</div>
 
   const h = match.homeScore ?? 0
   const a = match.awayScore ?? 0
@@ -272,7 +261,6 @@ export default function MatchReport() {
   const homeGoals = goals.filter(e => e.team === 'home')
   const awayGoals = goals.filter(e => e.team === 'away')
 
-  // Group goals per scorer: "Messi 12' 34'"
   function goalLines(evts: MatchEvent[]) {
     const map: Record<string, number[]> = {}
     for (const e of evts) {
@@ -282,37 +270,24 @@ export default function MatchReport() {
     return Object.entries(map).map(([name, mins]) => `${name} ${mins.map(m => `${m}'`).join(' ')}`)
   }
 
-  // MOTM — highest rated player
   const allPerfs = [...match.performances.home, ...match.performances.away]
   const motm = allPerfs.length ? allPerfs.reduce((best, p) => p.rating > best.rating ? p : best) : null
   const motmTeam = motm && match.performances.home.find(p => p.instanceId === motm.instanceId)
     ? match.homeClub.name
     : match.awayClub.name
 
-  const card: React.CSSProperties = {
-    background: 'var(--bg-card)', border: '1px solid var(--border)',
-    borderRadius: 'var(--radius)', padding: '20px 24px',
-  }
-  const secLabel: React.CSSProperties = {
-    fontSize: 10, fontWeight: 800, letterSpacing: '0.12em',
-    textTransform: 'uppercase', color: 'var(--text-2)', marginBottom: 14,
-  }
-
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', padding: '24px 16px' }}>
+    <div className={styles.page}>
       {showReplay && <ReplayTicker match={match} onClose={() => setShowReplay(false)} />}
-      <div style={{ maxWidth: 860, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div className={styles.inner}>
 
         {/* Back + prev/next */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Link to={`/league/${leagueId}`} state={{ tab: backTab }} style={{ color: 'var(--text-2)', fontSize: 13, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+        <div className={styles.nav}>
+          <Link to={`/league/${leagueId}?tab=${backTab}`} className={styles.backLink}>
             ← Back to league
           </Link>
-          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-            <button
-              onClick={() => setShowReplay(true)}
-              style={{ background: 'rgba(54,226,126,0.1)', border: '1px solid rgba(54,226,126,0.3)', borderRadius: 'var(--radius-xs)', padding: '5px 12px', cursor: 'pointer', color: 'var(--green)', fontSize: 12, fontWeight: 700 }}
-            >
+          <div className={styles.navRight}>
+            <button onClick={() => setShowReplay(true)} className={styles.replayBtn}>
               ▶ Replay
             </button>
             {siblingIds.length > 1 && (() => {
@@ -321,8 +296,20 @@ export default function MatchReport() {
               const nextId = idx < siblingIds.length - 1 ? siblingIds[idx + 1] : null
               return (
                 <>
-                  <button onClick={() => prevId && navigate(`/league/${leagueId}/match/${prevId}`, { state: { tab: backTab } })} disabled={!prevId} style={{ background: 'var(--bg-card-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-xs)', padding: '5px 10px', cursor: prevId ? 'pointer' : 'not-allowed', color: prevId ? 'var(--text-1)' : 'var(--text-3)', fontSize: 13 }}>‹ Prev</button>
-                  <button onClick={() => nextId && navigate(`/league/${leagueId}/match/${nextId}`, { state: { tab: backTab } })} disabled={!nextId} style={{ background: 'var(--bg-card-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-xs)', padding: '5px 10px', cursor: nextId ? 'pointer' : 'not-allowed', color: nextId ? 'var(--text-1)' : 'var(--text-3)', fontSize: 13 }}>Next ›</button>
+                  <button
+                    onClick={() => prevId && navigate(`/league/${leagueId}/match/${prevId}`, { state: { tab: backTab } })}
+                    disabled={!prevId}
+                    className={prevId ? styles.prevNextBtn : styles.prevNextBtnDisabled}
+                  >
+                    ‹ Prev
+                  </button>
+                  <button
+                    onClick={() => nextId && navigate(`/league/${leagueId}/match/${nextId}`, { state: { tab: backTab } })}
+                    disabled={!nextId}
+                    className={nextId ? styles.prevNextBtn : styles.prevNextBtnDisabled}
+                  >
+                    Next ›
+                  </button>
                 </>
               )
             })()}
@@ -330,57 +317,51 @@ export default function MatchReport() {
         </div>
 
         {/* ── Score header ──────────────────────────────── */}
-        <div style={{ ...card, padding: '28px 32px' }}>
-          <div style={{ fontSize: 11, color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 700, textAlign: 'center', marginBottom: 24 }}>
+        <div className={styles.scoreCard}>
+          <div className={styles.matchday}>
             Matchday {match.matchday} · Full Time
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 16 }}>
-
+          <div className={styles.scoreGrid}>
             {/* Home team */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+            <div className={styles.homeTeam}>
               <ClubBadge name={match.homeClub.name} size={56} logoConfig={match.homeClub.logoConfig} />
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: homeWin ? 'var(--text-1)' : 'var(--text-2)', textAlign: 'right' }}>
+              <div className={homeWin ? styles.homeTeamNameWinner : styles.homeTeamNameLoser}>
                 {match.homeClub.name}
               </div>
-              <div style={{ fontSize: 10, color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>Home</div>
-              <div style={{ textAlign: 'right', marginTop: 4 }}>
+              <div className={styles.teamSideLabel}>Home</div>
+              <div className={styles.goalLines}>
                 {goalLines(homeGoals).map(line => (
-                  <div key={line} style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.7 }}>⚽ {line}</div>
+                  <div key={line} className={styles.goalLine}>⚽ {line}</div>
                 ))}
               </div>
             </div>
 
             {/* Score */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: 64, fontWeight: 900, letterSpacing: 6, lineHeight: 1, color: 'var(--text-1)' }}>
-                {h}<span style={{ color: 'var(--text-3)', margin: '0 6px' }}>–</span>{a}
+            <div className={styles.scoreCol}>
+              <div className={styles.scoreDisplay}>
+                {h}<span className={styles.scoreSep}>–</span>{a}
               </div>
-              <div style={{
-                fontSize: 12, fontWeight: 800, padding: '3px 12px', borderRadius: 20, letterSpacing: 0.5,
-                background: homeWin ? 'rgba(54,226,126,0.12)' : awayWin ? 'rgba(232,128,106,0.12)' : 'rgba(255,255,255,0.06)',
-                color: homeWin ? 'var(--green)' : awayWin ? 'var(--red)' : 'var(--text-3)',
-                border: `1px solid ${homeWin ? 'rgba(54,226,126,0.3)' : awayWin ? 'rgba(232,128,106,0.3)' : 'var(--border)'}`,
-              }}>
+              <div className={homeWin ? styles.resultBadgeHomeWin : awayWin ? styles.resultBadgeAwayWin : styles.resultBadgeDraw}>
                 {homeWin ? `${match.homeClub.name} Win` : awayWin ? `${match.awayClub.name} Win` : 'Draw'}
               </div>
               {match.simulatedAt && (
-                <div style={{ fontSize: 10, color: 'var(--text-3)' }}>
+                <div className={styles.matchDate}>
                   {new Date(match.simulatedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}
                 </div>
               )}
             </div>
 
             {/* Away team */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
+            <div className={styles.awayTeam}>
               <ClubBadge name={match.awayClub.name} size={56} logoConfig={match.awayClub.logoConfig} />
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: awayWin ? 'var(--text-1)' : 'var(--text-2)' }}>
+              <div className={awayWin ? styles.awayTeamNameWinner : styles.awayTeamNameLoser}>
                 {match.awayClub.name}
               </div>
-              <div style={{ fontSize: 10, color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>Away</div>
-              <div style={{ marginTop: 4 }}>
+              <div className={styles.teamSideLabel}>Away</div>
+              <div className={styles.awayGoalLines}>
                 {goalLines(awayGoals).map(line => (
-                  <div key={line} style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.7 }}>⚽ {line}</div>
+                  <div key={line} className={styles.goalLine}>⚽ {line}</div>
                 ))}
               </div>
             </div>
@@ -389,31 +370,29 @@ export default function MatchReport() {
 
         {/* ── MOTM ──────────────────────────────────────── */}
         {motm && (
-          <div style={{ ...card, background: 'linear-gradient(135deg, rgba(54,226,126,0.08) 0%, var(--bg-card) 60%)', border: '1px solid rgba(54,226,126,0.25)' }}>
-            <div style={{ ...secLabel, color: 'var(--green)' }}>Man of the Match</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-              <div style={{
-                width: 56, height: 56, borderRadius: '50%',
-                background: getBadgeColor(motm.playerName),
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 18, fontWeight: 900, color: '#000', flexShrink: 0,
-              }}>
+          <div className={styles.motmCard}>
+            <div className={styles.secLabelGreen}>Man of the Match</div>
+            <div className={styles.motmBody}>
+              <div
+                className={styles.motmAvatar}
+                style={{ background: getBadgeColor(motm.playerName) }}
+              >
                 {motm.playerName.split(' ').map(w => w[0]).slice(0, 2).join('')}
               </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--text-1)', marginBottom: 4 }}>{motm.playerName}</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span className={posClass(motm.positionPlayed ?? motm.position)} style={{ fontSize: 10 }}>{motm.positionPlayed ?? motm.position}</span>
+              <div className={styles.motmInfo}>
+                <div className={styles.motmName}>{motm.playerName}</div>
+                <div className={styles.motmMeta}>
+                  <span className={`${posClass(motm.positionPlayed ?? motm.position)} ${styles.motmPosTag}`}>{motm.positionPlayed ?? motm.position}</span>
                   {motm.positionPlayed && motm.positionPlayed !== motm.position && (
-                    <span style={{ fontSize: 10, color: 'var(--text-3)', background: 'var(--bg-card-2)', border: '1px solid var(--border)', borderRadius: 3, padding: '0 4px' }} title="Natural position">{motm.position}</span>
+                    <span className={styles.motmNatPos} title="Natural position">{motm.position}</span>
                   )}
-                  <span style={{ fontSize: 12, color: 'var(--text-2)' }}>{motmTeam}</span>
-                  {motm.goals > 0 && <span style={{ fontSize: 12, color: 'var(--text-2)' }}>⚽ {motm.goals}</span>}
-                  {motm.assists > 0 && <span style={{ fontSize: 12, color: 'var(--text-2)' }}>🅰️ {motm.assists}</span>}
-                  <span style={{ fontSize: 12, color: 'var(--text-2)' }}>{motm.minutesPlayed}'</span>
+                  <span className={styles.motmMetaItem}>{motmTeam}</span>
+                  {motm.goals > 0 && <span className={styles.motmMetaItem}>⚽ {motm.goals}</span>}
+                  {motm.assists > 0 && <span className={styles.motmMetaItem}>🅰️ {motm.assists}</span>}
+                  <span className={styles.motmMetaItem}>{motm.minutesPlayed}'</span>
                 </div>
               </div>
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: 44, fontWeight: 900, color: ratingColor(motm.rating), lineHeight: 1 }}>
+              <div className={styles.motmRating} style={{ color: ratingColor(motm.rating) }}>
                 {motm.rating.toFixed(1)}
               </div>
             </div>
@@ -421,15 +400,15 @@ export default function MatchReport() {
         )}
 
         {/* ── Timeline + Stats side by side ─────────────── */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)', gap: 16 }}>
+        <div className={styles.twoCol}>
 
           {/* Timeline */}
-          <div style={card}>
-            <div style={secLabel}>Timeline</div>
+          <div className={styles.card}>
+            <div className={styles.secLabel}>Timeline</div>
             {timeline.length === 0 ? (
-              <div style={{ color: 'var(--text-2)', fontSize: 13 }}>No events recorded.</div>
+              <div className={styles.timelineEmpty}>No events recorded.</div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div className={styles.timeline}>
                 {timeline.map(e => {
                   const isHome = e.team === 'home'
                   const isSub = e.type === 'SUBSTITUTION'
@@ -439,27 +418,27 @@ export default function MatchReport() {
 
                   const nameBlock = isSub ? (
                     <span>
-                      <span style={{ color: 'var(--red)', fontWeight: 600 }}>{e.playerName ?? '?'}</span>
-                      <span style={{ color: 'var(--text-3)', margin: '0 3px' }}>▶</span>
-                      <span style={{ color: 'var(--green)', fontWeight: 600 }}>{e.assistName ?? '?'}</span>
+                      <span className={styles.subOut}>{e.playerName ?? '?'}</span>
+                      <span className={styles.subArrow}>▶</span>
+                      <span className={styles.subIn}>{e.assistName ?? '?'}</span>
                     </span>
                   ) : (
                     <span>
-                      <span style={{ fontWeight: 600 }}>{e.playerName ?? '?'}</span>
-                      {e.assistName && <span style={{ fontSize: 11, color: 'var(--text-2)' }}> ({e.assistName})</span>}
+                      <span className={styles.eventScorer}>{e.playerName ?? '?'}</span>
+                      {e.assistName && <span className={styles.eventAssist}> ({e.assistName})</span>}
                     </span>
                   )
 
                   return (
-                    <div key={e.id} style={{ display: 'grid', gridTemplateColumns: '1fr 52px 1fr', alignItems: 'center', gap: 4, fontSize: 12 }}>
+                    <div key={e.id} className={styles.timelineRow}>
                       {isHome
-                        ? <div style={{ textAlign: 'right' }}>{nameBlock}</div>
+                        ? <div className={styles.timelineHome}>{nameBlock}</div>
                         : <div />}
-                      <div style={{ textAlign: 'center', color: 'var(--text-2)', fontWeight: 700, fontSize: 11 }}>
+                      <div className={styles.timelineCenter}>
                         {icon} {e.minute}'
                       </div>
                       {!isHome
-                        ? <div style={{ textAlign: 'left' }}>{nameBlock}</div>
+                        ? <div className={styles.timelineAway}>{nameBlock}</div>
                         : <div />}
                     </div>
                   )
@@ -470,10 +449,9 @@ export default function MatchReport() {
 
           {/* Stats */}
           {match.stats ? (
-            <div style={card}>
-              <div style={{ ...secLabel, marginBottom: 10 }}>Match Stats</div>
-              {/* Team name labels */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 700, color: 'var(--text-2)', marginBottom: 12 }}>
+            <div className={styles.statsCard}>
+              <div className={styles.statsHeader}>Match Stats</div>
+              <div className={styles.statsTeamRow}>
                 <span>{match.homeClub.name}</span>
                 <span>{match.awayClub.name}</span>
               </div>
@@ -501,47 +479,39 @@ export default function MatchReport() {
 
         {/* ── Player ratings ────────────────────────────── */}
         {allPerfs.length > 0 && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div className={styles.ratingsGrid}>
             {([
               { club: match.homeClub, perfs: match.performances.home },
               { club: match.awayClub, perfs: match.performances.away },
             ] as const).map(({ club, perfs }) => (
-              <div key={club.id} style={card}>
-                <div style={{ ...secLabel, marginBottom: 6 }}>{club.name}</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+              <div key={club.id} className={styles.ratingsCard}>
+                <div className={styles.ratingsTeamLabel}>{club.name}</div>
+                <div className={styles.ratingsList}>
                   {perfs.map(p => {
                     const displayPos = p.positionPlayed ?? p.position
                     const isCrossRole = p.positionPlayed && p.positionPlayed !== p.position
                     return (
-                    <div key={p.instanceId} style={{
-                      display: 'flex', alignItems: 'center', gap: 8, padding: '5px 8px',
-                      borderRadius: 6,
-                      background: p === motm ? 'rgba(54,226,126,0.06)' : 'transparent',
-                      border: `1px solid ${p === motm ? 'rgba(54,226,126,0.2)' : 'transparent'}`,
-                    }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, minWidth: 30 }}>
-                        <span className={posClass(displayPos)} style={{ fontSize: 9 }}>{displayPos}</span>
-                        {isCrossRole && (
-                          <span style={{ fontSize: 8, color: 'var(--text-3)', lineHeight: 1 }} title="Natural position">{p.position}</span>
-                        )}
-                      </div>
-                      <span style={{ flex: 1, fontSize: 13, fontWeight: p.goals > 0 ? 700 : 500, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {p.playerName}
-                      </span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-                        {p.goals > 0   && <span style={{ fontSize: 11 }}>⚽{p.goals}</span>}
-                        {p.assists > 0 && <span style={{ fontSize: 11 }}>🅰️{p.assists}</span>}
-                        {p.minutesPlayed < 90 && (
-                          <span style={{ fontSize: 10, color: 'var(--text-3)' }}>{p.minutesPlayed}'</span>
-                        )}
-                        <span style={{
-                          fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 15,
-                          color: ratingColor(p.rating), minWidth: 34, textAlign: 'right',
-                        }}>
-                          {p.rating.toFixed(1)}
+                      <div key={p.instanceId} className={p === motm ? styles.ratingRowMotm : styles.ratingRowNormal}>
+                        <div className={styles.ratingPosCol}>
+                          <span className={`${posClass(displayPos)} ${styles.ratingPosTag}`}>{displayPos}</span>
+                          {isCrossRole && (
+                            <span className={styles.ratingNatPos} title="Natural position">{p.position}</span>
+                          )}
+                        </div>
+                        <span className={p.goals > 0 ? styles.ratingNameScorer : styles.ratingName}>
+                          {p.playerName}
                         </span>
+                        <div className={styles.ratingMeta}>
+                          {p.goals > 0   && <span className={styles.ratingIcon}>⚽{p.goals}</span>}
+                          {p.assists > 0 && <span className={styles.ratingIcon}>🅰️{p.assists}</span>}
+                          {p.minutesPlayed < 90 && (
+                            <span className={styles.ratingMins}>{p.minutesPlayed}'</span>
+                          )}
+                          <span className={styles.ratingValue} style={{ color: ratingColor(p.rating) }}>
+                            {p.rating.toFixed(1)}
+                          </span>
+                        </div>
                       </div>
-                    </div>
                     )
                   })}
                 </div>

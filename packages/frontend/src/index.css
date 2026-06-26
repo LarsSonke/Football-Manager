@@ -305,6 +305,186 @@ input::placeholder { color: var(--text-3); }
   50%       { filter: drop-shadow(0 0 10px currentColor); }
 }
 
+/* ── Manga panel system ──────────────────────────────────────────────────── */
+.mg-panel {
+  border: 3px solid var(--paper);
+  background: var(--steel);
+  overflow: hidden;
+}
+.mg-panel--paper {
+  background: var(--paper);
+  color: var(--ink);
+}
+.mg-panel--accent {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+.mg-panel__header {
+  background: var(--ink);
+  padding: 9px 16px;
+  border-bottom: 3px solid var(--paper);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.mg-panel__title {
+  font-family: var(--font-display);
+  font-size: 18px;
+  letter-spacing: .02em;
+}
+.mg-panel__badge {
+  font-family: var(--font-narrow);
+  font-size: 10px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.mg-panel__body {
+  padding: 14px 16px 16px;
+}
+
+/* ── Manga overlay ───────────────────────────────────────────────────────── */
+.mg-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  background: rgba(8,8,10,0.88);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.mg-overlay__panel {
+  background: var(--steel);
+  border: 3px solid var(--paper);
+  max-width: 580px;
+  width: 100%;
+  max-height: 88vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+.mg-overlay__header {
+  background: var(--ink);
+  padding: 12px 20px;
+  border-bottom: 3px solid var(--paper);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.mg-overlay__title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  flex: 1;
+  letter-spacing: .02em;
+}
+.mg-overlay__close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--paper);
+  font-size: 20px;
+  line-height: 1;
+  padding: 0 0 0 12px;
+  opacity: 0.7;
+}
+.mg-overlay__close:hover { opacity: 1; }
+.mg-overlay__body {
+  padding: 16px 20px 24px;
+}
+
+/* ── Onboarding note ─────────────────────────────────────────────────────── */
+.mg-onboarding {
+  margin: 16px 20px 0;
+  padding: 12px 16px;
+  background: rgba(229,32,47,0.06);
+  border: 2px solid rgba(229,32,47,0.20);
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.mg-onboarding__icon {
+  color: var(--accent);
+  font-size: 15px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.mg-onboarding__text {
+  font-family: var(--font-narrow);
+  font-size: 12px;
+  letter-spacing: .04em;
+  color: var(--ash);
+  line-height: 1.65;
+}
+
+/* ── Section heading ─────────────────────────────────────────────────────── */
+.mg-section-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.mg-section-heading__title {
+  font-family: var(--font-display);
+  font-size: 22px;
+}
+.mg-section-heading__rule {
+  flex: 1;
+  height: 3px;
+  background: var(--paper);
+}
+.mg-section-heading__action {
+  font-family: var(--font-narrow);
+  font-size: 10px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--ash);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+.mg-section-heading__action:hover { color: var(--paper); }
+
+/* ── Clickable panel hover ───────────────────────────────────────────────── */
+.mg-clickable {
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.mg-clickable:hover { border-color: rgba(244,241,234,0.6); }
+
+/* ── Stat bar ────────────────────────────────────────────────────────────── */
+.mg-bar {
+  height: 6px;
+  background: #0c0c0e;
+}
+.mg-bar--sm { height: 4px; }
+.mg-bar--lg { height: 8px; }
+.mg-bar__fill {
+  height: 100%;
+  transform-origin: left;
+  animation: mgGrow 1s .3s cubic-bezier(.2,.8,.3,1) both;
+}
+
+/* ── Data-driven colour helpers ──────────────────────────────────────────── */
+[data-result="W"] { background: var(--paper); color: var(--ink); }
+[data-result="D"] { background: var(--steel); color: var(--paper); }
+[data-result="L"] { background: var(--accent); color: var(--paper); }
+
+[data-level="high"] { color: #2f6b46; }
+[data-level="mid"]  { color: #cf9438; }
+[data-level="low"]  { color: var(--accent); }
+
+[data-ovr="elite"]  { color: #2f6b46; }
+[data-ovr="good"]   { color: #6a8a2f; }
+[data-ovr="decent"] { color: #cf9438; }
+[data-ovr="poor"]   { color: var(--accent); }
+
 /* ── PWA safe-area ───────────────────────────────────────────────────────── */
 .nav {
   padding-top: env(safe-area-inset-top, 0px);

@@ -5,6 +5,7 @@ import { posClass, getBadgeColor, ovrColor } from '../../utils/helpers'
 import { PlayerPhoto } from '../../components/PlayerPhoto'
 import { useIsMobile } from './types'
 import type { ClubData, LeagueData, SquadPlayer, MessageData, InboxEntry, LeagueChatMessage } from './types'
+import styles from './Messages.module.css'
 
 function findInstance(league: LeagueData, instanceId: string | null): { player: SquadPlayer; clubName: string } | null {
   if (!instanceId) return null
@@ -151,48 +152,24 @@ export default function Messages({ leagueId, myClub, league, currentUserId, onRe
   const selectedInboxEntry = inbox.find(e => e.user?.id === selectedUserId)
 
   return (
-    <div style={{
-      display: 'grid',
-      gridTemplateColumns: isMobile ? '1fr' : '260px 1fr',
-      gap: 0,
-      background: 'var(--bg-card)',
-      border: '1px solid var(--border)',
-      borderRadius: 'var(--radius)',
-      minHeight: 500,
-      overflow: 'hidden',
-    }}>
+    <div className={styles.root}>
       {/* Left sidebar – conversation list */}
       {(!isMobile || (!selectedUserId && view !== 'league')) && (
-        <div style={{ borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)', fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 800, color: 'var(--text-1)' }}>
-            Inbox
-          </div>
+        <div className={styles.sidebar}>
+          <div className={styles.sidebarTitle}>Inbox</div>
           {/* League Chat entry */}
           <div
             onClick={() => { setView('league'); setSelectedUserId(null) }}
-            style={{
-              padding: '10px 14px',
-              borderBottom: '1px solid var(--border)',
-              cursor: 'pointer',
-              background: view === 'league' ? 'rgba(229,32,47,0.08)' : 'transparent',
-              display: 'flex', alignItems: 'center', gap: 10,
-            }}
+            className={view === 'league' ? styles.convItemLeagueActive : styles.convItemLeague}
           >
-            <div style={{
-              width: 34, height: 34, borderRadius: '50%', flexShrink: 0,
-              background: 'rgba(244,241,234,0.1)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 16,
-            }}>
-              💬
-            </div>
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)' }}>League Chat</div>
-              <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Everyone can see this</div>
+            <div className={styles.convAvatar}>💬</div>
+            <div className={styles.convInfo}>
+              <div className={styles.convName}>League Chat</div>
+              <div className={styles.convSub}>Everyone can see this</div>
             </div>
           </div>
           {otherHumanClubs.length === 0 && (
-            <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>No other human clubs yet.</div>
+            <div className={styles.noClubs}>No other human clubs yet.</div>
           )}
           {otherHumanClubs.map(club => {
             const entry = inbox.find(e => e.user?.id === club.user?.id)
@@ -202,25 +179,14 @@ export default function Messages({ leagueId, myClub, league, currentUserId, onRe
               <div
                 key={club.id}
                 onClick={() => { if (club.user) { setView('dm'); loadThread(club.user.id) } }}
-                style={{
-                  padding: '10px 14px',
-                  borderBottom: '1px solid var(--border)',
-                  cursor: 'pointer',
-                  background: isSelected ? 'rgba(255,255,255,0.05)' : 'transparent',
-                  display: 'flex', alignItems: 'center', gap: 10,
-                }}
+                className={isSelected ? styles.convItemActive : styles.convItem}
               >
-                <div style={{
-                  width: 34, height: 34, borderRadius: '50%', flexShrink: 0,
-                  background: getBadgeColor(club.name),
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 11, fontWeight: 900, color: '#000',
-                }}>
+                <div className={styles.convBadge} style={{ background: getBadgeColor(club.name) }}>
                   {club.name.split(' ').map(w => w[0]).slice(0, 2).join('')}
                 </div>
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{club.name}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div className={styles.convInfo}>
+                  <div className={styles.convName}>{club.name}</div>
+                  <div className={styles.convSub}>
                     {last
                       ? last.type === 'TRANSFER_OFFER'
                         ? `Transfer offer · ${fmtPrice(last.offerPrice ?? 0)}`
@@ -237,39 +203,33 @@ export default function Messages({ leagueId, myClub, league, currentUserId, onRe
 
       {/* Right panel – thread or league chat */}
       {(!isMobile || selectedUserId || view === 'league') && (
-        <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        <div className={styles.panel}>
           {view === 'league' ? (
-            <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <div className={styles.chat}>
               {/* Header */}
-              <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: 18 }}>💬</span>
+              <div className={styles.chatHeader}>
+                <span className={styles.chatHeaderIcon}>💬</span>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-1)' }}>League Chat</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{league.name} · visible to everyone</div>
+                  <div className={styles.chatHeaderTitle}>League Chat</div>
+                  <div className={styles.chatHeaderSub}>{league.name} · visible to everyone</div>
                 </div>
                 {isMobile && (
-                  <button onClick={() => setView('dm')} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-2)', fontSize: 20 }}>←</button>
+                  <button className={styles.backBtn} onClick={() => setView('dm')}>←</button>
                 )}
               </div>
               {/* Messages */}
-              <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div className={styles.messagesFeed}>
                 {leagueChat.length === 0 && (
-                  <div style={{ textAlign: 'center', color: 'var(--text-3)', fontSize: 12, padding: '40px 0' }}>Be the first to say something!</div>
+                  <div className={styles.feedEmpty}>Be the first to say something!</div>
                 )}
                 {leagueChat.map(msg => {
                   const isMe = msg.fromUserId === currentUserId
                   return (
-                    <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
-                      <div style={{ fontSize: 10, color: 'var(--text-3)', marginBottom: 3 }}>
+                    <div key={msg.id} className={isMe ? styles.bubbleWrapMe : styles.bubbleWrapThem}>
+                      <div className={styles.bubbleMeta}>
                         {msg.fromUser.username} · {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </div>
-                      <div style={{
-                        maxWidth: '75%', padding: '8px 12px',
-                        background: isMe ? 'rgba(229,32,47,0.1)' : 'var(--steel)',
-                        border: `2px solid ${isMe ? 'rgba(229,32,47,0.4)' : 'rgba(244,241,234,0.1)'}`,
-                        borderRadius: 0,
-                        fontSize: 13, color: 'var(--text-1)',
-                      }}>
+                      <div className={isMe ? styles.bubbleLeagueMe : styles.bubbleLeagueThem}>
                         {msg.text}
                       </div>
                     </div>
@@ -278,43 +238,43 @@ export default function Messages({ leagueId, myClub, league, currentUserId, onRe
                 <div ref={leagueChatEndRef} />
               </div>
               {/* Input */}
-              <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', display: 'flex', gap: 8 }}>
+              <div className={styles.inputAreaLeague}>
                 <input
                   value={leagueChatText}
                   onChange={e => setLeagueChatText(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendLeague() } }}
                   placeholder="Message everyone..."
-                  style={{ flex: 1, background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '8px 12px', color: 'var(--text-1)', fontSize: 13, outline: 'none' }}
+                  className={styles.msgInputLeague}
                 />
-                <button className="btn btn-green" style={{ flexShrink: 0 }} onClick={handleSendLeague} disabled={sendingLeague || !leagueChatText.trim()}>
+                <button className={`btn btn-green ${styles.sendBtnLeague}`} onClick={handleSendLeague} disabled={sendingLeague || !leagueChatText.trim()}>
                   Send
                 </button>
               </div>
             </div>
           ) : !selectedUserId ? (
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)', fontSize: 14 }}>
+            <div className={styles.panelEmpty}>
               Select a conversation to start messaging
             </div>
           ) : (
             <>
               {/* Thread header */}
-              <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div className={styles.threadHeader}>
                 {isMobile && (
-                  <button onClick={() => setSelectedUserId(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-2)', fontSize: 18, padding: 0, marginRight: 4 }}>←</button>
+                  <button className={styles.threadBackBtn} onClick={() => setSelectedUserId(null)}>←</button>
                 )}
-                <div style={{ width: 32, height: 32, borderRadius: '50%', background: getBadgeColor(selectedInboxEntry?.clubName ?? ''), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 900, color: '#000', flexShrink: 0 }}>
+                <div className={styles.threadBadge} style={{ background: getBadgeColor(selectedInboxEntry?.clubName ?? '') }}>
                   {(selectedInboxEntry?.clubName ?? '??').split(' ').map(w => w[0]).slice(0, 2).join('')}
                 </div>
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)' }}>{selectedInboxEntry?.clubName ?? ''}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{selectedInboxEntry?.user?.username ?? ''}</div>
+                  <div className={styles.threadHeaderName}>{selectedInboxEntry?.clubName ?? ''}</div>
+                  <div className={styles.threadHeaderUser}>{selectedInboxEntry?.user?.username ?? ''}</div>
                 </div>
               </div>
 
               {/* Messages */}
-              <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10, minHeight: 200, maxHeight: 420 }}>
+              <div className={styles.threadFeed}>
                 {thread.length === 0 && (
-                  <div style={{ textAlign: 'center', color: 'var(--text-3)', fontSize: 13, margin: 'auto' }}>No messages yet. Say hello!</div>
+                  <div className={styles.feedEmptyDm}>No messages yet. Say hello!</div>
                 )}
                 {thread.map(msg => {
                   const isMine = msg.fromUserId === currentUserId
@@ -323,57 +283,50 @@ export default function Messages({ leagueId, myClub, league, currentUserId, onRe
                     const statusColor = msg.offerStatus === 'ACCEPTED' ? 'var(--green)' : msg.offerStatus === 'REJECTED' ? 'var(--red)' : 'var(--gold)'
                     const statusLabel = msg.offerStatus === 'ACCEPTED' ? 'Accepted' : msg.offerStatus === 'REJECTED' ? 'Rejected' : 'Pending'
                     return (
-                      <div key={msg.id} style={{ alignSelf: isMine ? 'flex-end' : 'flex-start', maxWidth: '85%' }}>
-                        <div style={{ background: 'var(--bg-base)', border: `1px solid var(--border)`, borderRadius: 'var(--radius)', overflow: 'hidden' }}>
-                          <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-2)' }}>Transfer Offer</span>
-                            <span style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 700, color: statusColor, background: `${statusColor}22`, padding: '1px 6px', borderRadius: 4 }}>{statusLabel}</span>
+                      <div key={msg.id} className={isMine ? styles.offerWrapMe : styles.offerWrapThem}>
+                        <div className={styles.offerCard}>
+                          <div className={styles.offerCardHeader}>
+                            <span className={styles.offerCardLabel}>Transfer Offer</span>
+                            <span className={styles.offerStatus} style={{ color: statusColor, background: `${statusColor}22` }}>{statusLabel}</span>
                           </div>
                           {found ? (
-                            <div style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 10 }}>
-                              <PlayerPhoto url={found.player.player.photoUrl} name={found.player.player.name} size={32} style={{ borderRadius: '50%' }} />
+                            <div className={styles.offerBody}>
+                              <PlayerPhoto url={found.player.player.photoUrl} name={found.player.player.name} size={32} className={styles.offerPlayerAvatar} />
                               <div>
-                                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-1)' }}>{found.player.player.name}</div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                <div className={styles.offerPlayerName}>{found.player.player.name}</div>
+                                <div className={styles.offerPlayerMeta}>
                                   <span className={posClass(found.player.player.position)} style={{ fontSize: 9 }}>{found.player.player.position}</span>
-                                  <span style={{ fontSize: 11, color: ovrColor(found.player.player.overall), fontFamily: 'var(--font-display)', fontWeight: 800 }}>{found.player.player.overall}</span>
-                                  <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{found.clubName}</span>
+                                  <span className={styles.offerOvr} style={{ color: ovrColor(found.player.player.overall) }}>{found.player.player.overall}</span>
+                                  <span className={styles.offerClub}>{found.clubName}</span>
                                 </div>
                               </div>
-                              <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
-                                <div style={{ fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 800, color: 'var(--text-1)' }}>{fmtPrice(msg.offerPrice ?? 0)}</div>
+                              <div className={styles.offerPrice}>
+                                <div className={styles.offerPriceValue}>{fmtPrice(msg.offerPrice ?? 0)}</div>
                               </div>
                             </div>
                           ) : (
-                            <div style={{ padding: '8px 12px', color: 'var(--text-3)', fontSize: 12 }}>Player no longer available</div>
+                            <div className={styles.offerCardUnavailable}>Player no longer available</div>
                           )}
                           {msg.offerStatus === 'PENDING' && !isMine && (
-                            <div style={{ padding: '8px 12px', borderTop: '1px solid var(--border)', display: 'flex', gap: 8 }}>
+                            <div className={styles.offerActions}>
                               <button className="btn btn-green" style={{ fontSize: 12, padding: '4px 12px' }} onClick={() => handleAccept(msg.id)}>Accept</button>
-                              <button className="btn" style={{ fontSize: 12, padding: '4px 12px', background: 'var(--red)', color: '#fff' }} onClick={() => handleReject(msg.id)}>Reject</button>
+                              <button className={`btn ${styles.offerRejectBtn}`} onClick={() => handleReject(msg.id)}>Reject</button>
                             </div>
                           )}
                           {msg.offerStatus === 'PENDING' && isMine && (
-                            <div style={{ padding: '8px 12px', borderTop: '1px solid var(--border)', fontSize: 11, color: 'var(--text-3)' }}>Awaiting response…</div>
+                            <div className={styles.offerPending}>Awaiting response…</div>
                           )}
                         </div>
-                        <div style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 3, textAlign: isMine ? 'right' : 'left' }}>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                        <div className={isMine ? styles.offerTimeMe : styles.offerTimeThem}>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                       </div>
                     )
                   }
                   // TEXT message
                   return (
-                    <div key={msg.id} style={{ alignSelf: isMine ? 'flex-end' : 'flex-start', maxWidth: '70%' }}>
-                      {!isMine && <div style={{ fontSize: 10, color: 'var(--text-3)', marginBottom: 2 }}>{msg.fromUser.username}</div>}
-                      <div style={{
-                        background: isMine ? 'var(--green)' : 'var(--bg-base)',
-                        border: isMine ? 'none' : '1px solid var(--border)',
-                        borderRadius: 'var(--radius)',
-                        padding: '8px 12px',
-                        fontSize: 13,
-                        color: isMine ? '#000' : 'var(--text-1)',
-                      }}>{msg.text}</div>
-                      <div style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 2, textAlign: isMine ? 'right' : 'left' }}>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                    <div key={msg.id} className={isMine ? styles.dmMsgWrapMe : styles.dmMsgWrapThem}>
+                      {!isMine && <div className={styles.bubbleSenderName}>{msg.fromUser.username}</div>}
+                      <div className={isMine ? styles.bubbleDmMe : styles.bubbleDmThem}>{msg.text}</div>
+                      <div className={isMine ? styles.bubbleTimeMe : styles.bubbleTimeThem}>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                     </div>
                   )
                 })}
@@ -382,21 +335,18 @@ export default function Messages({ leagueId, myClub, league, currentUserId, onRe
 
               {/* Offer picker */}
               {showOfferPicker && (
-                <div style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-base)', padding: 14 }}>
-                  <div style={{ fontWeight: 700, fontSize: 12, color: 'var(--text-2)', marginBottom: 8 }}>Select a player to offer</div>
+                <div className={styles.offerPicker}>
+                  <div className={styles.offerPickerTitle}>Select a player to offer</div>
                   {/* Sell: your squad */}
-                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>Offer to sell (your squad)</div>
-                  <div style={{ maxHeight: 150, overflowY: 'auto', marginBottom: 10 }}>
+                  <div className={styles.offerPickerSectionLabel}>Offer to sell (your squad)</div>
+                  <div className={styles.offerPickerList}>
                     {myClub.squad.map(p => (
-                      <div key={p.id} onClick={() => { setOfferFor({ player: p, club: myClub }); setOfferPrice(String(p.player.baseValue)) }} style={{
-                        display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px',
-                        borderRadius: 6, cursor: 'pointer',
-                        background: offerFor?.player.id === p.id ? 'rgba(255,255,255,0.07)' : 'transparent',
-                      }}>
-                        <PlayerPhoto url={p.player.photoUrl} name={p.player.name} size={24} style={{ borderRadius: '50%' }} />
-                        <span style={{ flex: 1, fontSize: 12, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.player.name}</span>
+                      <div key={p.id} onClick={() => { setOfferFor({ player: p, club: myClub }); setOfferPrice(String(p.player.baseValue)) }}
+                        className={offerFor?.player.id === p.id ? styles.offerPickerRowActive : styles.offerPickerRow}>
+                        <PlayerPhoto url={p.player.photoUrl} name={p.player.name} size={24} className={styles.offerPickerAvatar} />
+                        <span className={styles.offerPickerName}>{p.player.name}</span>
                         <span className={posClass(p.player.position)} style={{ fontSize: 9 }}>{p.player.position}</span>
-                        <span style={{ fontSize: 12, fontFamily: 'var(--font-display)', fontWeight: 800, color: ovrColor(p.player.overall) }}>{p.player.overall}</span>
+                        <span className={styles.offerPickerOvr} style={{ color: ovrColor(p.player.overall) }}>{p.player.overall}</span>
                       </div>
                     ))}
                   </div>
@@ -406,18 +356,15 @@ export default function Messages({ leagueId, myClub, league, currentUserId, onRe
                     if (!otherClub) return null
                     return (
                       <>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>Offer to buy ({otherClub.name})</div>
-                        <div style={{ maxHeight: 150, overflowY: 'auto', marginBottom: 10 }}>
+                        <div className={styles.offerPickerSectionLabel}>Offer to buy ({otherClub.name})</div>
+                        <div className={styles.offerPickerList}>
                           {otherClub.squad.map(p => (
-                            <div key={p.id} onClick={() => { setOfferFor({ player: p, club: otherClub }); setOfferPrice(String(p.player.baseValue)) }} style={{
-                              display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px',
-                              borderRadius: 6, cursor: 'pointer',
-                              background: offerFor?.player.id === p.id ? 'rgba(255,255,255,0.07)' : 'transparent',
-                            }}>
-                              <PlayerPhoto url={p.player.photoUrl} name={p.player.name} size={24} style={{ borderRadius: '50%' }} />
-                              <span style={{ flex: 1, fontSize: 12, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.player.name}</span>
+                            <div key={p.id} onClick={() => { setOfferFor({ player: p, club: otherClub }); setOfferPrice(String(p.player.baseValue)) }}
+                              className={offerFor?.player.id === p.id ? styles.offerPickerRowActive : styles.offerPickerRow}>
+                              <PlayerPhoto url={p.player.photoUrl} name={p.player.name} size={24} className={styles.offerPickerAvatar} />
+                              <span className={styles.offerPickerName}>{p.player.name}</span>
                               <span className={posClass(p.player.position)} style={{ fontSize: 9 }}>{p.player.position}</span>
-                              <span style={{ fontSize: 12, fontFamily: 'var(--font-display)', fontWeight: 800, color: ovrColor(p.player.overall) }}>{p.player.overall}</span>
+                              <span className={styles.offerPickerOvr} style={{ color: ovrColor(p.player.overall) }}>{p.player.overall}</span>
                             </div>
                           ))}
                         </div>
@@ -425,19 +372,19 @@ export default function Messages({ leagueId, myClub, league, currentUserId, onRe
                     )
                   })()}
                   {offerFor && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 12, color: 'var(--text-2)' }}>{offerFor.player.player.name}</span>
+                    <div className={styles.offerConfirmRow}>
+                      <span className={styles.offerConfirmName}>{offerFor.player.player.name}</span>
                       <input
                         type="number"
                         value={offerPrice}
                         onChange={e => setOfferPrice(e.target.value)}
-                        style={{ width: 100, padding: '4px 8px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-1)', fontSize: 13 }}
+                        className={styles.offerConfirmInput}
                         placeholder="Price"
                       />
-                      <button className="btn btn-green" style={{ fontSize: 12, padding: '4px 12px' }} onClick={() => setShowOfferPicker(false)}>
+                      <button className={`btn btn-green ${styles.offerConfirmDone}`} onClick={() => setShowOfferPicker(false)}>
                         Done
                       </button>
-                      <button onClick={() => { setOfferFor(null); setOfferPrice(''); setShowOfferPicker(false) }} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', fontSize: 16 }}>✕</button>
+                      <button className={styles.offerConfirmClear} onClick={() => { setOfferFor(null); setOfferPrice(''); setShowOfferPicker(false) }}>✕</button>
                     </div>
                   )}
                 </div>
@@ -445,21 +392,21 @@ export default function Messages({ leagueId, myClub, league, currentUserId, onRe
 
               {/* Pending offer preview */}
               {offerFor && !showOfferPicker && (
-                <div style={{ borderTop: '1px solid var(--border)', padding: '6px 16px', display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-base)', fontSize: 12 }}>
-                  <span style={{ color: 'var(--text-2)' }}>Offer:</span>
-                  <span style={{ color: 'var(--text-1)', fontWeight: 600 }}>{offerFor.player.player.name}</span>
-                  <span style={{ color: 'var(--text-3)' }}>for</span>
-                  <span style={{ color: 'var(--gold)', fontWeight: 700 }}>{fmtPrice(parseInt(offerPrice, 10) || 0)}</span>
-                  <button onClick={() => { setOfferFor(null); setOfferPrice('') }} style={{ marginLeft: 4, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: 14 }}>✕</button>
+                <div className={styles.offerPreview}>
+                  <span className={styles.offerPreviewLabel}>Offer:</span>
+                  <span className={styles.offerPreviewName}>{offerFor.player.player.name}</span>
+                  <span className={styles.offerPreviewFor}>for</span>
+                  <span className={styles.offerPreviewPrice}>{fmtPrice(parseInt(offerPrice, 10) || 0)}</span>
+                  <button className={styles.offerPreviewClear} onClick={() => { setOfferFor(null); setOfferPrice('') }}>✕</button>
                 </div>
               )}
 
               {/* Input area */}
-              <div style={{ borderTop: '1px solid var(--border)', padding: '10px 16px', display: 'flex', gap: 8, alignItems: 'center' }}>
+              <div className={styles.inputArea}>
                 <button
                   onClick={() => setShowOfferPicker(v => !v)}
                   title="Transfer offer"
-                  style={{ background: showOfferPicker ? 'rgba(255,255,255,0.08)' : 'none', border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer', color: 'var(--text-2)', fontSize: 16, padding: '5px 10px', flexShrink: 0 }}
+                  className={showOfferPicker ? styles.offerToggleBtnActive : styles.offerToggleBtn}
                 >
                   ⇄
                 </button>
@@ -469,9 +416,9 @@ export default function Messages({ leagueId, myClub, league, currentUserId, onRe
                   onChange={e => setText(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() } }}
                   placeholder="Type a message…"
-                  style={{ flex: 1, padding: '7px 12px', background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-1)', fontSize: 13 }}
+                  className={styles.msgInput}
                 />
-                <button className="btn btn-green" style={{ fontSize: 13, padding: '7px 16px', flexShrink: 0 }} onClick={handleSend} disabled={sending || (!text.trim() && !offerFor)}>
+                <button className={`btn btn-green ${styles.sendBtn}`} onClick={handleSend} disabled={sending || (!text.trim() && !offerFor)}>
                   Send
                 </button>
               </div>

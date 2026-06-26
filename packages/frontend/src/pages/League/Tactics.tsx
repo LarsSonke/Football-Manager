@@ -6,6 +6,7 @@ import { KitSvg, type KitConfig } from '../../components/KitSvg'
 import { api } from '../../api/client'
 import { useIsMobile } from './types'
 import type { ClubData, SquadPlayer, LineupSlot, SubSlot, TacticData, CustomSlot } from './types'
+import styles from './Tactics.module.css'
 
 // ─── Formation Constants ──────────────────────────────────────────────────────
 
@@ -259,9 +260,9 @@ const WIDTH_IMPACTS: Record<number, { wing: number; central: number }> = {
 
 function PipBar({ value, color = 'var(--green)' }: { value: number; color?: string }) {
   return (
-    <div style={{ display: 'flex', gap: 3 }}>
+    <div className={styles.pipBar}>
       {Array.from({ length: 5 }, (_, i) => (
-        <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: i < value ? color : 'rgba(255,255,255,0.1)', flexShrink: 0 }} />
+        <div key={i} className={styles.pip} style={{ background: i < value ? color : 'rgba(255,255,255,0.1)' }} />
       ))}
     </div>
   )
@@ -306,7 +307,9 @@ function Stars({ value, max = 5 }: { value: number; max?: number }) {
   return (
     <span style={{ color: 'var(--gold)', letterSpacing: 1, fontSize: 13 }}>
       {'★'.repeat(Math.max(0, Math.min(max, value)))}
-      <span style={{ color: 'rgba(255,255,255,0.15)' }}>{'★'.repeat(Math.max(0, max - Math.min(max, value)))}</span>
+      <span style={{ color: 'rgba(255,255,255,0.15)' }}>
+        {'★'.repeat(Math.max(0, max - Math.min(max, value)))}
+      </span>
     </span>
   )
 }
@@ -315,12 +318,12 @@ function ModalStatBar({ label, value }: { label: string; value: number }) {
   const pct = Math.min(100, Math.max(0, value))
   const color = pct >= 80 ? 'var(--green)' : pct >= 65 ? 'var(--gold)' : pct >= 45 ? 'var(--text-2)' : 'var(--red)'
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
-      <span style={{ fontSize: 10, color: 'var(--text-2)', width: 110, textAlign: 'right', flexShrink: 0 }}>{label}</span>
-      <div style={{ flex: 1, height: 5, background: 'rgba(255,255,255,0.07)', borderRadius: 3, overflow: 'hidden' }}>
-        <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: 3, transition: 'width 0.3s' }} />
+    <div className={styles.modalStatBar}>
+      <span className={styles.modalStatBarLabel}>{label}</span>
+      <div className={styles.modalStatBarTrack}>
+        <div className={styles.modalStatBarFill} style={{ width: `${pct}%`, background: color }} />
       </div>
-      <span style={{ fontFamily: 'var(--font-display)', fontSize: 12, fontWeight: 800, color, width: 24, textAlign: 'right', flexShrink: 0 }}>{value}</span>
+      <span className={styles.modalStatBarValue} style={{ color }}>{value}</span>
     </div>
   )
 }
@@ -403,71 +406,68 @@ function PlayerDetailModal({
 
   return (
     <div
-      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1000, display: 'flex', alignItems: isMobile ? 'flex-end' : 'center', justifyContent: 'center', padding: isMobile ? 0 : 16 }}
+      className={isMobile ? styles.modalOverlayMobile : styles.modalOverlay}
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: isMobile ? 0 : 'var(--radius)', width: '100%', maxWidth: isMobile ? '100%' : 680, height: isMobile ? '100%' : '82vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      <div className={isMobile ? styles.modalMobile : styles.modal}>
         {/* Header */}
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 16 }}>
-          <PlayerPhoto url={p.photoUrl} name={p.name} size={64} style={{ borderRadius: '50%', border: '2px solid var(--border)' }} />
+        <div className={styles.modalHeader}>
+          <PlayerPhoto url={p.photoUrl} name={p.name} size={64} className={styles.modalAvatar} />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-1)' }}>{p.name}</span>
+            <div className={styles.modalNameRow}>
+              <span className={styles.modalName}>{p.name}</span>
               <span className={posClass(slotPos)} style={{ fontSize: 10 }}>{slotPos}</span>
             </div>
-            <div style={{ display: 'flex', gap: 16, marginTop: 6, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 12, color: 'var(--text-2)' }}>Age {p.age}</span>
-              {p.heightCm > 0 && <span style={{ fontSize: 12, color: 'var(--text-2)' }}>{p.heightCm} cm</span>}
-              {p.nationality && <span style={{ fontSize: 12, color: 'var(--text-2)' }}>{p.nationality}</span>}
+            <div className={styles.modalBio}>
+              <span className={styles.modalBioItem}>Age {p.age}</span>
+              {p.heightCm > 0 && <span className={styles.modalBioItem}>{p.heightCm} cm</span>}
+              {p.nationality && <span className={styles.modalBioItem}>{p.nationality}</span>}
             </div>
-            <div style={{ display: 'flex', gap: 20, marginTop: 8 }}>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 900, color: 'var(--text-1)' }}>{p.overall}</div>
-                <div style={{ fontSize: 9, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5 }}>OVR</div>
+            <div className={styles.modalStats}>
+              <div className={styles.modalStat}>
+                <div className={styles.modalStatValue}>{p.overall}</div>
+                <div className={styles.modalStatLabel}>OVR</div>
               </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 900, color: 'var(--green)' }}>{p.potential}</div>
-                <div style={{ fontSize: 9, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5 }}>POT</div>
+              <div className={styles.modalStat}>
+                <div className={styles.modalStatValueGreen}>{p.potential}</div>
+                <div className={styles.modalStatLabel}>POT</div>
               </div>
-              <div style={{ textAlign: 'center' }}>
+              <div className={styles.modalStat}>
                 <Stars value={p.skillMoves} />
-                <div style={{ fontSize: 9, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 2 }}>Skill</div>
+                <div className={styles.starsLabel}>Skill</div>
               </div>
-              <div style={{ textAlign: 'center' }}>
+              <div className={styles.modalStat}>
                 <Stars value={p.weakFoot} />
-                <div style={{ fontSize: 9, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 2 }}>Weak Foot</div>
+                <div className={styles.starsLabel}>Weak Foot</div>
               </div>
             </div>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-2)', fontSize: 20, padding: 4, lineHeight: 1, flexShrink: 0 }}>✕</button>
+          <button className={styles.modalCloseBtn} onClick={onClose}>✕</button>
         </div>
 
         {/* Tabs */}
-        <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', padding: '0 20px' }}>
+        <div className={styles.modalTabs}>
           {(['stats', ...(hasSlot ? ['roles'] : [])] as ('stats' | 'roles')[]).map(t => (
-            <button key={t} onClick={() => setTab(t)} style={{
-              padding: '10px 16px', fontSize: 12, fontWeight: 700, cursor: 'pointer',
-              background: 'none', border: 'none', borderBottom: `2px solid ${tab === t ? 'var(--green)' : 'transparent'}`,
-              color: tab === t ? 'var(--green)' : 'var(--text-2)', textTransform: 'capitalize',
-              transition: 'all 0.15s', marginBottom: -1,
-            }}>{t === 'stats' ? 'Stats' : 'Player Roles'}</button>
+            <button key={t} onClick={() => setTab(t)} className={tab === t ? styles.modalTabActive : styles.modalTab}>
+              {t === 'stats' ? 'Stats' : 'Player Roles'}
+            </button>
           ))}
         </div>
 
         {/* Body */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
+        <div className={styles.modalBody}>
           {tab === 'stats' && (
             <>
-              <div style={{ marginBottom: 20 }}>
-                <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>Main Stats</div>
-                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '0 24px' }}>
+              <div className={styles.statSection}>
+                <div className={styles.statSectionTitle}>Main Stats</div>
+                <div className={styles.mainStatsGrid}>
                   {mainStats.map(s => <ModalStatBar key={s.label} label={s.label} value={s.value} />)}
                 </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '0 24px' }}>
+              <div className={styles.subStatGroups}>
                 {subStatGroups.map(group => (
-                  <div key={group.title} style={{ marginBottom: 16 }}>
-                    <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>{group.title}</div>
+                  <div key={group.title} className={styles.subStatGroup}>
+                    <div className={styles.statSectionTitle}>{group.title}</div>
                     {group.stats.map(s => <ModalStatBar key={s.label} label={s.label} value={s.value} />)}
                   </div>
                 ))}
@@ -477,25 +477,20 @@ function PlayerDetailModal({
 
           {tab === 'roles' && (
             <div>
-              <div style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 16, lineHeight: 1.6 }}>
+              <div className={styles.rolesIntro}>
                 Select a role for <strong style={{ color: 'var(--text-1)' }}>{p.name}</strong> in the <strong style={{ color: 'var(--text-1)' }}>{slotPos}</strong> position. The role shapes how they behave during matches.
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div className={styles.rolesList}>
                 {p.preferredRoles.map(role => {
                   const active = currentRole === role
                   return (
-                    <button key={role} onClick={() => onRoleChange?.(slotIndex!, role)} style={{
-                      display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 14px',
-                      background: active ? 'rgba(54,226,126,0.08)' : 'var(--bg-base)',
-                      border: `1.5px solid ${active ? 'var(--green)' : 'var(--border)'}`,
-                      borderRadius: 8, cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s',
-                    }}>
-                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: active ? 'var(--green)' : 'var(--border)', marginTop: 4, flexShrink: 0, transition: 'background 0.15s' }} />
+                    <button key={role} onClick={() => onRoleChange?.(slotIndex!, role)} className={active ? styles.roleBtnActive : styles.roleBtn}>
+                      <div className={active ? styles.roleIndicatorActive : styles.roleIndicator} />
                       <div>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: active ? 'var(--green)' : 'var(--text-1)', textTransform: 'capitalize', marginBottom: 3 }}>
+                        <div className={active ? styles.roleNameActive : styles.roleName}>
                           {role.replace(/-/g, ' ')}
                         </div>
-                        <div style={{ fontSize: 11, color: 'var(--text-2)', lineHeight: 1.5 }}>
+                        <div className={styles.roleDesc}>
                           {ROLE_DESCRIPTIONS[role] ?? 'Standard role for this position'}
                         </div>
                       </div>
@@ -503,7 +498,7 @@ function PlayerDetailModal({
                   )
                 })}
                 {p.preferredRoles.length === 0 && (
-                  <div style={{ fontSize: 12, color: 'var(--text-2)', padding: 16, textAlign: 'center' }}>No preferred roles defined for this player.</div>
+                  <div className={styles.noRoles}>No preferred roles defined for this player.</div>
                 )}
               </div>
             </div>
@@ -808,23 +803,12 @@ export default function Tactics({ leagueId, myClub, onSaved, nextMatchday }: {
       if (!player) return null
       const fitColor = 'var(--green)'
       return (
-        <div style={{
-          position: 'fixed',
+        <div className={styles.touchGhost} style={{
           left: touchPos.x - Math.round(cardW * 0.55),
           top:  touchPos.y - Math.round(cardW * 1.1),
           width: Math.round(cardW * 1.15),
-          pointerEvents: 'none',
-          zIndex: 9999,
-          transform: 'rotate(3deg)',
-          filter: 'drop-shadow(0 8px 20px rgba(0,0,0,0.8))',
         }}>
-          <div style={{
-            background: 'rgba(0,0,0,0.95)',
-            border: `2.5px solid ${fitColor}`,
-            borderRadius: 10,
-            padding: '4px 5px',
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-          }}>
+          <div className={styles.touchGhostInner} style={{ border: `2.5px solid ${fitColor}` }}>
             <PlayerPhoto url={player.player.photoUrl} name={player.player.name} size={photoSz} style={{ borderRadius: '50%', border: `2px solid ${fitColor}` }} />
             <span style={{ fontSize: nameFz, fontWeight: 700, color: '#fff', textAlign: 'center', lineHeight: 1.2, width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {player.player.name.split(' ').slice(-1)[0]}
@@ -837,43 +821,30 @@ export default function Tactics({ leagueId, myClub, onSaved, nextMatchday }: {
       )
     })()}
 
-    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 1fr) 300px', gap: 20, alignItems: 'start' }}>
+    <div className={styles.root}>
 
       {/* Left: pitch */}
       <div>
         {/* Formation picker */}
-        <div style={{ display: 'flex', gap: 5, marginBottom: 8, flexWrap: 'wrap' }}>
+        <div className={styles.formationBar}>
           {Object.keys(FORMATION_SLOTS).map(f => (
-            <button key={f} onClick={() => changeFormation(f)} style={{
-              padding: '5px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700,
-              cursor: 'pointer', border: 'none', fontFamily: 'var(--font-display)',
-              background: formation === f ? 'var(--green)' : 'var(--bg-card)',
-              color: formation === f ? '#000' : 'var(--text-2)',
-              transition: 'all 0.15s',
-            }}>{f}</button>
+            <button key={f} onClick={() => changeFormation(f)} className={formation === f ? styles.formationBtnActive : styles.formationBtn}>{f}</button>
           ))}
-          <button onClick={() => changeFormation('custom')} style={{
-            padding: '5px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700,
-            cursor: 'pointer', border: `1.5px solid ${formation === 'custom' ? 'var(--green)' : 'var(--border)'}`,
-            fontFamily: 'var(--font-display)',
-            background: formation === 'custom' ? 'rgba(54,226,126,0.12)' : 'transparent',
-            color: formation === 'custom' ? 'var(--green)' : 'var(--text-2)',
-            transition: 'all 0.15s',
-          }}>✏ Custom</button>
-          <button onClick={() => setLineup(autoAssign(formation === 'custom' ? '4-3-3' : formation, myClub.squad, nextMatchday))} style={{ padding: '5px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700, cursor: 'pointer', border: '1.5px solid var(--green)', background: 'rgba(54,226,126,0.08)', color: 'var(--green)', marginLeft: 'auto' }}>↺ Best XI</button>
+          <button onClick={() => changeFormation('custom')} className={formation === 'custom' ? styles.formationBtnCustomActive : styles.formationBtnCustom}>✏ Custom</button>
+          <button className={styles.bestXiBtn} onClick={() => setLineup(autoAssign(formation === 'custom' ? '4-3-3' : formation, myClub.squad, nextMatchday))}>↺ Best XI</button>
         </div>
         {formation === 'custom' ? (
-          <div style={{ fontSize: 11, color: 'var(--text-2)', marginBottom: 12, padding: '8px 10px', background: 'rgba(255,255,255,0.04)', borderRadius: 6, lineHeight: 1.6 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-              <span style={{ display: 'flex', flexWrap: 'wrap', gap: '0 10px' }}>
-                <span style={{ fontWeight: 700, color: customSlots.length === 11 ? 'var(--green)' : 'var(--gold)' }}>{customSlots.length}/11 slots</span>
+          <div className={styles.customInfo}>
+            <div className={styles.customInfoHeader}>
+              <span className={styles.customInfoSlots}>
+                <span className={customSlots.length === 11 ? styles.customSlotCountOk : styles.customSlotCountWarn}>{customSlots.length}/11 slots</span>
                 {customSlots.length > 0 && !customSlots.some(s => s.position === 'GK') && (
-                  <span style={{ color: 'var(--red)' }}>needs a GK</span>
+                  <span className={styles.customValidationError}>needs a GK</span>
                 )}
                 {(() => {
                   const defCount = customSlots.filter(s => DEFENDER_POSITIONS.has(s.position)).length
-                  if (customSlots.length > 0 && defCount < 3) return <span key="def-min" style={{ color: 'var(--red)' }}>min 3 defenders ({defCount})</span>
-                  if (defCount > 5) return <span key="def-max" style={{ color: 'var(--red)' }}>max 5 defenders ({defCount})</span>
+                  if (customSlots.length > 0 && defCount < 3) return <span key="def-min" className={styles.customValidationError}>min 3 defenders ({defCount})</span>
+                  if (defCount > 5) return <span key="def-max" className={styles.customValidationError}>max 5 defenders ({defCount})</span>
                   return null
                 })()}
                 {FLANK_PAIRS.flatMap(([l, r]) => {
@@ -883,30 +854,25 @@ export default function Tactics({ leagueId, myClub, onSaved, nextMatchday }: {
                   if (hasR && !hasL) return [`${r} needs ${l}`]
                   return []
                 }).map(msg => (
-                  <span key={msg} style={{ color: 'var(--red)' }}>{msg}</span>
+                  <span key={msg} className={styles.customValidationError}>{msg}</span>
                 ))}
               </span>
-              <button onClick={() => { setCustomSlots([]); setLineup([]) }} style={{ fontSize: 10, color: 'var(--red)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0, marginLeft: 8 }}>Clear all</button>
+              <button className={styles.customClearBtn} onClick={() => { setCustomSlots([]); setLineup([]) }}>Clear all</button>
             </div>
-            <span style={{ fontSize: 10, color: 'var(--text-3)' }}>Click pitch to add — position auto-detected from location · drag to reposition · click badge to override</span>
+            <span className={styles.customHint}>Click pitch to add — position auto-detected from location · drag to reposition · click badge to override</span>
           </div>
         ) : FORMATION_DESC[formation] ? (
-          <div style={{ fontSize: 11, color: 'var(--text-2)', marginBottom: 12, padding: '7px 10px', background: 'rgba(255,255,255,0.04)', borderRadius: 6, lineHeight: 1.5 }}>
-            <span style={{ fontWeight: 700, color: 'var(--text-1)' }}>{formation}</span>
+          <div className={styles.formationDesc}>
+            <span className={styles.formationDescName}>{formation}</span>
             {' — '}{FORMATION_DESC[formation]}
           </div>
         ) : null}
 
         {/* Pitch */}
-        <div style={{ width: `${pitchScale}%`, margin: '0 auto' }}>
+        <div className={styles.pitchWrapper} style={{ width: `${pitchScale}%` }}>
         <div
           ref={pitchRef}
-          style={{
-            position: 'relative', width: '100%', aspectRatio: '68 / 58',
-            borderRadius: 14, overflow: 'hidden',
-            border: '2px solid rgba(255,255,255,0.12)',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-          }}
+          className={styles.pitch}
           onDragOver={e => e.preventDefault()}
           onTouchEnd={handlePitchTouchEnd}
           onClick={e => {
@@ -945,10 +911,10 @@ export default function Tactics({ leagueId, myClub, onSaved, nextMatchday }: {
           onMouseLeave={() => { customDragRef.current = null }}
         >
           {/* Grass stripes */}
-          <div style={{ position: 'absolute', inset: 0, background: 'repeating-linear-gradient(to bottom, #1e5c1e 0%, #1e5c1e 10%, #1a4a1a 10%, #1a4a1a 20%)' }} />
+          <div className={styles.pitchGrass} />
 
           {/* Pitch SVG markings */}
-          <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} viewBox="0 0 100 100" preserveAspectRatio="none">
+          <svg className={styles.pitchSvg} viewBox="0 0 100 100" preserveAspectRatio="none">
             <rect x="2" y="2" width="96" height="96" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="0.6" />
             <line x1="2" y1="2" x2="98" y2="2" stroke="rgba(255,255,255,0.35)" strokeWidth="0.7" />
             <ellipse cx="50" cy="2" rx="16" ry="13" fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="0.5" clipPath="url(#bottomHalf)" />
@@ -1006,9 +972,7 @@ export default function Tactics({ leagueId, myClub, onSaved, nextMatchday }: {
                   customDragMovedRef.current = false
                 }}
                 style={{
-                  position: 'absolute',
                   left: `${slot.x}%`, top: `${slot.y}%`,
-                  transform: 'translate(-50%, -50%)',
                   width: cardW,
                   background: isCustomDragging
                     ? 'rgba(255,255,255,0.12)'
@@ -1018,48 +982,28 @@ export default function Tactics({ leagueId, myClub, onSaved, nextMatchday }: {
                     ? 'rgba(255,255,255,0.05)'
                     : player ? 'rgba(0,0,0,0.82)' : 'rgba(0,0,0,0.4)',
                   border: `2px solid ${isCustomDragging ? 'rgba(255,255,255,0.6)' : isActiveTarget ? 'var(--green)' : isActiveSrc ? 'rgba(255,255,255,0.4)' : player?.injured ? 'var(--red)' : player?.suspendedMatchday === nextMatchday ? 'var(--gold)' : player ? fitColor : 'rgba(255,255,255,0.2)'}`,
-                  borderRadius: 10,
                   cursor: isCustomMode ? 'move' : player ? 'grab' : 'default',
                   padding: isMobile ? '3px 4px' : `${Math.round(pitchScale * 0.07)}px ${Math.round(pitchScale * 0.08)}px`,
-                  display: 'flex', flexDirection: 'column', alignItems: 'center',
                   gap: Math.round(pitchScale * 0.04),
                   zIndex: isCustomDragging ? 30 : isActiveSrc ? 20 : 10,
                   transition: isCustomDragging ? 'none' : 'border-color 0.12s, background 0.12s, opacity 0.12s',
-                  backdropFilter: 'blur(6px)',
                   opacity: isActiveSrc && !isCustomMode ? 0.3 : 1,
                   boxShadow: player ? '0 3px 12px rgba(0,0,0,0.6)' : 'none',
-                  userSelect: 'none',
                 }}
+                className={player ? styles.slot : styles.slotEmpty}
               >
                 {/* Flank-pair warning pill */}
                 {hasFlankWarning && (
-                  <div style={{
-                    position: 'absolute',
-                    bottom: '100%', left: '50%', transform: 'translateX(-50%)',
-                    marginBottom: 4,
-                    background: 'var(--gold)', color: '#000',
-                    fontSize: Math.max(7, posFz), fontWeight: 900,
-                    padding: '2px 6px', borderRadius: 4,
-                    whiteSpace: 'nowrap', zIndex: 15, lineHeight: 1.4,
-                    pointerEvents: 'none',
-                    boxShadow: '0 2px 6px rgba(0,0,0,0.5)',
-                  }}>
+                  <div className={styles.flankWarning} style={{ fontSize: Math.max(7, posFz) }}>
                     ⚠ add {flankMirror}
                   </div>
                 )}
                 {/* In custom mode: × delete button */}
                 {isCustomMode && (
                   <button
+                    className={styles.slotDeleteBtn}
                     onMouseDown={e => e.stopPropagation()}
                     onClick={e => { e.stopPropagation(); removeCustomSlot(i) }}
-                    style={{
-                      position: 'absolute', top: -6, right: -6,
-                      width: 16, height: 16, borderRadius: '50%',
-                      background: 'var(--red)', border: 'none',
-                      color: '#fff', fontSize: 9, fontWeight: 900,
-                      cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      lineHeight: 1, padding: 0, zIndex: 5,
-                    }}
                   >×</button>
                 )}
                 {/* Position badge */}
@@ -1075,9 +1019,12 @@ export default function Tactics({ leagueId, myClub, onSaved, nextMatchday }: {
                   style={{
                     background: player ? fitColor : isCustomMode ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.15)',
                     color: player ? '#000' : isCustomMode ? '#fff' : 'rgba(255,255,255,0.5)',
-                    fontSize: posFz, fontWeight: 900,
-                    textTransform: 'uppercase', letterSpacing: 0.5,
-                    padding: `1px ${Math.round(posFz * 0.5)}px`, borderRadius: 3,
+                    fontSize: posFz,
+                    padding: `1px ${Math.round(posFz * 0.5)}px`,
+                    fontWeight: 900,
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.5,
+                    borderRadius: 3,
                     cursor: isCustomMode ? 'pointer' : 'default',
                     outline: isCustomMode && customPickerFor === i ? '1.5px solid #fff' : 'none',
                   }}
@@ -1096,23 +1043,17 @@ export default function Tactics({ leagueId, myClub, onSaved, nextMatchday }: {
                         <div style={{ position: 'relative', flexShrink: 0 }}>
                           <PlayerPhoto url={player.player.photoUrl} name={player.player.name} size={photoSz} style={{ borderRadius: '50%', border: `2px solid ${alertColor ?? fitColor}`, opacity: dimmed ? 0.65 : 1 }} />
                           {player.injured && (
-                            <div style={{
-                              position: 'absolute', bottom: -2, right: -2, zIndex: 2,
-                              width: Math.max(9, Math.round(photoSz * 0.42)), height: Math.max(9, Math.round(photoSz * 0.42)),
-                              borderRadius: '50%', background: 'var(--red)',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              fontSize: Math.max(5, Math.round(photoSz * 0.24)), fontWeight: 900, color: '#fff', lineHeight: 1,
-                              border: '1.5px solid rgba(0,0,0,0.9)',
+                            <div className={styles.alertBadgeInj} style={{
+                              width: Math.max(9, Math.round(photoSz * 0.42)),
+                              height: Math.max(9, Math.round(photoSz * 0.42)),
+                              fontSize: Math.max(5, Math.round(photoSz * 0.24)),
                             }}>✚</div>
                           )}
                           {!player.injured && isSusp && (
-                            <div style={{
-                              position: 'absolute', bottom: -2, right: -2, zIndex: 2,
-                              width: Math.max(9, Math.round(photoSz * 0.42)), height: Math.max(9, Math.round(photoSz * 0.42)),
-                              borderRadius: '50%', background: 'var(--gold)',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              fontSize: Math.max(5, Math.round(photoSz * 0.22)), fontWeight: 900, color: '#000', lineHeight: 1,
-                              border: '1.5px solid rgba(0,0,0,0.9)',
+                            <div className={styles.alertBadgeSusp} style={{
+                              width: Math.max(9, Math.round(photoSz * 0.42)),
+                              height: Math.max(9, Math.round(photoSz * 0.42)),
+                              fontSize: Math.max(5, Math.round(photoSz * 0.22)),
                             }}>S</div>
                           )}
                         </div>
@@ -1129,7 +1070,7 @@ export default function Tactics({ leagueId, myClub, onSaved, nextMatchday }: {
                       {!player.injured && player.suspendedMatchday === nextMatchday && <span style={{ fontSize: Math.max(6, posFz - 1), color: 'var(--gold)', fontWeight: 800 }}>S</span>}
                     </div>
                     {/* Fitness / Morale / Form dots */}
-                    <div style={{ display: 'flex', gap: Math.max(2, Math.round(pitchScale * 0.025)), alignItems: 'center' }}>
+                    <div className={styles.statDots} style={{ gap: Math.max(2, Math.round(pitchScale * 0.025)) }}>
                       {([
                         { v: player.fitness, label: 'F' },
                         { v: player.morale,  label: 'M' },
@@ -1138,9 +1079,9 @@ export default function Tactics({ leagueId, myClub, onSaved, nextMatchday }: {
                         const dotColor = v >= 75 ? 'var(--green)' : v >= 50 ? 'var(--gold)' : 'var(--red)'
                         const dotSz = Math.max(4, Math.round(pitchScale * 0.05))
                         return (
-                          <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <div style={{ width: dotSz, height: dotSz, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
-                            {roleFz > 0 && <span style={{ fontSize: Math.max(5, Math.round(dotSz * 0.9)), color: 'rgba(255,255,255,0.38)', fontWeight: 700, lineHeight: 1 }}>{label}</span>}
+                          <div key={label} className={styles.statDot}>
+                            <div className={styles.dot} style={{ width: dotSz, height: dotSz, background: dotColor }} />
+                            {roleFz > 0 && <span className={styles.dotLabel} style={{ fontSize: Math.max(5, Math.round(dotSz * 0.9)) }}>{label}</span>}
                           </div>
                         )
                       })}
@@ -1173,15 +1114,9 @@ export default function Tactics({ leagueId, myClub, onSaved, nextMatchday }: {
           const top  = vy + 14 + PICKER_H > window.innerHeight ? vy - PICKER_H - 14 : vy + 14
           return (
             <>
-              <div onMouseDown={() => setCustomPickerFor(null)} style={{ position: 'fixed', inset: 0, zIndex: 999 }} />
-              <div style={{
-                position: 'fixed', left, top, zIndex: 1000,
-                background: 'var(--bg-card)', border: '1px solid var(--border)',
-                borderRadius: 10, padding: '10px 12px',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
-                minWidth: PICKER_W,
-              }}>
-                <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>
+              <div className={styles.pickerOverlay} onMouseDown={() => setCustomPickerFor(null)} />
+              <div className={styles.picker} style={{ left, top, minWidth: PICKER_W }}>
+                <div className={styles.pickerLabel}>
                   Change position
                 </div>
                 {(() => {
@@ -1191,16 +1126,18 @@ export default function Tactics({ leagueId, myClub, onSaved, nextMatchday }: {
                   const usedAll     = new Set(otherSlots.map(cs => cs.position))
                   const otherDefCount = otherSlots.filter(cs => DEFENDER_POSITIONS.has(cs.position)).length
                   return (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                    <div className={styles.pickerBtns}>
                       {relatable.map(pos => {
                         const isCurrent   = s.position === pos
                         const isTaken     = (UNIQUE_POSITIONS.has(pos) && usedUnique.has(pos))
                                          || (DEFENDER_POSITIONS.has(pos) && otherDefCount >= 5)
                         const mirror      = MIRROR_POSITION[pos]
                         const needsMirror = !isTaken && !isCurrent && mirror && !usedAll.has(mirror)
+                        const btnClass = isTaken ? styles.pickerBtnDisabled : isCurrent ? styles.pickerBtnActive : needsMirror ? styles.pickerBtnNeedsMirror : styles.pickerBtnDefault
                         return (
                           <button
                             key={pos}
+                            className={btnClass}
                             disabled={isTaken}
                             onMouseDown={e => e.stopPropagation()}
                             onClick={e => { e.stopPropagation(); if (!isTaken) editCustomSlotPosition(customPickerFor, pos) }}
@@ -1211,19 +1148,9 @@ export default function Tactics({ leagueId, myClub, onSaved, nextMatchday }: {
                                   : `${pos} already used`
                                 : needsMirror ? `Remember to also add ${mirror}` : undefined
                             }
-                            style={{
-                              padding: '5px 12px', borderRadius: 5, fontSize: 12, fontWeight: 800,
-                              border: `1px solid ${isCurrent ? 'var(--green)' : needsMirror ? 'var(--gold)' : 'var(--border)'}`,
-                              cursor: isTaken ? 'not-allowed' : 'pointer',
-                              background: isCurrent ? 'rgba(54,226,126,0.15)' : needsMirror ? 'rgba(233,196,106,0.08)' : 'rgba(255,255,255,0.06)',
-                              color: isCurrent ? 'var(--green)' : isTaken ? 'rgba(255,255,255,0.2)' : needsMirror ? 'var(--gold)' : 'var(--text-1)',
-                              textTransform: 'uppercase', letterSpacing: 0.4,
-                              opacity: isTaken ? 0.45 : 1,
-                              position: 'relative',
-                            }}
                           >
                             {pos}
-                            {needsMirror && <span style={{ fontSize: 8, position: 'absolute', top: 1, right: 2, lineHeight: 1 }}>⚠</span>}
+                            {needsMirror && <span className={styles.pickerBtnMirrorWarn}>⚠</span>}
                           </button>
                         )
                       })}
@@ -1237,22 +1164,17 @@ export default function Tactics({ leagueId, myClub, onSaved, nextMatchday }: {
 
         {/* Bench */}
         {bench.length > 0 && (
-          <div style={{ marginTop: 14 }}>
-            <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Bench · {bench.length} players</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: 6 }}>
+          <div className={styles.benchSection}>
+            <div className={styles.benchTitle}>Bench · {bench.length} players</div>
+            <div className={styles.benchGrid}>
               {bench.map(p => (
-                <div
-                  key={p.id}
-                  draggable
-                  onDragStart={() => { /* bench-to-pitch DnD could be added */ }}
-                  style={{ padding: '6px 8px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 7, display: 'flex', alignItems: 'center', gap: 6, cursor: 'default' }}
-                >
-                  <PlayerPhoto url={p.player.photoUrl} name={p.player.name} size={24} style={{ borderRadius: '50%' }} />
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.player.name.split(' ').slice(-1)[0]}</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <div key={p.id} draggable onDragStart={() => { /* bench-to-pitch DnD could be added */ }} className={styles.benchCard}>
+                  <PlayerPhoto url={p.player.photoUrl} name={p.player.name} size={24} className={styles.benchAvatar} />
+                  <div className={styles.benchInfo}>
+                    <div className={styles.benchName}>{p.player.name.split(' ').slice(-1)[0]}</div>
+                    <div className={styles.benchMeta}>
                       <span className={posClass(p.player.position)} style={{ fontSize: 8 }}>{p.player.position}</span>
-                      <span style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 800, color: 'var(--text-2)' }}>{p.player.overall}</span>
+                      <span className={styles.benchOvr}>{p.player.overall}</span>
                     </div>
                   </div>
                 </div>
@@ -1261,31 +1183,27 @@ export default function Tactics({ leagueId, myClub, onSaved, nextMatchday }: {
           </div>
         )}
 
-        <div style={{ marginTop: 10, fontSize: 11, color: 'var(--text-3)' }}>
+        <div className={styles.dragHint}>
           {isMobile ? 'Hold a player (400 ms) to drag · tap to view stats' : 'Drag players between slots to rearrange · Click a player to view stats & set role'}
         </div>
       </div>
 
       {/* Right: settings */}
-      <div style={{ display: isMobile ? 'grid' : 'flex', gridTemplateColumns: isMobile ? '1fr 1fr' : undefined, flexDirection: isMobile ? undefined : 'column', gap: 14, alignItems: isMobile ? 'start' : undefined }}>
+      <div className={styles.settingsCol}>
 
         {/* Team rating */}
-        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 16px' }}>
-          <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Team Rating</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span style={{ fontFamily: 'var(--font-display)', fontSize: 36, fontWeight: 900, color: 'var(--text-1)', lineHeight: 1 }}>
-              {currentRating ?? '—'}
-            </span>
+        <div className={styles.ratingCard}>
+          <div className={styles.ratingLabel}>Team Rating</div>
+          <div className={styles.ratingRow}>
+            <span className={styles.ratingValue}>{currentRating ?? '—'}</span>
             {previewRating !== null && currentRating !== null && (
               <>
-                <span style={{ fontSize: 20, color: 'var(--text-3)' }}>→</span>
+                <span className={styles.ratingArrow}>→</span>
                 <div>
-                  <span style={{ fontFamily: 'var(--font-display)', fontSize: 36, fontWeight: 900, lineHeight: 1,
-                    color: previewRating > currentRating ? 'var(--green)' : previewRating < currentRating ? 'var(--red)' : 'var(--text-1)' }}>
+                  <span className={previewRating > currentRating ? styles.ratingPreviewGood : previewRating < currentRating ? styles.ratingPreviewBad : styles.ratingPreviewSame}>
                     {previewRating}
                   </span>
-                  <span style={{ fontSize: 13, fontWeight: 700, marginLeft: 4,
-                    color: previewRating > currentRating ? 'var(--green)' : previewRating < currentRating ? 'var(--red)' : 'var(--text-3)' }}>
+                  <span className={previewRating > currentRating ? styles.ratingDeltaGood : previewRating < currentRating ? styles.ratingDeltaBad : styles.ratingDeltaSame}>
                     {previewRating > currentRating ? `+${previewRating - currentRating}` :
                      previewRating < currentRating ? `${previewRating - currentRating}` : '='}
                   </span>
@@ -1294,38 +1212,34 @@ export default function Tactics({ leagueId, myClub, onSaved, nextMatchday }: {
             )}
           </div>
           {previewRating !== null && (
-            <div style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 6 }}>Drop to apply · drag away to cancel</div>
+            <div className={styles.ratingHint}>Drop to apply · drag away to cancel</div>
           )}
         </div>
 
         {/* Tactical style */}
-        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+        <div className={styles.settingsCard}>
           <div className="card-header">
             <span className="accent-bar" />
-            <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Tactical Style</span>
+            <span className={styles.secLabel}>Tactical Style</span>
           </div>
-          <div style={{ padding: 14 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5, marginBottom: 10 }}>
+          <div className={styles.settingsBody}>
+            <div className={styles.styleGrid}>
               {(Object.keys(STYLE_LABELS) as TacticStyle[]).map(s => (
-                <button key={s} onClick={() => setStyle(s)} style={{
-                  padding: '8px 6px', borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: 'pointer',
-                  border: `1.5px solid ${style === s ? 'var(--green)' : 'var(--border)'}`,
-                  background: style === s ? 'rgba(54,226,126,0.1)' : 'transparent',
-                  color: style === s ? 'var(--green)' : 'var(--text-2)',
-                  textAlign: 'center', transition: 'all 0.15s',
-                }}>{STYLE_LABELS[s]}</button>
+                <button key={s} onClick={() => setStyle(s)} className={style === s ? styles.styleBtnActive : styles.styleBtn}>
+                  {STYLE_LABELS[s]}
+                </button>
               ))}
             </div>
-            <div style={{ background: 'var(--bg-base)', borderRadius: 8, padding: '10px 12px' }}>
-              <div style={{ fontSize: 11, color: 'var(--text-2)', lineHeight: 1.5, marginBottom: 9 }}>{STYLE_DESC[style]}</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div className={styles.styleInfo}>
+              <div className={styles.styleDesc}>{STYLE_DESC[style]}</div>
+              <div className={styles.styleTraits}>
                 {STYLE_TRAITS[style].bonuses.map(t => (
-                  <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, color: 'var(--green)' }}>
-                    <span style={{ fontWeight: 800, fontSize: 11 }}>+</span>{t}
+                  <div key={t} className={styles.styleTrait}>
+                    <span className={styles.styleTraitPlus}>+</span>{t}
                   </div>
                 ))}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, color: 'var(--red)', marginTop: 2 }}>
-                  <span style={{ fontWeight: 800, fontSize: 11 }}>−</span>{STYLE_TRAITS[style].cost}
+                <div className={styles.styleTraitCost}>
+                  <span className={styles.styleTraitMinus}>−</span>{STYLE_TRAITS[style].cost}
                 </div>
               </div>
             </div>
@@ -1333,43 +1247,40 @@ export default function Tactics({ leagueId, myClub, onSaved, nextMatchday }: {
         </div>
 
         {/* Settings — stage buttons */}
-        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+        <div className={styles.settingsCard}>
           <div className="card-header">
             <span className="accent-bar" />
-            <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Settings</span>
+            <span className={styles.secLabel}>Settings</span>
           </div>
-          <div style={{ padding: 14 }}>
+          <div className={styles.settingsBody}>
 
             {/* Pressing */}
             {(() => {
               const active = PRESSING_STAGES.find(s => s.value === pressing)
               const imp = PRESSING_IMPACTS[pressing]
               return (
-                <div style={{ marginBottom: 16 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 7 }}>
-                    <span style={{ fontSize: 11, color: 'var(--text-2)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>Pressing</span>
-                    <span style={{ fontSize: 11, color: 'var(--green)', fontWeight: 700 }}>{active?.label ?? ''}</span>
+                <div className={styles.stageRow}>
+                  <div className={styles.stageHeader}>
+                    <span className={styles.stageTitle}>Pressing</span>
+                    <span className={styles.stageActiveLabel}>{active?.label ?? ''}</span>
                   </div>
-                  <div style={{ display: 'flex', gap: 3, marginBottom: 7 }}>
+                  <div className={styles.stageBtns}>
                     {PRESSING_STAGES.map(stage => (
-                      <button key={stage.label} onClick={() => setPressing(stage.value)} title={stage.desc} style={{
-                        flex: 1, padding: '6px 2px', fontSize: 10, fontWeight: 700, cursor: 'pointer',
-                        borderRadius: 5, border: `1.5px solid ${pressing === stage.value ? 'var(--green)' : 'var(--border)'}`,
-                        background: pressing === stage.value ? 'rgba(54,226,126,0.12)' : 'transparent',
-                        color: pressing === stage.value ? 'var(--green)' : 'var(--text-3)',
-                        transition: 'all 0.15s', whiteSpace: 'nowrap',
-                      }}>{stage.label}</button>
+                      <button key={stage.label} onClick={() => setPressing(stage.value)} title={stage.desc}
+                        className={pressing === stage.value ? styles.stageBtnActive : styles.stageBtn}>
+                        {stage.label}
+                      </button>
                     ))}
                   </div>
-                  {active && <div style={{ fontSize: 10, color: 'var(--text-3)', marginBottom: 8 }}>{active.desc}</div>}
+                  {active && <div className={styles.stageDesc}>{active.desc}</div>}
                   {imp && (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, background: 'var(--bg-base)', borderRadius: 6, padding: '8px 10px' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        <span style={{ fontSize: 9, color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.4 }}>Ball Recovery</span>
+                    <div className={styles.stageImpact}>
+                      <div className={styles.stageImpactCol}>
+                        <span className={styles.stageImpactLabel}>Ball Recovery</span>
                         <PipBar value={imp.recovery} color="var(--green)" />
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        <span style={{ fontSize: 9, color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.4 }}>Stamina Cost</span>
+                      <div className={styles.stageImpactCol}>
+                        <span className={styles.stageImpactLabel}>Stamina Cost</span>
                         <PipBar value={imp.stamina} color={imp.stamina >= 4 ? 'var(--red)' : imp.stamina >= 3 ? 'var(--gold)' : 'var(--green)'} />
                       </div>
                     </div>
@@ -1383,31 +1294,28 @@ export default function Tactics({ leagueId, myClub, onSaved, nextMatchday }: {
               const active = DEFLINE_STAGES.find(s => s.value === defLine)
               const imp = DEFLINE_IMPACTS[defLine]
               return (
-                <div style={{ marginBottom: 16 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 7 }}>
-                    <span style={{ fontSize: 11, color: 'var(--text-2)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>Defensive Line</span>
-                    <span style={{ fontSize: 11, color: 'var(--green)', fontWeight: 700 }}>{active?.label ?? ''}</span>
+                <div className={styles.stageRow}>
+                  <div className={styles.stageHeader}>
+                    <span className={styles.stageTitle}>Defensive Line</span>
+                    <span className={styles.stageActiveLabel}>{active?.label ?? ''}</span>
                   </div>
-                  <div style={{ display: 'flex', gap: 3, marginBottom: 7 }}>
+                  <div className={styles.stageBtns}>
                     {DEFLINE_STAGES.map(stage => (
-                      <button key={stage.label} onClick={() => setDefLine(stage.value)} title={stage.desc} style={{
-                        flex: 1, padding: '6px 2px', fontSize: 10, fontWeight: 700, cursor: 'pointer',
-                        borderRadius: 5, border: `1.5px solid ${defLine === stage.value ? 'var(--green)' : 'var(--border)'}`,
-                        background: defLine === stage.value ? 'rgba(54,226,126,0.12)' : 'transparent',
-                        color: defLine === stage.value ? 'var(--green)' : 'var(--text-3)',
-                        transition: 'all 0.15s', whiteSpace: 'nowrap',
-                      }}>{stage.label}</button>
+                      <button key={stage.label} onClick={() => setDefLine(stage.value)} title={stage.desc}
+                        className={defLine === stage.value ? styles.stageBtnActive : styles.stageBtn}>
+                        {stage.label}
+                      </button>
                     ))}
                   </div>
-                  {active && <div style={{ fontSize: 10, color: 'var(--text-3)', marginBottom: 8 }}>{active.desc}</div>}
+                  {active && <div className={styles.stageDesc}>{active.desc}</div>}
                   {imp && (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, background: 'var(--bg-base)', borderRadius: 6, padding: '8px 10px' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        <span style={{ fontSize: 9, color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.4 }}>Compactness</span>
+                    <div className={styles.stageImpact}>
+                      <div className={styles.stageImpactCol}>
+                        <span className={styles.stageImpactLabel}>Compactness</span>
                         <PipBar value={imp.compact} color="var(--green)" />
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        <span style={{ fontSize: 9, color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.4 }}>Counter Risk</span>
+                      <div className={styles.stageImpactCol}>
+                        <span className={styles.stageImpactLabel}>Counter Risk</span>
                         <PipBar value={imp.counterRisk} color={imp.counterRisk >= 4 ? 'var(--red)' : imp.counterRisk >= 3 ? 'var(--gold)' : 'var(--green)'} />
                       </div>
                     </div>
@@ -1421,31 +1329,28 @@ export default function Tactics({ leagueId, myClub, onSaved, nextMatchday }: {
               const active = WIDTH_STAGES.find(s => s.value === width)
               const imp = WIDTH_IMPACTS[width]
               return (
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 7 }}>
-                    <span style={{ fontSize: 11, color: 'var(--text-2)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>Width</span>
-                    <span style={{ fontSize: 11, color: 'var(--green)', fontWeight: 700 }}>{active?.label ?? ''}</span>
+                <div className={styles.stageRow}>
+                  <div className={styles.stageHeader}>
+                    <span className={styles.stageTitle}>Width</span>
+                    <span className={styles.stageActiveLabel}>{active?.label ?? ''}</span>
                   </div>
-                  <div style={{ display: 'flex', gap: 3, marginBottom: 7 }}>
+                  <div className={styles.stageBtns}>
                     {WIDTH_STAGES.map(stage => (
-                      <button key={stage.label} onClick={() => setWidth(stage.value)} title={stage.desc} style={{
-                        flex: 1, padding: '6px 2px', fontSize: 10, fontWeight: 700, cursor: 'pointer',
-                        borderRadius: 5, border: `1.5px solid ${width === stage.value ? 'var(--green)' : 'var(--border)'}`,
-                        background: width === stage.value ? 'rgba(54,226,126,0.12)' : 'transparent',
-                        color: width === stage.value ? 'var(--green)' : 'var(--text-3)',
-                        transition: 'all 0.15s', whiteSpace: 'nowrap',
-                      }}>{stage.label}</button>
+                      <button key={stage.label} onClick={() => setWidth(stage.value)} title={stage.desc}
+                        className={width === stage.value ? styles.stageBtnActive : styles.stageBtn}>
+                        {stage.label}
+                      </button>
                     ))}
                   </div>
-                  {active && <div style={{ fontSize: 10, color: 'var(--text-3)', marginBottom: 8 }}>{active.desc}</div>}
+                  {active && <div className={styles.stageDesc}>{active.desc}</div>}
                   {imp && (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, background: 'var(--bg-base)', borderRadius: 6, padding: '8px 10px' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        <span style={{ fontSize: 9, color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.4 }}>Wing Threat</span>
+                    <div className={styles.stageImpact}>
+                      <div className={styles.stageImpactCol}>
+                        <span className={styles.stageImpactLabel}>Wing Threat</span>
                         <PipBar value={imp.wing} color="var(--green)" />
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        <span style={{ fontSize: 9, color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.4 }}>Central Strength</span>
+                      <div className={styles.stageImpactCol}>
+                        <span className={styles.stageImpactLabel}>Central Strength</span>
                         <PipBar value={imp.central} color="var(--green)" />
                       </div>
                     </div>
@@ -1458,25 +1363,25 @@ export default function Tactics({ leagueId, myClub, onSaved, nextMatchday }: {
         </div>
 
         {/* Substitutions */}
-        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+        <div className={styles.settingsCard}>
           <div className="card-header">
             <span className="accent-bar" />
-            <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Substitutions</span>
+            <span className={styles.secLabel}>Substitutions</span>
           </div>
-          <div style={{ padding: 14 }}>
-            <div style={{ fontSize: 11, color: 'var(--text-2)', marginBottom: 10 }}>
+          <div className={styles.settingsBody}>
+            <div className={styles.subIntro}>
               Set up to 3 subs. Each triggers when the starter hits a fitness threshold or a match minute.
             </div>
             {subs.map((sub, i) => {
               const outPlayer = instanceMap[sub.outInstanceId]
               const inPlayer  = instanceMap[sub.inInstanceId]
               return (
-                <div key={i} style={{ background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px', marginBottom: 8 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, flexWrap: 'wrap' as const }}>
+                <div key={i} className={styles.subCard}>
+                  <div className={styles.subSelects}>
                     <select
                       value={sub.outInstanceId}
                       onChange={e => setSubs(prev => prev.map((s, j) => j === i ? { ...s, outInstanceId: e.target.value } : s))}
-                      style={{ flex: 1, minWidth: 0, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-1)', fontSize: 11, padding: '4px 6px' }}
+                      className={styles.subSelect}
                     >
                       <option value="">— Off —</option>
                       {lineup.map(slot => {
@@ -1484,23 +1389,23 @@ export default function Tactics({ leagueId, myClub, onSaved, nextMatchday }: {
                         return p ? <option key={slot.instanceId} value={slot.instanceId}>{p.player.name} ({slot.position})</option> : null
                       })}
                     </select>
-                    <span style={{ fontSize: 10, color: 'var(--text-3)' }}>▶</span>
+                    <span className={styles.subArrow}>▶</span>
                     <select
                       value={sub.inInstanceId}
                       onChange={e => setSubs(prev => prev.map((s, j) => j === i ? { ...s, inInstanceId: e.target.value } : s))}
-                      style={{ flex: 1, minWidth: 0, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-1)', fontSize: 11, padding: '4px 6px' }}
+                      className={styles.subSelect}
                     >
                       <option value="">— On —</option>
                       {bench.map(p => <option key={p.id} value={p.id}>{p.player.name} ({p.player.position})</option>)}
                     </select>
-                    <button onClick={() => setSubs(prev => prev.filter((_, j) => j !== i))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: 16, padding: '0 2px', lineHeight: 1 }}>✕</button>
+                    <button onClick={() => setSubs(prev => prev.filter((_, j) => j !== i))} className={styles.subRemoveBtn}>✕</button>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ fontSize: 10, color: 'var(--text-2)', flexShrink: 0 }}>Trigger when</span>
+                  <div className={styles.subCondition}>
+                    <span className={styles.subConditionLabel}>Trigger when</span>
                     <select
                       value={sub.condition.type}
                       onChange={e => setSubs(prev => prev.map((s, j) => j === i ? { ...s, condition: { ...s.condition, type: e.target.value as 'minute' | 'fitness' } } : s))}
-                      style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-1)', fontSize: 11, padding: '3px 5px' }}
+                      className={styles.subConditionSelect}
                     >
                       <option value="fitness">fitness ≤</option>
                       <option value="minute">minute ≥</option>
@@ -1511,12 +1416,12 @@ export default function Tactics({ leagueId, myClub, onSaved, nextMatchday }: {
                       max={sub.condition.type === 'fitness' ? 80 : 89}
                       value={sub.condition.value}
                       onChange={e => setSubs(prev => prev.map((s, j) => j === i ? { ...s, condition: { ...s.condition, value: Number(e.target.value) } } : s))}
-                      style={{ width: 52, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-1)', fontSize: 11, padding: '3px 6px', textAlign: 'center' as const }}
+                      className={styles.subConditionInput}
                     />
-                    <span style={{ fontSize: 10, color: 'var(--text-2)' }}>{sub.condition.type === 'fitness' ? '(stamina)' : '(match min)'}</span>
+                    <span className={styles.subConditionHint}>{sub.condition.type === 'fitness' ? '(stamina)' : '(match min)'}</span>
                   </div>
                   {outPlayer && inPlayer && (
-                    <div style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 6 }}>
+                    <div className={styles.subSummary}>
                       {outPlayer.player.name} → {inPlayer.player.name} · {sub.condition.type === 'fitness' ? `when stamina ≤ ${sub.condition.value}` : `at minute ${sub.condition.value}`}
                     </div>
                   )}
@@ -1525,8 +1430,7 @@ export default function Tactics({ leagueId, myClub, onSaved, nextMatchday }: {
             })}
             {subs.length < 3 && (
               <button
-                className="btn btn-outline"
-                style={{ width: '100%', fontSize: 11, marginTop: 4 }}
+                className={styles.addSubBtn}
                 onClick={() => setSubs(prev => [...prev, { outInstanceId: '', inInstanceId: '', condition: { type: 'fitness', value: 40 } }])}
               >
                 + Add Substitution
@@ -1536,56 +1440,56 @@ export default function Tactics({ leagueId, myClub, onSaved, nextMatchday }: {
         </div>
 
         {/* Fit legend */}
-        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+        <div className={styles.settingsCard}>
           <div className="card-header">
             <span className="accent-bar" />
-            <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Position Fit</span>
+            <span className={styles.secLabel}>Position Fit</span>
           </div>
-          <div style={{ padding: 14 }}>
-          {[['var(--green)', 'Natural position — full rating'], ['var(--gold)', '~ Adjacent position — slight penalty'], ['var(--red)', '! Wrong position — large penalty']].map(([c, l]) => (
-            <div key={l} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, fontSize: 11, color: 'var(--text-2)' }}>
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: c, flexShrink: 0, display: 'inline-block' }} />
-              {l}
-            </div>
-          ))}
+          <div className={styles.settingsBody}>
+            {[['var(--green)', 'Natural position — full rating'], ['var(--gold)', '~ Adjacent position — slight penalty'], ['var(--red)', '! Wrong position — large penalty']].map(([c, l]) => (
+              <div key={l} className={styles.fitLegendRow}>
+                <span className={styles.fitDot} style={{ background: c }} />
+                {l}
+              </div>
+            ))}
           </div>
         </div>
 
         {/* Presets */}
-        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+        <div className={styles.settingsCard}>
           <div className="card-header">
             <span className="accent-bar" />
-            <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Presets</span>
+            <span className={styles.secLabel}>Presets</span>
           </div>
-          <div style={{ padding: 12 }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: presets.length > 0 ? 8 : 0 }}>
+          <div className={styles.presetsBody}>
+            <div className={styles.presetChips}>
               {presets.map((p, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 0, background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: 20, overflow: 'hidden' }}>
-                  <button onClick={() => loadPreset(p)} style={{ padding: '4px 10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600, color: 'var(--text-1)' }}>{p.name}</button>
-                  <button onClick={() => deletePreset(i)} style={{ padding: '4px 6px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: 'var(--text-3)', lineHeight: 1 }}>✕</button>
+                <div key={i} className={styles.presetChip}>
+                  <button onClick={() => loadPreset(p)} className={styles.presetLoadBtn}>{p.name}</button>
+                  <button onClick={() => deletePreset(i)} className={styles.presetDeleteBtn}>✕</button>
                 </div>
               ))}
             </div>
             {presets.length < 4 && (
-              <button className="btn btn-ghost" style={{ width: '100%', fontSize: 11 }} onClick={savePreset}>
-                💾 Save current as preset
+              <button className="btn btn-ghost" onClick={savePreset}>
+                Save current as preset
               </button>
             )}
             {presets.length >= 4 && (
-              <div style={{ fontSize: 10, color: 'var(--text-3)', textAlign: 'center' }}>Max 4 presets — delete one to save a new preset</div>
+              <div className={styles.presetsMaxNote}>Max 4 presets — delete one to save a new preset</div>
             )}
           </div>
         </div>
 
         {/* Save */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div className={styles.saveRow}>
           {isDirty && !saving && (
-            <span style={{ fontSize: 12, color: 'var(--gold)', fontWeight: 700, flexShrink: 0 }}>● Unsaved</span>
+            <span className={styles.unsavedDot}>● Unsaved</span>
           )}
           <button className="btn btn-green" style={{ flex: 1 }} onClick={handleSave} disabled={saving}>
             {saving ? 'Saving...' : 'Save Tactics'}
           </button>
-          {saveMsg && !isDirty && <span style={{ fontSize: 12, color: saveMsg === 'Save failed' ? 'var(--red)' : 'var(--green)' }}>{saveMsg}</span>}
+          {saveMsg && !isDirty && <span className={saveMsg === 'Save failed' ? styles.saveMsgErr : styles.saveMsgOk}>{saveMsg}</span>}
         </div>
       </div>
     </div>

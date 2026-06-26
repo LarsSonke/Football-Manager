@@ -4,6 +4,7 @@ import { posClass, ovrColor } from '../../utils/helpers'
 import { PlayerPhoto } from '../../components/PlayerPhoto'
 import { useIsMobile } from './types'
 import type { ClubData, SquadPlayer, FreeAgent, TransferListing } from './types'
+import styles from './Transfers.module.css'
 
 export default function Transfers({ leagueId, myClub, squadSize, transferWindowOpen, onRefresh }: {
   leagueId: string
@@ -116,25 +117,21 @@ export default function Transfers({ leagueId, myClub, squadSize, transferWindowO
   function PlayerRow({ p, action }: { p: FreeAgent | SquadPlayer; action: React.ReactNode }) {
     const pl = p.player
     return (
-      <div style={{
-        display: 'grid', gridTemplateColumns: isMobile ? '28px 1fr 36px auto' : '28px 1fr 36px 36px 36px 36px auto',
-        alignItems: 'center', gap: 8,
-        padding: '9px 14px', borderBottom: '1px solid var(--border)',
-      }}>
-        <PlayerPhoto url={pl.photoUrl} name={pl.name} size={28} style={{ borderRadius: '50%' }} />
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pl.name}</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+      <div className={isMobile ? styles.playerRowFreeAgentMobile : styles.playerRowFreeAgent}>
+        <PlayerPhoto url={pl.photoUrl} name={pl.name} size={28} className={styles.playerAvatar} />
+        <div className={styles.playerInfo}>
+          <div className={styles.playerName}>{pl.name}</div>
+          <div className={styles.playerMeta}>
             <span className={posClass(pl.position)} style={{ fontSize: 9 }}>{pl.position}</span>
-            <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Age {pl.age}</span>
-            {p.injured && <span style={{ fontSize: 10, color: 'var(--red)', fontWeight: 700 }}>INJ</span>}
+            <span className={styles.playerAge}>Age {pl.age}</span>
+            {p.injured && <span className={styles.playerInjured}>INJ</span>}
           </div>
         </div>
-        <span style={{ fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 800, color: ovrColor(pl.overall), textAlign: 'center' }}>{pl.overall}</span>
+        <span className={styles.playerOvr} style={{ color: ovrColor(pl.overall) }}>{pl.overall}</span>
         {!isMobile && <>
-          <span style={{ fontSize: 11, color: p.fitness >= 75 ? 'var(--green)' : p.fitness >= 50 ? 'var(--gold)' : 'var(--red)', textAlign: 'center' }}>{p.fitness}</span>
-          <span style={{ fontSize: 11, color: p.morale >= 70 ? 'var(--green)' : p.morale >= 50 ? 'var(--gold)' : 'var(--red)', textAlign: 'center' }}>{p.morale}</span>
-          <span style={{ fontSize: 11, color: p.form >= 70 ? 'var(--green)' : p.form >= 50 ? 'var(--gold)' : 'var(--red)', textAlign: 'center' }}>{p.form}</span>
+          <span className={styles.playerStat} data-level={p.fitness >= 75 ? 'high' : p.fitness >= 50 ? 'mid' : 'low'}>{p.fitness}</span>
+          <span className={styles.playerStat} data-level={p.morale >= 70 ? 'high' : p.morale >= 50 ? 'mid' : 'low'}>{p.morale}</span>
+          <span className={styles.playerStat} data-level={p.form >= 70 ? 'high' : p.form >= 50 ? 'mid' : 'low'}>{p.form}</span>
         </>}
         {action}
       </div>
@@ -142,65 +139,55 @@ export default function Transfers({ leagueId, myClub, squadSize, transferWindowO
   }
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 20, alignItems: 'start' }}>
+    <div className={styles.root}>
 
       {transferWindowOpen === false && (
-        <div style={{ gridColumn: '1 / -1', padding: '10px 14px', background: 'rgba(245,166,35,0.08)', border: '1px solid rgba(245,166,35,0.3)', borderRadius: 'var(--radius-sm)', marginBottom: 16, fontSize: 12, color: 'var(--gold)', fontWeight: 600 }}>
+        <div className={styles.windowBanner}>
           Transfer window is currently closed. No transfers can be made.
         </div>
       )}
 
       {/* Transfer Market */}
       {otherListings.length > 0 && (
-        <div style={{ gridColumn: '1 / -1', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
-          <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)' }}>Transfer Market</div>
-            <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{otherListings.length} listed</span>
+        <div className={styles.panelFullWidth}>
+          <div className={styles.panelHeader}>
+            <div className={styles.panelTitle}>Transfer Market</div>
+            <span className={styles.panelCount}>{otherListings.length} listed</span>
           </div>
           {!isMobile && (
-            <div style={{ display: 'grid', gridTemplateColumns: '28px 1fr 80px 36px 36px 36px 36px auto', gap: 8, padding: '6px 14px', borderBottom: '1px solid var(--border)' }}>
+            <div className={styles.colHeadersMarket}>
               {['', 'Player', 'Club', 'OVR', 'FIT', 'MOR', 'FRM', ''].map((h, i) => (
-                <span key={i} style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5 }}>{h}</span>
+                <span key={i} className={i >= 3 ? styles.colHeadCenter : styles.colHead}>{h}</span>
               ))}
             </div>
           )}
           {otherListings.map(l => {
             const pl = l.instance.player
             const inst = l.instance
+            const canBuy = !squadFull && myClub.budget >= l.askingPrice
             return (
-              <div key={l.id} style={{
-                display: 'grid',
-                gridTemplateColumns: isMobile ? '28px 1fr auto' : '28px 1fr 80px 36px 36px 36px 36px auto',
-                alignItems: 'center', gap: 8,
-                padding: '9px 14px', borderBottom: '1px solid var(--border)',
-              }}>
-                <PlayerPhoto url={pl.photoUrl} name={pl.name} size={28} style={{ borderRadius: '50%' }} />
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pl.name}</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <div key={l.id} className={isMobile ? styles.playerRowMarketMobile : styles.playerRowMarket}>
+                <PlayerPhoto url={pl.photoUrl} name={pl.name} size={28} className={styles.playerAvatar} />
+                <div className={styles.playerInfo}>
+                  <div className={styles.playerName}>{pl.name}</div>
+                  <div className={styles.playerMeta}>
                     <span className={posClass(pl.position)} style={{ fontSize: 9 }}>{pl.position}</span>
-                    <span style={{ fontSize: 11, color: 'var(--text-3)' }}>Age {pl.age}</span>
-                    {inst.injured && <span style={{ fontSize: 10, color: 'var(--red)', fontWeight: 700 }}>INJ</span>}
+                    <span className={styles.playerAge}>Age {pl.age}</span>
+                    {inst.injured && <span className={styles.playerInjured}>INJ</span>}
                   </div>
                 </div>
-                {!isMobile && <span style={{ fontSize: 11, color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.sellerClub.name}</span>}
-                <span style={{ fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 800, color: ovrColor(pl.overall), textAlign: 'center' }}>{pl.overall}</span>
+                {!isMobile && <span className={styles.playerClub}>{l.sellerClub.name}</span>}
+                <span className={styles.playerOvr} style={{ color: ovrColor(pl.overall) }}>{pl.overall}</span>
                 {!isMobile && <>
-                  <span style={{ fontSize: 11, color: inst.fitness >= 75 ? 'var(--green)' : inst.fitness >= 50 ? 'var(--gold)' : 'var(--red)', textAlign: 'center' }}>{inst.fitness}</span>
-                  <span style={{ fontSize: 11, color: inst.morale >= 70 ? 'var(--green)' : inst.morale >= 50 ? 'var(--gold)' : 'var(--red)', textAlign: 'center' }}>{inst.morale}</span>
-                  <span style={{ fontSize: 11, color: inst.form >= 70 ? 'var(--green)' : inst.form >= 50 ? 'var(--gold)' : 'var(--red)', textAlign: 'center' }}>{inst.form}</span>
+                  <span className={styles.playerStat} data-level={inst.fitness >= 75 ? 'high' : inst.fitness >= 50 ? 'mid' : 'low'}>{inst.fitness}</span>
+                  <span className={styles.playerStat} data-level={inst.morale >= 70 ? 'high' : inst.morale >= 50 ? 'mid' : 'low'}>{inst.morale}</span>
+                  <span className={styles.playerStat} data-level={inst.form >= 70 ? 'high' : inst.form >= 50 ? 'mid' : 'low'}>{inst.form}</span>
                 </>}
                 <button
+                  className={styles.btnBuy}
                   onClick={() => handleBuy(l.instanceId)}
                   disabled={!!actionId || squadFull || myClub.budget < l.askingPrice}
-                  style={{
-                    padding: '4px 10px', borderRadius: 5, fontSize: 11, fontWeight: 700,
-                    border: 'none', cursor: (squadFull || myClub.budget < l.askingPrice) ? 'not-allowed' : 'pointer',
-                    background: (squadFull || myClub.budget < l.askingPrice) ? 'rgba(255,255,255,0.06)' : 'var(--green)',
-                    color: (squadFull || myClub.budget < l.askingPrice) ? 'var(--text-3)' : '#000',
-                    opacity: actionId === l.instanceId ? 0.5 : 1,
-                    whiteSpace: 'nowrap',
-                  }}
+                  style={{ opacity: actionId === l.instanceId ? 0.5 : canBuy ? 1 : undefined }}
                   title={myClub.budget < l.askingPrice ? `Need €${(l.askingPrice / 1_000_000).toFixed(1)}M` : ''}
                 >
                   {actionId === l.instanceId ? '…' : `€${l.askingPrice >= 1_000_000 ? (l.askingPrice / 1_000_000).toFixed(1) + 'M' : (l.askingPrice / 1_000).toFixed(0) + 'k'}`}
@@ -212,54 +199,43 @@ export default function Transfers({ leagueId, myClub, squadSize, transferWindowO
       )}
 
       {/* Free agents */}
-      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
-        <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-            <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)' }}>Free Agents</div>
-            <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{freeAgents.length} available</span>
-            {squadFull && <span style={{ fontSize: 11, color: 'var(--red)', marginLeft: 'auto' }}>Squad full</span>}
+      <div className={styles.panel}>
+        <div className={styles.filterArea}>
+          <div className={styles.filterTitle}>
+            <div className={styles.panelTitle}>Free Agents</div>
+            <span className={styles.panelCount}>{freeAgents.length} available</span>
+            {squadFull && <span className={styles.panelWarning}>Squad full</span>}
           </div>
           <input
             value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Search by name…"
-            style={{ width: '100%', padding: '6px 10px', background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-1)', fontSize: 12, marginBottom: 8 }}
+            className={styles.searchInput}
           />
-          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+          <div className={styles.posFilters}>
             {positions.map(p => (
-              <button key={p} onClick={() => setPosFilter(p)} style={{
-                padding: '2px 8px', borderRadius: 10, fontSize: 10, fontWeight: 700,
-                border: 'none', cursor: 'pointer',
-                background: posFilter === p ? 'var(--green)' : 'rgba(255,255,255,0.07)',
-                color: posFilter === p ? '#000' : 'var(--text-2)',
-              }}>{p}</button>
+              <button key={p} onClick={() => setPosFilter(p)} className={posFilter === p ? styles.posChipActive : styles.posChip}>{p}</button>
             ))}
           </div>
         </div>
         {!isMobile && (
-          <div style={{ display: 'grid', gridTemplateColumns: '28px 1fr 36px 36px 36px 36px auto', gap: 8, padding: '6px 14px', borderBottom: '1px solid var(--border)' }}>
+          <div className={styles.colHeadersFreeAgent}>
             {['', 'Player', 'OVR', 'FIT', 'MOR', 'FRM', ''].map((h, i) => (
-              <span key={i} style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5, textAlign: i >= 2 ? 'center' : 'left' }}>{h}</span>
+              <span key={i} className={i >= 2 ? styles.colHeadCenter : styles.colHead}>{h}</span>
             ))}
           </div>
         )}
         {loading ? (
-          <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>Loading…</div>
+          <div className={styles.emptyState}>Loading…</div>
         ) : filtered.length === 0 ? (
-          <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>No free agents match your filter.</div>
+          <div className={styles.emptyState}>No free agents match your filter.</div>
         ) : (
           filtered.map(p => (
             <PlayerRow key={p.id} p={p} action={
               <button
+                className={styles.btnSign}
                 onClick={() => handlePickup(p.id)}
                 disabled={!!actionId || squadFull}
-                style={{
-                  padding: '4px 12px', borderRadius: 5, fontSize: 11, fontWeight: 700,
-                  border: 'none', cursor: squadFull ? 'not-allowed' : 'pointer',
-                  background: squadFull ? 'rgba(255,255,255,0.06)' : 'var(--green)',
-                  color: squadFull ? 'var(--text-3)' : '#000',
-                  opacity: actionId === p.id ? 0.5 : 1,
-                  whiteSpace: 'nowrap',
-                }}
+                style={{ opacity: actionId === p.id ? 0.5 : 1 }}
               >{actionId === p.id ? '…' : 'Sign'}</button>
             } />
           ))
@@ -267,39 +243,41 @@ export default function Transfers({ leagueId, myClub, squadSize, transferWindowO
       </div>
 
       {/* Your squad — release panel */}
-      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
-        <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-1)' }}>Your Squad</div>
-          <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{myClub.squad.length}/{squadSize}</span>
-          {squadTooSmall && <span style={{ fontSize: 11, color: 'var(--red)', marginLeft: 'auto' }}>Min 11 — can't release</span>}
+      <div className={styles.panel}>
+        <div className={styles.panelHeader}>
+          <div className={styles.panelTitle}>Your Squad</div>
+          <span className={styles.panelCount}>{myClub.squad.length}/{squadSize}</span>
+          {squadTooSmall && <span className={styles.panelWarning}>Min 11 — can't release</span>}
         </div>
         {!isMobile && (
-          <div style={{ display: 'grid', gridTemplateColumns: '28px 1fr 36px 36px 36px 36px auto', gap: 8, padding: '6px 14px', borderBottom: '1px solid var(--border)' }}>
+          <div className={styles.colHeadersFreeAgent}>
             {['', 'Player', 'OVR', 'FIT', 'MOR', 'FRM', ''].map((h, i) => (
-              <span key={i} style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 0.5, textAlign: i >= 2 ? 'center' : 'left' }}>{h}</span>
+              <span key={i} className={i >= 2 ? styles.colHeadCenter : styles.colHead}>{h}</span>
             ))}
           </div>
         )}
         {[...myClub.squad].sort((a, b) => b.player.overall - a.player.overall).map(p => (
           <PlayerRow key={p.id} p={p} action={
-            <div style={{ display: 'flex', gap: 4 }}>
+            <div className={styles.actionGroup}>
               {listedIds.has(p.id) ? (
                 <button
+                  className={styles.btnDelist}
                   onClick={() => handleDelist(p.id)}
                   disabled={!!actionId}
-                  style={{ padding: '4px 8px', borderRadius: 5, fontSize: 11, fontWeight: 700, border: '1px solid var(--gold)', cursor: 'pointer', background: 'transparent', color: 'var(--gold)', opacity: actionId === p.id ? 0.5 : 1, whiteSpace: 'nowrap' }}
+                  style={{ opacity: actionId === p.id ? 0.5 : 1 }}
                 >{actionId === p.id ? '…' : 'Delist'}</button>
               ) : (
                 <button
+                  className={styles.btnList}
                   onClick={() => { setListFor(p); setListPrice(String(p.player.baseValue)) }}
                   disabled={!!actionId || squadTooSmall}
-                  style={{ padding: '4px 8px', borderRadius: 5, fontSize: 11, fontWeight: 700, border: '1px solid var(--text-3)', cursor: squadTooSmall ? 'not-allowed' : 'pointer', background: 'transparent', color: squadTooSmall ? 'var(--text-3)' : 'var(--text-2)', whiteSpace: 'nowrap' }}
                 >List</button>
               )}
               <button
+                className={styles.btnRelease}
                 onClick={() => setConfirmRelease(p)}
                 disabled={!!actionId || squadTooSmall || listedIds.has(p.id)}
-                style={{ padding: '4px 8px', borderRadius: 5, fontSize: 11, fontWeight: 700, border: '1px solid var(--red)', cursor: (squadTooSmall || listedIds.has(p.id)) ? 'not-allowed' : 'pointer', background: 'transparent', color: (squadTooSmall || listedIds.has(p.id)) ? 'var(--text-3)' : 'var(--red)', opacity: actionId === p.id ? 0.5 : 1, whiteSpace: 'nowrap' }}
+                style={{ opacity: actionId === p.id ? 0.5 : 1 }}
               >{actionId === p.id ? '…' : 'Release'}</button>
             </div>
           } />
@@ -308,40 +286,34 @@ export default function Transfers({ leagueId, myClub, squadSize, transferWindowO
 
       {/* Feedback banner */}
       {msg && (
-        <div style={{
-          gridColumn: '1 / -1', padding: '10px 16px', borderRadius: 8,
-          background: msg.includes('!') ? 'rgba(54,226,126,0.1)' : 'rgba(255,60,60,0.1)',
-          border: `1px solid ${msg.includes('!') ? 'var(--green)' : 'var(--red)'}`,
-          color: msg.includes('!') ? 'var(--green)' : 'var(--red)',
-          fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        }}>
+        <div className={msg.includes('!') ? styles.feedbackSuccess : styles.feedbackError}>
           {msg}
-          <button onClick={() => setMsg('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontSize: 16 }}>×</button>
+          <button className={styles.feedbackClose} onClick={() => setMsg('')}>×</button>
         </div>
       )}
 
       {/* List for sale dialog */}
       {listFor && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '24px 28px', maxWidth: 360, width: '100%' }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)', marginBottom: 4 }}>List {listFor.player.name} for sale</div>
-            <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 16 }}>OVR {listFor.player.overall} · {listFor.player.position} · Age {listFor.player.age}</div>
-            <label style={{ fontSize: 12, color: 'var(--text-2)', display: 'block', marginBottom: 6 }}>Asking price (€)</label>
+        <div className={styles.overlay}>
+          <div className={styles.dialog}>
+            <div className={styles.dialogTitle}>List {listFor.player.name} for sale</div>
+            <div className={styles.dialogSub}>OVR {listFor.player.overall} · {listFor.player.position} · Age {listFor.player.age}</div>
+            <label className={styles.dialogLabel}>Asking price (€)</label>
             <input
               type="number" min={1000} step={50000}
               value={listPrice}
               onChange={e => setListPrice(e.target.value)}
-              style={{ width: '100%', padding: '8px 10px', background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-1)', fontSize: 14, marginBottom: 6 }}
+              className={styles.dialogInput}
             />
-            <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 20 }}>
+            <div className={styles.dialogMarketValue}>
               Market value: €{(listFor.player.baseValue / 1_000_000).toFixed(1)}M
             </div>
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            <div className={styles.dialogActions}>
               <button className="btn btn-ghost" onClick={() => setListFor(null)}>Cancel</button>
               <button
+                className={styles.btnConfirmList}
                 onClick={() => { const p = parseInt(listPrice); if (p >= 1000) handleList(listFor.id, p) }}
                 disabled={!listPrice || parseInt(listPrice) < 1000}
-                style={{ padding: '7px 18px', borderRadius: 7, background: 'var(--green)', border: 'none', color: '#000', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}
               >List for €{parseInt(listPrice) >= 1_000_000 ? (parseInt(listPrice) / 1_000_000).toFixed(1) + 'M' : (parseInt(listPrice) / 1_000).toFixed(0) + 'k'}</button>
             </div>
           </div>
@@ -350,17 +322,17 @@ export default function Transfers({ leagueId, myClub, squadSize, transferWindowO
 
       {/* Release confirmation dialog */}
       {confirmRelease && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '24px 28px', maxWidth: 360, width: '100%' }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)', marginBottom: 8 }}>Release {confirmRelease.player.name}?</div>
-            <div style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 20, lineHeight: 1.6 }}>
+        <div className={styles.overlay}>
+          <div className={styles.dialog}>
+            <div className={styles.dialogTitle}>Release {confirmRelease.player.name}?</div>
+            <div className={styles.dialogBody}>
               They will become a free agent and any other club in the league can sign them. This cannot be undone.
             </div>
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            <div className={styles.dialogActions}>
               <button className="btn btn-ghost" onClick={() => setConfirmRelease(null)}>Cancel</button>
               <button
+                className={styles.btnConfirmRelease}
                 onClick={() => handleRelease(confirmRelease.id)}
-                style={{ padding: '7px 18px', borderRadius: 7, background: 'var(--red)', border: 'none', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}
               >Release</button>
             </div>
           </div>

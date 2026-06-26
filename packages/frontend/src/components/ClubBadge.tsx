@@ -85,6 +85,29 @@ export function getBadgeColor(name: string): string {
   return palette[Math.abs(h) % palette.length]
 }
 
+const DEFAULT_BG_COLORS    = ['#0d1117','#1a1a2e','#0f3460','#2d1b69','#7a0c0c','#5c3a00','#0a4a0a','#003a4a']
+const DEFAULT_ACCENT_COLORS = ['#e63946','#e8823e','#e9c46a','#36e27e','#27cdff','#7b68ee','#e879c6','#d0d0d0']
+const DEFAULT_EMBLEMS: EmblemKey[] = ['star','bolt','crown','diamond','cross','chevron','flames','castle','wings','arrow','trident','ring']
+
+function generateDefaultConfig(name: string): LogoConfig {
+  function h(seed: number): number {
+    let v = seed
+    for (const c of name) v = Math.imul(31, v) + c.charCodeAt(0) | 0
+    return Math.abs(v)
+  }
+  const shapes: LogoConfig['shape'][] = ['shield', 'circle', 'hexagon', 'rounded']
+  const initials = name.split(/\s+/).slice(0, 2).map(w => w[0]?.toUpperCase() ?? '').join('')
+  return {
+    shape:     shapes[h(3) % shapes.length],
+    bg:        DEFAULT_BG_COLORS[h(1) % DEFAULT_BG_COLORS.length],
+    accent:    DEFAULT_ACCENT_COLORS[h(7) % DEFAULT_ACCENT_COLORS.length],
+    emblem:    DEFAULT_EMBLEMS[h(5) % DEFAULT_EMBLEMS.length],
+    text:      initials,
+    textColor: '#ffffff',
+    division:  'none',
+  }
+}
+
 function isValidHex(v: string): boolean {
   return /^#[0-9a-fA-F]{6}$/.test(v)
 }
@@ -175,22 +198,8 @@ export function ClubBadge({
   size?: number
   logoConfig?: LogoConfig | null
 }) {
-  if (logoConfig) return <SvgBadge config={logoConfig} size={size} />
-
-  const initials = name.split(/\s+/).slice(0, 2).map(w => w[0]?.toUpperCase() ?? '').join('')
-  return (
-    <div style={{
-      width: size, height: size,
-      borderRadius: Math.round(size * 0.18),
-      background: getBadgeColor(name),
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontFamily: 'var(--font-display)', fontWeight: 800,
-      fontSize: Math.round(size * 0.33), color: '#000',
-      flexShrink: 0, letterSpacing: 0.5,
-    }}>
-      {initials}
-    </div>
-  )
+  const config = logoConfig ?? generateDefaultConfig(name)
+  return <SvgBadge config={config} size={size} />
 }
 
 // ─── Logo Maker modal ─────────────────────────────────────────────────────────

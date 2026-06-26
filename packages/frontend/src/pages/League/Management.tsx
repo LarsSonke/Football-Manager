@@ -212,7 +212,7 @@ export default function Management({ league, myClub, isCreator, onRefresh }: {
       {/* Club Name */}
       <div className={styles.card}>
         <div className="card-header"><span className="accent-bar" /><span className={styles.secLabel}>Club Identity</span></div>
-        <div style={{ padding: '4px 0 2px' }}>
+        <div style={{ padding: '12px 16px 14px' }}>
           {renaming ? (
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
               <input

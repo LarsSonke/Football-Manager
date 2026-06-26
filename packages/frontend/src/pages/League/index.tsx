@@ -525,7 +525,7 @@ export default function League() {
     ...(myClub && league.status === 'ACTIVE' ? [{ key: 'transfers' as Tab, label: 'Transfers', icon: <ArrowLeftRight size={14} /> }] : []),
     ...(myClub && league.status === 'ACTIVE' ? [{ key: 'messages' as Tab, label: 'Messages', icon: <Mail size={14} /> }] : []),
     ...(isCreator ? [{ key: 'manage' as Tab, label: 'Manage', icon: <Settings size={14} /> }] : []),
-    ...(myClub && league.status === 'ACTIVE' ? [{ key: 'management' as Tab, label: 'Upgrades', icon: <TrendingUp size={14} /> }] : []),
+    ...(myClub && league.status === 'ACTIVE' ? [{ key: 'management' as Tab, label: 'Club', icon: <TrendingUp size={14} /> }] : []),
     ...(league.hasCup ? [{ key: 'cup' as Tab, label: 'Cup', icon: <Trophy size={14} /> }] : []),
   ]
 

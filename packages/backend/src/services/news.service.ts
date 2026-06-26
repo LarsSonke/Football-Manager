@@ -61,21 +61,21 @@ export async function getLeagueNews(leagueId: string): Promise<NewsItem[]> {
       items.push({
         type: 'result',
         headline: `${m.homeClub.name} beat ${m.awayClub.name} ${hs}–${as_}`,
-        detail: `Matchday ${m.matchday}`,
+        detail: `Day ${m.matchday} · League`,
         matchday: m.matchday,
       })
     } else if (as_ > hs) {
       items.push({
         type: 'result',
         headline: `${m.awayClub.name} win away at ${m.homeClub.name} ${as_}–${hs}`,
-        detail: `Matchday ${m.matchday}`,
+        detail: `Day ${m.matchday} · League`,
         matchday: m.matchday,
       })
     } else {
       items.push({
         type: 'result',
         headline: `${m.homeClub.name} vs ${m.awayClub.name} ends all square ${hs}–${as_}`,
-        detail: `Matchday ${m.matchday}`,
+        detail: `Day ${m.matchday} · League`,
         matchday: m.matchday,
       })
     }
@@ -108,11 +108,11 @@ export async function getLeagueNews(leagueId: string): Promise<NewsItem[]> {
       }
 
       if (winStreak >= 3) {
-        items.push({ type: 'streak', headline: `${club.name} on a ${winStreak}-game winning streak`, detail: 'Current form', matchday: day })
+        items.push({ type: 'streak', headline: `${club.name} on a ${winStreak}-game winning streak`, detail: `Day ${day} · Form`, matchday: day })
       } else if (unbeatenStreak >= 4 && winStreak < unbeatenStreak) {
-        items.push({ type: 'streak', headline: `${club.name} unbeaten in ${unbeatenStreak} matches`, detail: 'Current form', matchday: day })
+        items.push({ type: 'streak', headline: `${club.name} unbeaten in ${unbeatenStreak} matches`, detail: `Day ${day} · Form`, matchday: day })
       } else if (lossStreak >= 3) {
-        items.push({ type: 'streak', headline: `${club.name} winless in ${lossStreak} straight`, detail: 'Under pressure', matchday: day })
+        items.push({ type: 'streak', headline: `${club.name} winless in ${lossStreak} straight`, detail: `Day ${day} · Form`, matchday: day })
       }
     }
   }
@@ -128,7 +128,7 @@ export async function getLeagueNews(leagueId: string): Promise<NewsItem[]> {
       items.push({
         type: 'scorer',
         headline: `${inst.player.name} leads the Golden Boot race`,
-        detail: `${topScorerGroup._sum.goals} goal${topScorerGroup._sum.goals !== 1 ? 's' : ''} · ${inst.club?.name ?? ''}`,
+        detail: `Day ${day} · ${inst.player.position} · ${topScorerGroup._sum.goals} goals · ${inst.club?.name ?? ''}`,
         matchday: day,
       })
     }
@@ -140,7 +140,7 @@ export async function getLeagueNews(leagueId: string): Promise<NewsItem[]> {
       items.push({
         type: 'injury',
         headline: `${p.player.name} sidelined with injury`,
-        detail: `${p.player.position} · ${p.club.name}`,
+        detail: `Day ${day} · ${p.player.position} · ${p.club.name}`,
         matchday: day,
       })
     }
@@ -151,7 +151,7 @@ export async function getLeagueNews(leagueId: string): Promise<NewsItem[]> {
     items.push({
       type: 'transfer',
       headline: `${l.instance.player.name} available for transfer`,
-      detail: `${l.instance.player.position} · OVR ${l.instance.player.overall} · €${(l.askingPrice / 1000).toFixed(0)}k · ${l.sellerClub.name}`,
+      detail: `Day ${day} · ${l.instance.player.position} · OVR ${l.instance.player.overall} · €${(l.askingPrice / 1000).toFixed(0)}k · ${l.sellerClub.name}`,
       matchday: day,
     })
   }

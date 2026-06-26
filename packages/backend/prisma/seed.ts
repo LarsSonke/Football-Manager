@@ -132,7 +132,7 @@ const PLAYERS: PlayerRow[] = [
 function calcValue(overall: number): number {
   if (overall <= 50) return 0
   const x = overall - 50
-  return Math.round(x * x * x * 0.4)
+  return Math.round(x * x * x * 40)
 }
 
 async function main() {

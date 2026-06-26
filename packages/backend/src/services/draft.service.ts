@@ -115,8 +115,9 @@ export async function makePick(
   if (!club) throw new Error('Club not found')
 
   const price = instance.player.baseValue
-  // AI clubs must always be able to pick so the draft never stalls
-  if (!club.isAI && club.budget < price) throw new Error('Insufficient budget')
+
+  // Human clubs cannot overspend — AI clubs can as a last-resort fallback
+  if (!club.isAI && club.budget < price) throw new Error('Insufficient budget — pick a cheaper player')
 
   // Record pick and assign player
   await prisma.draftPick.create({
@@ -468,15 +469,28 @@ async function aiAutoPick(leagueId: string, clubId: string, skipChain = false): 
   }
   targets.ATT = Math.max(1, r - targets.GK - targets.DEF - targets.MID)
 
-  // Fetch top-50 players this club can still afford
+  // Cap per-pick spend at 2× average to prevent one player eating the budget
+  const maxPickBudget = Math.min(club.budget, Math.max(1, Math.round(budgetPerPick * 2)))
+
+  // Fetch top-50 players this club can afford within the per-pick cap
   let candidates = await prisma.playerInstance.findMany({
-    where: { leagueId, clubId: null, player: { baseValue: { lte: club.budget } } },
+    where: { leagueId, clubId: null, player: { baseValue: { lte: maxPickBudget } } },
     include: { player: true },
     orderBy: { player: { overall: 'desc' } },
     take: 50,
   })
 
-  // Safety fallback: pick cheapest available so the draft never stalls
+  // Safety fallback: if cap is too tight, widen to full remaining budget
+  if (candidates.length === 0) {
+    candidates = await prisma.playerInstance.findMany({
+      where: { leagueId, clubId: null, player: { baseValue: { lte: club.budget } } },
+      include: { player: true },
+      orderBy: { player: { baseValue: 'asc' } },
+      take: 10,
+    })
+  }
+
+  // Last-resort fallback: pick cheapest available so the draft never stalls
   if (candidates.length === 0) {
     const cheapest = await prisma.playerInstance.findFirst({
       where: { leagueId, clubId: null },
@@ -501,19 +515,18 @@ async function aiAutoPick(leagueId: string, clubId: string, skipChain = false): 
     const have      = catCounts[cat] ?? 0
     const needScore = have >= target ? 0 : (target - have) / target
 
-    // 3. Budget efficiency (0–1): penalise spending much more than avg per pick
-    //    costRatio = 1 means right on pace; 2 = twice the average
+    // 3. Budget efficiency (0–1): penalise spending above average per pick
     const costRatio   = budgetPerPick > 0 ? p.baseValue / budgetPerPick : 0
-    const budgetScore = costRatio <= 1.5
+    const budgetScore = costRatio <= 1.0
       ? 1
-      : Math.max(0, 1 - (costRatio - 1.5) / 3)
+      : Math.max(0, 1 - (costRatio - 1.0) / 2)
 
     // Small jitter so different AI clubs don't always pick identically
     const jitter = Math.random() * 0.06 - 0.03
 
     return {
       inst,
-      score: qualityScore * 0.40 + needScore * 0.35 + budgetScore * 0.25 + jitter,
+      score: qualityScore * 0.35 + needScore * 0.35 + budgetScore * 0.30 + jitter,
     }
   })
 

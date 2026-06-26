@@ -1,7 +1,101 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { api } from '../../api/client'
 import { ClubBadge } from '../../components/ClubBadge'
 import type { LeagueData } from './types'
+
+const SLOT_COLORS = [
+  '#e8806a','#27cdf6','#36e27e','#cf9438','#a78bfa','#f472b6',
+  '#34d399','#fb923c','#60a5fa','#e879f9','#4ade80','#f87171',
+  '#38bdf8','#fbbf24','#a3e635','#c084fc','#f9a8d4','#6ee7b7',
+]
+
+function DraftRevealScreen({ clubs, squadSize, onDismiss }: {
+  clubs: LeagueData['clubs']
+  squadSize: number
+  onDismiss: () => void
+}) {
+  const [revealed, setRevealed] = useState(0)
+  const done = revealed >= squadSize
+
+  useEffect(() => {
+    const iv = setInterval(() => {
+      setRevealed(r => {
+        if (r >= squadSize) { clearInterval(iv); return r }
+        return r + 1
+      })
+    }, 110)
+    return () => clearInterval(iv)
+  }, [squadSize])
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 9999,
+      background: 'rgba(8,8,10,0.96)',
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      padding: 24, gap: 20,
+    }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.15em', color: 'var(--ash)', textTransform: 'uppercase', marginBottom: 6 }}>
+          Quick Draft
+        </div>
+        <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: '0.08em', color: 'var(--paper)', textTransform: 'uppercase' }}>
+          {done ? 'ROSTERS COMPLETE' : 'FILLING ROSTERS…'}
+        </div>
+      </div>
+
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: `repeat(${Math.min(clubs.length, 6)}, 1fr)`,
+        gap: 10,
+        maxWidth: 720,
+        width: '100%',
+      }}>
+        {clubs.map((club, ci) => {
+          const color = SLOT_COLORS[ci % SLOT_COLORS.length]
+          const filled = revealed
+          return (
+            <div key={club.id} style={{
+              background: 'rgba(255,255,255,0.03)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 8, padding: '10px 8px',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7,
+            }}>
+              <div style={{
+                fontSize: 9, fontWeight: 700, color: 'var(--text-2)', textAlign: 'center',
+                letterSpacing: '0.04em', maxWidth: '100%',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>
+                {club.name}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 11px)', gap: 3 }}>
+                {Array.from({ length: squadSize }, (_, i) => {
+                  const show = i < filled
+                  return (
+                    <div key={i} style={{
+                      width: 11, height: 11, borderRadius: 2,
+                      background: show ? color : 'rgba(255,255,255,0.06)',
+                      transition: 'background 0.12s, transform 0.12s',
+                      transform: show ? 'scale(1)' : 'scale(0.6)',
+                    }} />
+                  )
+                })}
+              </div>
+              <div style={{ fontSize: 9, color: done ? color : 'var(--ash)', fontWeight: 700, letterSpacing: '0.04em' }}>
+                {filled}/{squadSize}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {done && (
+        <button className="btn btn-green" onClick={onDismiss} style={{ fontSize: 13, letterSpacing: '0.08em', marginTop: 8 }}>
+          Continue to Season →
+        </button>
+      )}
+    </div>
+  )
+}
 
 export default function Manage({ league, onUpdate, onDelete }: { league: LeagueData; onUpdate: (data: Partial<LeagueData>) => void; onDelete: () => void }) {
   const canEdit = league.status === 'SETUP'
@@ -21,6 +115,7 @@ export default function Manage({ league, onUpdate, onDelete }: { league: LeagueD
   const [hostMsg, setHostMsg] = useState('')
   const [hostLoading, setHostLoading] = useState<'draft' | 'matchday' | 'season' | null>(null)
   const [confirmSeason, setConfirmSeason] = useState(false)
+  const [showDraftReveal, setShowDraftReveal] = useState(false)
 
   async function handleSave() {
     setFormError('')
@@ -66,11 +161,21 @@ export default function Manage({ league, onUpdate, onDelete }: { league: LeagueD
 
   async function handleQuickDraft() {
     setHostLoading('draft'); setHostMsg('')
+    setShowDraftReveal(true)
     try {
       await api.post(`/draft/${league.id}/quick-complete`)
-      setHostMsg('Draft completed! Season is starting...')
-    } catch (e: any) { setHostMsg(e.response?.data?.error ?? 'Failed') }
-    finally { setHostLoading(null) }
+    } catch (e: any) {
+      setShowDraftReveal(false)
+      setHostMsg(e.response?.data?.error ?? 'Failed')
+    } finally { setHostLoading(null) }
+  }
+
+  async function handleDraftRevealDismiss() {
+    setShowDraftReveal(false)
+    try {
+      const res = await api.get(`/leagues/${league.id}`)
+      onUpdate(res.data)
+    } catch {}
   }
 
   async function handleSimulateMatchday() {
@@ -92,6 +197,14 @@ export default function Manage({ league, onUpdate, onDelete }: { league: LeagueD
   }
 
   return (
+    <>
+    {showDraftReveal && (
+      <DraftRevealScreen
+        clubs={league.clubs}
+        squadSize={league.squadSize ?? 25}
+        onDismiss={handleDraftRevealDismiss}
+      />
+    )}
     <div style={{ maxWidth: 600 }}>
       {formError && <p className="error-text" style={{ marginBottom: 14 }}>{formError}</p>}
 
@@ -229,5 +342,6 @@ export default function Manage({ league, onUpdate, onDelete }: { league: LeagueD
         </div>
       )}
     </div>
+    </>
   )
 }

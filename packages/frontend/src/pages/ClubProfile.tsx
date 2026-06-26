@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
+import { Star, Target } from 'lucide-react'
 import { api } from '../api/client'
 import { ClubBadge, type LogoConfig } from '../components/ClubBadge'
+import { BallIcon } from '../components/icons'
 import { posClass } from '../utils/helpers'
 import { Navbar } from '../components/Navbar'
 import styles from './ClubProfile.module.css'
@@ -279,11 +281,11 @@ export default function ClubProfile() {
                       <span className={posClass(p.position)} style={{ fontSize: 9 }}>{p.position}</span>
                       <div>
                         <div className={styles.performerName}>{p.name}</div>
-                        <div className={styles.performerApps}>{p.appearances} apps · ⭐{p.avgRating.toFixed(1)}</div>
+                        <div className={styles.performerApps}>{p.appearances} apps · <Star size={11} style={{ verticalAlign: 'middle' }} />{p.avgRating.toFixed(1)}</div>
                       </div>
                       <div className={styles.performerStats}>
-                        {p.goals > 0 && <div className={styles.performerGoals}>⚽ {p.goals}</div>}
-                        {p.assists > 0 && <div className={styles.performerAssists}>🎯 {p.assists}</div>}
+                        {p.goals > 0 && <div className={styles.performerGoals}><BallIcon size={11} /> {p.goals}</div>}
+                        {p.assists > 0 && <div className={styles.performerAssists}><Target size={11} /> {p.assists}</div>}
                       </div>
                     </div>
                   ))}

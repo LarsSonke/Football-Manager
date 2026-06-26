@@ -90,7 +90,7 @@ export function PlayerPool({
             background: posFilter === 'RECOMMEND' ? 'var(--gold)' : 'transparent',
             color: posFilter === 'RECOMMEND' ? '#000' : 'var(--gold)',
             transition: 'all 0.15s',
-          }} title="Show affordable players for positions your squad is missing">⭐ Recommend</button>
+          }} title="Show affordable players for positions your squad is missing">★ Recommend</button>
         </div>
         <input placeholder="Search player..." value={search} onChange={e => onSearchChange(e.target.value)} style={{ flex: 1, minWidth: 160, maxWidth: 240 }} />
       </div>
@@ -121,7 +121,7 @@ export function PlayerPool({
           }}
           title="Only show players you can afford"
         >
-          💰 Can Afford
+          Can Afford
         </button>
         {(minOvr || maxOvr || canAfford || posFilter !== 'ALL' || search) && (
           <button
@@ -136,7 +136,7 @@ export function PlayerPool({
 
       {posFilter === 'RECOMMEND' && (
         <div style={{ padding: '8px 12px', background: 'rgba(233,196,106,0.08)', border: '1px solid rgba(233,196,106,0.2)', borderRadius: 'var(--radius-sm)', marginBottom: 12, fontSize: 12, color: 'var(--gold)' }}>
-          ⭐ Showing affordable players for your missing squad positions
+          Showing affordable players for your missing squad positions
         </div>
       )}
 
@@ -175,7 +175,7 @@ export function PlayerPool({
               <div style={{ width: 44, height: 52, borderRadius: 6, overflow: 'hidden', background: 'var(--bg-base)', flexShrink: 0 }}>
                 {p.photoUrl
                   ? <img src={p.photoUrl} alt="" referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} onError={e => { const el = e.currentTarget as HTMLImageElement; el.style.display = 'none'; const p = el.parentElement; if (p) p.setAttribute('data-failed', '1') }} />
-                  : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)', fontSize: 22 }}>👤</div>
+                  : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)', fontSize: 22 }}>?</div>
                 }
               </div>
 

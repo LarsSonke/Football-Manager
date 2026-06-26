@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 import { useParams, Link, useLocation, useNavigate } from 'react-router-dom'
 import { api } from '../api/client'
 import { ClubBadge, type LogoConfig } from '../components/ClubBadge'
 import { getBadgeColor, ratingColor, posClass } from '../utils/helpers'
+import { BallIcon, CardIcon, SubIcon } from '../components/icons'
 import styles from './MatchReport.module.css'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -102,12 +104,11 @@ function ReplayTicker({ match, onClose }: { match: MatchDetail; onClose: () => v
 
   const done = shown >= allEvents.length
 
-  function eventIcon(type: string) {
-    if (type === 'GOAL') return '⚽'
-    if (type === 'YELLOW_CARD') return '🟨'
-    if (type === 'RED_CARD') return '🟥'
-    if (type === 'SUBSTITUTION') return '↕'
-    if (type === 'OWN_GOAL') return '⚽'
+  function eventIcon(type: string): ReactNode {
+    if (type === 'GOAL' || type === 'OWN_GOAL') return <BallIcon size={14} />
+    if (type === 'YELLOW_CARD') return <CardIcon color="yellow" size={14} />
+    if (type === 'RED_CARD') return <CardIcon color="red" size={14} />
+    if (type === 'SUBSTITUTION') return <SubIcon size={14} />
     if (type === 'PENALTY_MISS') return '✗'
     return '•'
   }
@@ -332,7 +333,7 @@ export default function MatchReport() {
               <div className={styles.teamSideLabel}>Home</div>
               <div className={styles.goalLines}>
                 {goalLines(homeGoals).map(line => (
-                  <div key={line} className={styles.goalLine}>⚽ {line}</div>
+                  <div key={line} className={styles.goalLine}><BallIcon size={12} /> {line}</div>
                 ))}
               </div>
             </div>
@@ -361,7 +362,7 @@ export default function MatchReport() {
               <div className={styles.teamSideLabel}>Away</div>
               <div className={styles.awayGoalLines}>
                 {goalLines(awayGoals).map(line => (
-                  <div key={line} className={styles.goalLine}>⚽ {line}</div>
+                  <div key={line} className={styles.goalLine}><BallIcon size={12} /> {line}</div>
                 ))}
               </div>
             </div>
@@ -387,8 +388,8 @@ export default function MatchReport() {
                     <span className={styles.motmNatPos} title="Natural position">{motm.position}</span>
                   )}
                   <span className={styles.motmMetaItem}>{motmTeam}</span>
-                  {motm.goals > 0 && <span className={styles.motmMetaItem}>⚽ {motm.goals}</span>}
-                  {motm.assists > 0 && <span className={styles.motmMetaItem}>🅰️ {motm.assists}</span>}
+                  {motm.goals > 0 && <span className={styles.motmMetaItem}><BallIcon size={12} /> {motm.goals}</span>}
+                  {motm.assists > 0 && <span className={styles.motmMetaItem}>A{motm.assists}</span>}
                   <span className={styles.motmMetaItem}>{motm.minutesPlayed}'</span>
                 </div>
               </div>
@@ -414,7 +415,7 @@ export default function MatchReport() {
                   const isSub = e.type === 'SUBSTITUTION'
                   const isYellow = e.type === 'YELLOW_CARD'
                   const isRed = e.type === 'RED_CARD'
-                  const icon = isSub ? '↕' : isYellow ? '🟨' : isRed ? '🟥' : '⚽'
+                  const icon: ReactNode = isSub ? <SubIcon size={12} /> : isYellow ? <CardIcon color="yellow" size={12} /> : isRed ? <CardIcon color="red" size={12} /> : <BallIcon size={12} />
 
                   const nameBlock = isSub ? (
                     <span>
@@ -502,8 +503,8 @@ export default function MatchReport() {
                           {p.playerName}
                         </span>
                         <div className={styles.ratingMeta}>
-                          {p.goals > 0   && <span className={styles.ratingIcon}>⚽{p.goals}</span>}
-                          {p.assists > 0 && <span className={styles.ratingIcon}>🅰️{p.assists}</span>}
+                          {p.goals > 0   && <span className={styles.ratingIcon}><BallIcon size={11} />{p.goals}</span>}
+                          {p.assists > 0 && <span className={styles.ratingIcon}>A{p.assists}</span>}
                           {p.minutesPlayed < 90 && (
                             <span className={styles.ratingMins}>{p.minutesPlayed}'</span>
                           )}

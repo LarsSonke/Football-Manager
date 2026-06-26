@@ -1,9 +1,11 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
+import { Star, Target } from 'lucide-react'
 import { api } from '../../api/client'
 import { ClubBadge } from '../../components/ClubBadge'
 import { PlayerPhoto } from '../../components/PlayerPhoto'
 import { KitSvg, type KitConfig } from '../../components/KitSvg'
+import { BallIcon } from '../../components/icons'
 import {
   posClass,
   type LeagueData, type MatchData, type ClubData, type AwardEntry, type MatchdayAwards,
@@ -62,8 +64,8 @@ function TOTWPitch({ players }: { players: AwardEntry[] }) {
             </div>
             {(p.goals > 0 || p.assists > 0) && (
               <div className={styles.totwPlayerStats}>
-                {p.goals > 0 && <span className={styles.totwGoalStat}>⚽{p.goals} </span>}
-                {p.assists > 0 && <span className={styles.totwAssistStat}>🅰{p.assists}</span>}
+                {p.goals > 0 && <span className={styles.totwGoalStat}><BallIcon size={10} />{p.goals} </span>}
+                {p.assists > 0 && <span className={styles.totwAssistStat}>A{p.assists}</span>}
               </div>
             )}
           </div>
@@ -820,15 +822,15 @@ export default function Overview({ league, matches, myClub, awards, onPhysioUpgr
           <div className={styles.awardsBody}>
             <div className={styles.awardsGrid}>
               {[
-                { label: '⭐ MOTM',       entry: awards.motm, value: awards.motm?.rating.toFixed(1) },
-                { label: '⚽ Top Scorer', entry: awards.topScorer ? { ...awards.topScorer, rating: 0, goals: awards.topScorer.goals, assists: 0, position: '', clubKitConfig: null, photoUrl: null } as AwardEntry : null, value: awards.topScorer ? String(awards.topScorer.goals) : null },
-                { label: '🎯 Top Assist', entry: awards.topAssist ? { ...awards.topAssist, rating: 0, goals: 0, assists: awards.topAssist.assists, position: '', clubKitConfig: null, photoUrl: null } as AwardEntry : null, value: awards.topAssist ? String(awards.topAssist.assists) : null },
+                { id: 'motm',   label: <><Star size={12} /> MOTM</>,        entry: awards.motm, value: awards.motm?.rating.toFixed(1) },
+                { id: 'scorer', label: <><BallIcon size={12} /> Top Scorer</>, entry: awards.topScorer ? { ...awards.topScorer, rating: 0, goals: awards.topScorer.goals, assists: 0, position: '', clubKitConfig: null, photoUrl: null } as AwardEntry : null, value: awards.topScorer ? String(awards.topScorer.goals) : null },
+                { id: 'assist', label: <><Target size={12} /> Top Assist</>,   entry: awards.topAssist ? { ...awards.topAssist, rating: 0, goals: 0, assists: awards.topAssist.assists, position: '', clubKitConfig: null, photoUrl: null } as AwardEntry : null, value: awards.topAssist ? String(awards.topAssist.assists) : null },
               ].map(item => item.entry ? (
-                <div key={item.label} className={styles.awardCard}>
+                <div key={item.id} className={styles.awardCard}>
                   <div className={styles.awardCardLabel}>{item.label}</div>
                   <div className={styles.awardCardPhotos}>
                     <PlayerPhoto url={item.entry.photoUrl} name={item.entry.playerName} size={36} style={{ borderRadius: '50%', border: '2px solid var(--border)' }} />
-                    <KitSvg config={item.entry.clubKitConfig as KitConfig | null} size={32} uid={`award-${item.label}-kit`} />
+                    <KitSvg config={item.entry.clubKitConfig as KitConfig | null} size={32} uid={`award-${item.id}-kit`} />
                   </div>
                   <div className={styles.awardCardName}>{item.entry.playerName}</div>
                   <div className={styles.awardCardClub}>

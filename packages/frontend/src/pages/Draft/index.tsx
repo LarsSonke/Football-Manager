@@ -297,7 +297,7 @@ export default function Draft() {
     <div style={{ minHeight: '100vh', background: 'var(--bg-base)' }}>
       {/* Nav */}
       <Navbar backTo={`/league/${leagueId}`} backLabel="← League">
-        {myClub && <span style={{ fontSize: 12, color: 'var(--text-2)' }}>💰 €{(myClub.budget / 1000).toFixed(0)}M</span>}
+        {myClub && <span style={{ fontSize: 12, color: 'var(--text-2)' }}>€{(myClub.budget / 1000).toFixed(0)}M</span>}
       </Navbar>
 
       {/* Header bar */}
@@ -339,7 +339,7 @@ export default function Draft() {
 
           {!draftComplete && currentClubId && (
             <div style={{ padding: '8px 16px', background: isMyTurn ? 'var(--green-glow)' : 'var(--bg-card-2)', border: `1px solid ${isMyTurn ? 'var(--green)' : 'var(--border)'}`, borderRadius: 'var(--radius-sm)' }}>
-              <div style={{ fontSize: 10, color: isMyTurn ? 'var(--green)' : 'var(--text-2)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>{isMyTurn ? '🎯 Your pick' : 'Now picking'}</div>
+              <div style={{ fontSize: 10, color: isMyTurn ? 'var(--green)' : 'var(--text-2)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>{isMyTurn ? 'Your pick' : 'Now picking'}</div>
               <div style={{ fontSize: 13, fontWeight: 700, marginTop: 2, color: 'var(--text-1)' }}>{clubMap[currentClubId]?.name ?? '...'}</div>
             </div>
           )}
@@ -359,7 +359,7 @@ export default function Draft() {
 
       {isMyTurn && !isAuction && (
         <div style={{ background: 'linear-gradient(90deg, rgba(54,226,126,0.18) 0%, transparent 100%)', borderBottom: '1px solid rgba(54,226,126,0.35)', padding: '13px 24px', textAlign: 'center' }}>
-          <span style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, color: 'var(--green)', letterSpacing: 1 }}>⚡ YOUR TURN TO PICK — Select a player below</span>
+          <span style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, color: 'var(--green)', letterSpacing: 1 }}>YOUR TURN TO PICK — Select a player below</span>
         </div>
       )}
 

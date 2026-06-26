@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Trophy } from 'lucide-react'
 import { api } from '../../api/client'
 import type { LeagueData } from './types'
 
@@ -39,7 +40,7 @@ export default function Cup({ leagueId, league }: { leagueId: string; league: Le
   }, [leagueId])
 
   if (loading) return <div style={{ color: 'var(--text-2)', textAlign: 'center', padding: 40 }}>Loading bracket...</div>
-  if (!bracket) return <div style={{ textAlign: 'center', padding: '64px 0', color: 'var(--text-2)' }}><div style={{ fontSize: 36, marginBottom: 10 }}>🏆</div><p>Cup bracket not available yet.</p></div>
+  if (!bracket) return <div style={{ textAlign: 'center', padding: '64px 0', color: 'var(--text-2)' }}><div style={{ marginBottom: 10, display: 'flex', justifyContent: 'center' }}><Trophy size={40} /></div><p>Cup bracket not available yet.</p></div>
 
   return (
     <div style={{ overflowX: 'auto' }}>

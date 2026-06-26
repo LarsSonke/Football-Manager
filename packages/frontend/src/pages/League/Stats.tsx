@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react'
+import type { ReactNode } from 'react'
+import { BarChart2, Target, Star, ShieldCheck, Users } from 'lucide-react'
 import { ClubBadge } from '../../components/ClubBadge'
 import { KitSvg, type KitConfig } from '../../components/KitSvg'
 import { api } from '../../api/client'
 import { posClass } from '../../utils/helpers'
 import { PlayerPhoto } from '../../components/PlayerPhoto'
+import { BallIcon } from '../../components/icons'
 import type { StatEntry, AwardEntry, StatCategory } from './types'
 import styles from './Stats.module.css'
 
@@ -68,8 +71,8 @@ function TOTWPitch({ players }: { players: AwardEntry[] }) {
             </div>
             {(p.goals > 0 || p.assists > 0) && (
               <div className={styles.pitchContribRow}>
-                {p.goals > 0 && <span className={styles.pitchGoals}>⚽{p.goals} </span>}
-                {p.assists > 0 && <span className={styles.pitchAssists}>🅰{p.assists}</span>}
+                {p.goals > 0 && <span className={styles.pitchGoals}><BallIcon size={10} />{p.goals} </span>}
+                {p.assists > 0 && <span className={styles.pitchAssists}>A{p.assists}</span>}
               </div>
             )}
           </div>
@@ -93,12 +96,12 @@ export default function Stats({ leagueId, status }: { leagueId: string; status: 
       .finally(() => setLoading(false))
   }, [leagueId])
 
-  const categories: { key: StatCategory; label: string; icon: string }[] = [
-    { key: 'goals',       label: 'Top Scorers',    icon: '⚽' },
-    { key: 'assists',     label: 'Top Assists',     icon: '🎯' },
-    { key: 'rating',      label: 'Best Rated',      icon: '⭐' },
-    { key: 'cleanSheets', label: 'Clean Sheets',    icon: '🧤' },
-    { key: 'appearances', label: 'Appearances',     icon: '🎽' },
+  const categories: { key: StatCategory; label: string; icon: ReactNode }[] = [
+    { key: 'goals',       label: 'Top Scorers',   icon: <BallIcon size={13} /> },
+    { key: 'assists',     label: 'Top Assists',   icon: <Target size={13} /> },
+    { key: 'rating',      label: 'Best Rated',    icon: <Star size={13} /> },
+    { key: 'cleanSheets', label: 'Clean Sheets',  icon: <ShieldCheck size={13} /> },
+    { key: 'appearances', label: 'Appearances',   icon: <Users size={13} /> },
   ]
 
   const sorted = [...entries].sort((a, b) => {
@@ -133,7 +136,7 @@ export default function Stats({ leagueId, status }: { leagueId: string; status: 
 
   if (status === 'SETUP' || status === 'DRAFTING') return (
     <div className={styles.setupState}>
-      <div className={styles.setupIcon}>📊</div>
+      <div className={styles.setupIcon}><BarChart2 size={40} /></div>
       <p className={styles.setupTitle}>No stats yet</p>
       <p className={styles.setupSubtitle}>Stats appear here after the first matchday.</p>
     </div>

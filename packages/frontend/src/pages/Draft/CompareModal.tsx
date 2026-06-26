@@ -103,7 +103,7 @@ export function CompareModal({ a, b, isMyTurn, myBudget, onPick, onClose, pickin
             <div style={{ width: 56, height: 64, borderRadius: 6, overflow: 'hidden', background: 'var(--bg-base)', border: `2px solid ${ovrColor(a.overall)}` }}>
               {a.photoUrl
                 ? <img src={a.photoUrl} alt="" referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} onError={e => { const el = e.currentTarget as HTMLImageElement; el.style.display = 'none'; const p = el.parentElement; if (p) p.setAttribute('data-failed', '1') }} />
-                : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)', fontSize: 24 }}>👤</div>
+                : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)', fontSize: 24 }}>?</div>
               }
             </div>
             <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, color: ovrColor(a.overall), lineHeight: 1 }}>{a.overall}</div>
@@ -116,7 +116,7 @@ export function CompareModal({ a, b, isMyTurn, myBudget, onPick, onClose, pickin
             <div style={{ width: 56, height: 64, borderRadius: 6, overflow: 'hidden', background: 'var(--bg-base)', border: `2px solid ${ovrColor(b.overall)}` }}>
               {b.photoUrl
                 ? <img src={b.photoUrl} alt="" referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} onError={e => { const el = e.currentTarget as HTMLImageElement; el.style.display = 'none'; const p = el.parentElement; if (p) p.setAttribute('data-failed', '1') }} />
-                : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)', fontSize: 24 }}>👤</div>
+                : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)', fontSize: 24 }}>?</div>
               }
             </div>
             <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, color: ovrColor(b.overall), lineHeight: 1 }}>{b.overall}</div>

@@ -29,7 +29,6 @@ function ColorPickerRow({
   const [draft, setDraft] = useState(value)
   const nativeRef = useRef<HTMLInputElement>(null)
 
-  // Keep draft in sync when parent changes (e.g. reset)
   useEffect(() => {
     if (isValidHex(value)) setDraft(value)
   }, [value])
@@ -46,28 +45,16 @@ function ColorPickerRow({
   }
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-        marginBottom: 6,
-      }}
-    >
-      {/* Colored swatch — clicking opens native color picker */}
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
       <div
         onClick={() => nativeRef.current?.click()}
         style={{
-          width: 20,
-          height: 20,
-          borderRadius: 4,
+          width: 22, height: 22, borderRadius: 2,
           background: isValidHex(draft) ? draft : value,
-          border: '1px solid rgba(255,255,255,0.18)',
-          cursor: 'pointer',
-          flexShrink: 0,
+          border: '2px solid rgba(244,241,234,0.20)',
+          cursor: 'pointer', flexShrink: 0,
         }}
       />
-      {/* Hidden native color input */}
       <input
         ref={nativeRef}
         type="color"
@@ -76,7 +63,6 @@ function ColorPickerRow({
         style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}
         tabIndex={-1}
       />
-      {/* Hex text input */}
       <input
         type="text"
         value={draft}
@@ -88,15 +74,14 @@ function ColorPickerRow({
           padding: '4px 8px',
           fontSize: 12,
           fontFamily: 'monospace',
-          background: 'var(--bg-base)',
-          border: `1px solid ${isValidHex(draft) ? 'var(--border)' : 'var(--red, #e63946)'}`,
-          borderRadius: 'var(--radius-sm)',
-          color: 'var(--text-1)',
+          background: 'rgba(0,0,0,0.35)',
+          border: `1px solid ${isValidHex(draft) ? 'rgba(244,241,234,0.25)' : '#e5202f'}`,
+          borderRadius: 2,
+          color: '#f4f1ea',
           outline: 'none',
         }}
       />
-      {/* Label */}
-      <span style={{ fontSize: 12, color: 'var(--text-2)', userSelect: 'none' }}>{label}</span>
+      <span style={{ fontSize: 12, color: 'rgba(244,241,234,0.55)', userSelect: 'none' }}>{label}</span>
     </div>
   )
 }
@@ -105,17 +90,15 @@ function ColorPickerRow({
 
 function SectionHeader({ children }: { children: React.ReactNode }) {
   return (
-    <div
-      style={{
-        fontSize: 11,
-        fontWeight: 800,
-        letterSpacing: '0.12em',
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+      <span style={{ width: 3, minHeight: 14, alignSelf: 'stretch', background: '#e5202f', flexShrink: 0 }} />
+      <span style={{
+        fontSize: 10,
+        fontFamily: 'var(--font-display)',
+        letterSpacing: '0.14em',
         textTransform: 'uppercase',
-        color: 'var(--text-2)',
-        marginBottom: 8,
-      }}
-    >
-      {children}
+        color: '#f4f1ea',
+      }}>{children}</span>
     </div>
   )
 }
@@ -160,9 +143,9 @@ export function KitDesigner({
 
   function selectionStyle(selected: boolean): React.CSSProperties {
     return {
-      background: selected ? 'rgba(54,226,126,0.12)' : 'var(--bg-base)',
-      border: `1.5px solid ${selected ? 'var(--green)' : 'var(--border)'}`,
-      borderRadius: 'var(--radius-sm)',
+      background: selected ? 'rgba(229,32,47,0.10)' : 'rgba(0,0,0,0.20)',
+      border: `2px solid ${selected ? '#e5202f' : 'rgba(244,241,234,0.20)'}`,
+      borderRadius: 2,
       cursor: 'pointer',
       padding: 4,
       display: 'flex',
@@ -179,7 +162,7 @@ export function KitDesigner({
         position: 'fixed',
         inset: 0,
         zIndex: 300,
-        background: 'rgba(0,0,0,0.88)',
+        background: 'rgba(8,8,10,0.88)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -188,9 +171,9 @@ export function KitDesigner({
     >
       <div
         style={{
-          background: 'var(--bg-card)',
-          borderRadius: 16,
-          border: '1px solid var(--border)',
+          background: '#16161a',
+          borderRadius: 2,
+          border: '3px solid #f4f1ea',
           display: 'flex',
           maxWidth: 900,
           width: '90%',
@@ -202,28 +185,31 @@ export function KitDesigner({
         {/* ── Header ── */}
         <div
           style={{
-            padding: '14px 20px',
-            borderBottom: '1px solid var(--border)',
+            padding: '13px 20px',
+            borderBottom: '3px solid #f4f1ea',
             display: 'flex',
             alignItems: 'center',
             gap: 12,
             flexShrink: 0,
+            background: `repeating-linear-gradient(-45deg, transparent 4px, rgba(255,255,255,0.03) 4px 8px), #08080a`,
           }}
         >
-          <span style={{ fontWeight: 800, fontSize: 15, flex: 1 }}>Kit Designer</span>
+          <span style={{ fontFamily: 'var(--font-display)', fontSize: 20, letterSpacing: '0.02em', color: '#f4f1ea', flex: 1 }}>
+            Kit Designer
+          </span>
           <button
             onClick={onClose}
             style={{
               background: 'none',
               border: 'none',
               cursor: 'pointer',
-              color: 'var(--text-2)',
-              fontSize: 18,
+              color: 'rgba(244,241,234,0.7)',
+              fontSize: 20,
               lineHeight: 1,
-              padding: '2px 6px',
+              padding: '2px 0 2px 12px',
             }}
           >
-            ✕
+            &#x2715;
           </button>
         </div>
 
@@ -235,12 +221,13 @@ export function KitDesigner({
             style={{
               width: 420,
               minWidth: 320,
-              borderRight: '1px solid var(--border)',
+              borderRight: '3px solid #f4f1ea',
               overflowY: 'auto',
               padding: '18px 20px',
               display: 'flex',
               flexDirection: 'column',
               gap: 20,
+              background: '#16161a',
             }}
           >
 
@@ -305,11 +292,12 @@ export function KitDesigner({
                       <span
                         style={{
                           fontSize: 9,
-                          fontWeight: 600,
-                          color: selected ? 'var(--green)' : 'var(--text-3)',
+                          fontFamily: 'var(--font-display)',
+                          color: selected ? '#e5202f' : 'rgba(244,241,234,0.45)',
                           textAlign: 'center',
                           lineHeight: 1.2,
-                          letterSpacing: '0.02em',
+                          letterSpacing: '0.06em',
+                          textTransform: 'uppercase',
                         }}
                       >
                         {p.label}
@@ -341,9 +329,10 @@ export function KitDesigner({
                       <span
                         style={{
                           fontSize: 9,
-                          fontWeight: 600,
-                          color: selected ? 'var(--green)' : 'var(--text-3)',
-                          letterSpacing: '0.02em',
+                          fontFamily: 'var(--font-display)',
+                          color: selected ? '#e5202f' : 'rgba(244,241,234,0.45)',
+                          letterSpacing: '0.06em',
+                          textTransform: 'uppercase',
                         }}
                       >
                         {c.label}
@@ -375,12 +364,13 @@ export function KitDesigner({
                       <span
                         style={{
                           fontSize: 9,
-                          fontWeight: 600,
-                          color: selected ? 'var(--green)' : 'var(--text-3)',
-                          letterSpacing: '0.02em',
+                          fontFamily: 'var(--font-display)',
+                          color: selected ? '#e5202f' : 'rgba(244,241,234,0.45)',
                           textAlign: 'center',
                           maxWidth: 60,
                           lineHeight: 1.2,
+                          letterSpacing: '0.06em',
+                          textTransform: 'uppercase',
                         }}
                       >
                         {s.label}
@@ -403,22 +393,22 @@ export function KitDesigner({
               justifyContent: 'center',
               padding: 32,
               gap: 16,
-              background: 'var(--bg-base)',
+              background: 'radial-gradient(circle at 50% 40%, rgba(244,241,234,0.05) 0%, transparent 70%), #08080a',
             }}
           >
             <KitSvg uid="kd-preview" size={160} config={config} />
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--text-1)' }}>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: 16, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#f4f1ea' }}>
                 {clubName}
               </div>
               <div
                 style={{
-                  fontSize: 11,
-                  fontWeight: 600,
-                  color: 'var(--text-3)',
+                  fontSize: 10,
+                  fontFamily: 'var(--font-display)',
+                  color: 'rgba(244,241,234,0.35)',
                   marginTop: 4,
                   textTransform: 'uppercase',
-                  letterSpacing: '0.1em',
+                  letterSpacing: '0.18em',
                 }}
               >
                 Home Kit
@@ -430,28 +420,32 @@ export function KitDesigner({
         {/* ── Footer ── */}
         <div
           style={{
-            padding: '12px 20px',
-            borderTop: '1px solid var(--border)',
+            padding: '11px 18px',
+            borderTop: '3px solid #f4f1ea',
             display: 'flex',
             alignItems: 'center',
-            gap: 10,
+            gap: 8,
             flexShrink: 0,
+            background: '#08080a',
           }}
         >
           {err && (
-            <span style={{ fontSize: 12, color: 'var(--red, #e63946)', flex: 1 }}>{err}</span>
+            <span style={{ fontSize: 11, color: '#e5202f', fontFamily: 'var(--font-display)', letterSpacing: '0.06em', flex: 1 }}>{err}</span>
           )}
           <span style={{ flex: 1 }} />
           <button
             onClick={() => { setConfig(initialConfig ?? DEFAULT_KIT_CONFIG); setErr('') }}
             style={{
-              background: 'none',
-              border: '1px solid var(--border)',
-              borderRadius: 6,
-              padding: '7px 14px',
+              background: 'transparent',
+              border: '2px solid rgba(244,241,234,0.30)',
+              borderRadius: 2,
+              padding: '6px 14px',
               cursor: 'pointer',
-              fontSize: 12,
-              color: 'var(--text-2)',
+              fontSize: 11,
+              fontFamily: 'var(--font-display)',
+              letterSpacing: '0.10em',
+              textTransform: 'uppercase',
+              color: 'rgba(244,241,234,0.60)',
             }}
           >
             Reset
@@ -459,13 +453,16 @@ export function KitDesigner({
           <button
             onClick={onClose}
             style={{
-              background: 'none',
-              border: '1px solid var(--border)',
-              borderRadius: 6,
-              padding: '7px 14px',
+              background: 'transparent',
+              border: '2px solid rgba(244,241,234,0.30)',
+              borderRadius: 2,
+              padding: '6px 14px',
               cursor: 'pointer',
-              fontSize: 12,
-              color: 'var(--text-2)',
+              fontSize: 11,
+              fontFamily: 'var(--font-display)',
+              letterSpacing: '0.10em',
+              textTransform: 'uppercase',
+              color: 'rgba(244,241,234,0.60)',
             }}
           >
             Cancel
@@ -474,18 +471,20 @@ export function KitDesigner({
             onClick={handleSave}
             disabled={saving}
             style={{
-              background: 'var(--green)',
-              color: '#000',
+              background: '#e5202f',
+              color: '#f4f1ea',
               border: 'none',
-              borderRadius: 6,
-              padding: '8px 20px',
-              fontSize: 13,
-              fontWeight: 700,
+              borderRadius: 2,
+              padding: '7px 22px',
+              fontSize: 12,
+              fontFamily: 'var(--font-display)',
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
               cursor: saving ? 'not-allowed' : 'pointer',
-              opacity: saving ? 0.7 : 1,
+              opacity: saving ? 0.6 : 1,
             }}
           >
-            {saving ? 'Saving…' : 'Save Kit'}
+            {saving ? 'Saving...' : 'Save Kit'}
           </button>
         </div>
       </div>

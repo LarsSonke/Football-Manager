@@ -116,7 +116,7 @@ export function PlayerDetailModal({ p, isMyTurn, canAfford, onPick, onClose, onT
           <div style={{ width: 72, height: 84, borderRadius: 8, border: `2px solid ${ovrColor(p.overall)}`, overflow: 'hidden', background: 'var(--bg-base)', flexShrink: 0, position: 'relative' }}>
             {p.photoUrl
               ? <img src={p.photoUrl} alt="" referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} onError={e => { const el = e.currentTarget as HTMLImageElement; el.style.display = 'none'; const p = el.parentElement; if (p) p.setAttribute('data-failed', '1') }} />
-              : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)', fontSize: 32 }}>👤</div>
+              : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)', fontSize: 32 }}>?</div>
             }
             {/* OVR badge overlaid at bottom */}
             <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, textAlign: 'center', background: 'rgba(0,0,0,0.6)', fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 800, color: ovrColor(p.overall), lineHeight: '20px' }}>{p.overall}</div>

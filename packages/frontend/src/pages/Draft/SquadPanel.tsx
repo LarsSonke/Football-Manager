@@ -1,3 +1,6 @@
+import type { ReactNode } from 'react'
+import { Zap, Target, Share2, ShieldCheck, Dumbbell } from 'lucide-react'
+import { BallIcon } from '../../components/icons'
 import type { PlayerData, PickRecord, PickedPlayer, ClubInfo, DraftSession } from './types'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -6,13 +9,13 @@ const IDEAL_FORMATION: Record<string, number> = {
   GK: 1, CB: 2, LB: 1, RB: 1, CDM: 1, CM: 2, CAM: 1, LW: 1, RW: 1, ST: 2,
 }
 
-const STAT_LABELS: [string, keyof PlayerData, string][] = [
-  ['Speed',    'pace',      '⚡'],
-  ['Attack',   'shooting',  '🎯'],
-  ['Passing',  'passing',   '🎩'],
-  ['Dribbling','dribbling', '⚽'],
-  ['Defence',  'defending', '🛡️'],
-  ['Physicality','physical','💪'],
+const STAT_LABELS: [string, keyof PlayerData, ReactNode][] = [
+  ['Speed',       'pace',      <Zap size={12} />],
+  ['Attack',      'shooting',  <Target size={12} />],
+  ['Passing',     'passing',   <Share2 size={12} />],
+  ['Dribbling',   'dribbling', <BallIcon size={12} />],
+  ['Defence',     'defending', <ShieldCheck size={12} />],
+  ['Physicality', 'physical',  <Dumbbell size={12} />],
 ]
 
 // ─── Squad Analysis ───────────────────────────────────────────────────────────

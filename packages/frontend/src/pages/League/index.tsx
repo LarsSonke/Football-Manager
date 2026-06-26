@@ -1,12 +1,15 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
+import type { ReactNode } from 'react'
 import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { io, type Socket } from 'socket.io-client'
+import { Trophy, BarChart2, Clock, Calendar } from 'lucide-react'
 import { useAuth } from '../../stores/auth.store'
 import { api } from '../../api/client'
 import { ClubBadge, LogoMaker } from '../../components/ClubBadge'
 import { type KitConfig } from '../../components/KitSvg'
 import { KitDesigner } from '../../components/KitDesigner'
 import { posClass } from '../../utils/helpers'
+import { BallIcon, CardIcon, SubIcon } from '../../components/icons'
 import Overview from './Overview'
 import Squad from './Squad'
 import Fixtures, { DraftSummaryOverlay } from './Fixtures'
@@ -66,7 +69,7 @@ function SeasonEndOverlay({ league, myClub, isCreator, startingNewSeason, onNewS
       <div className={styles.seasonEndPanel}>
         {/* Champion banner */}
         <div className={styles.seasonEndBanner}>
-          <div className={styles.seasonEndTrophy}>🏆</div>
+          <div className={styles.seasonEndTrophy}><Trophy size={48} /></div>
           <div className={styles.seasonEndEyebrow}>
             Season Complete · {league.name}
           </div>
@@ -88,7 +91,7 @@ function SeasonEndOverlay({ league, myClub, isCreator, startingNewSeason, onNewS
               return (
                 <div key={club.id} className={styles.seasonEndRow} data-champ={isChamp ? 'true' : 'false'}>
                   <span className={styles.seasonEndPos}>
-                    {isChamp ? '🏆' : i + 1}
+                    {isChamp ? <Trophy size={14} /> : i + 1}
                   </span>
                   <span className={styles.seasonEndClubName}>{club.name}</span>
                   <span className={styles.seasonEndStat}>{club.wins}W</span>
@@ -173,12 +176,12 @@ function SeasonEndOverlay({ league, myClub, isCreator, startingNewSeason, onNewS
 
 // ─── Nav items ────────────────────────────────────────────────────────────────
 
-const NAV: { key: Tab; label: string; icon: string }[] = [
+const NAV: { key: Tab; label: string; icon: ReactNode }[] = [
   { key: 'overview',   label: 'Overview',   icon: '◈' },
   { key: 'squad',      label: 'Squad',      icon: '◉' },
   { key: 'fixtures',   label: 'Fixtures',   icon: '▦' },
   { key: 'standings',  label: 'Standings',  icon: '≡' },
-  { key: 'stats',      label: 'Stats',      icon: '📊' },
+  { key: 'stats',      label: 'Stats',      icon: <BarChart2 size={14} /> },
 ]
 
 // ─── Live Ticker Overlay ──────────────────────────────────────────────────────
@@ -191,8 +194,10 @@ function LiveTicker({ matches, myClubId, onDismiss }: { matches: Map<string, Liv
   const otherMatches = matchList.filter(m => m !== myMatch)
   const allEnded = matchList.every(m => m.status === 'ended')
 
-  const EVENT_ICON: Record<string, string> = {
-    GOAL: '⚽', OWN_GOAL: '⚽', YELLOW_CARD: '🟨', RED_CARD: '🟥', SUBSTITUTION: '🔄', PENALTY_MISS: '❌',
+  const EVENT_ICON: Record<string, ReactNode> = {
+    GOAL: <BallIcon size={12} />, OWN_GOAL: <BallIcon size={12} />,
+    YELLOW_CARD: <CardIcon color="yellow" size={12} />, RED_CARD: <CardIcon color="red" size={12} />,
+    SUBSTITUTION: <SubIcon size={12} />, PENALTY_MISS: '✗',
   }
 
   const renderEvent = (evt: LiveMatchState['events'][number], m: LiveMatchState) => {
@@ -514,14 +519,14 @@ export default function League() {
   const suspendedStarters = myClub?.squad.filter(p => starterIds.has(p.id) && p.suspendedMatchday === nextMatchday) ?? []
   const lowFitnessStarters = myClub?.squad.filter(p => starterIds.has(p.id) && !p.injured && p.suspendedMatchday !== nextMatchday && p.fitness < 35) ?? []
   const hasLineupWarnings = (injuredStarters.length + suspendedStarters.length + lowFitnessStarters.length) > 0
-  const navItems = [
+  const navItems: { key: Tab; label: string; icon: ReactNode }[] = [
     ...NAV,
     ...(myClub ? [{ key: 'tactics' as Tab, label: 'Tactics', icon: '⊞' }] : []),
     ...(myClub && league.status === 'ACTIVE' ? [{ key: 'transfers' as Tab, label: 'Transfers', icon: '⇄' }] : []),
     ...(myClub && league.status === 'ACTIVE' ? [{ key: 'messages' as Tab, label: 'Messages', icon: '✉' }] : []),
     ...(isCreator ? [{ key: 'manage' as Tab, label: 'Manage', icon: '⊛' }] : []),
     ...(myClub && league.status === 'ACTIVE' ? [{ key: 'management' as Tab, label: 'Club', icon: '⬆' }] : []),
-    ...(league.hasCup ? [{ key: 'cup' as Tab, label: 'Cup', icon: '🏆' }] : []),
+    ...(league.hasCup ? [{ key: 'cup' as Tab, label: 'Cup', icon: <Trophy size={14} /> }] : []),
   ]
 
   const PAGE_TITLES: Record<Tab, string> = {
@@ -763,7 +768,7 @@ export default function League() {
 
           {league.status === 'SETUP' && !isCreator && (
             <div className={styles.setupWaiting}>
-              <span className={styles.setupWaitingAccent}>⏳</span>
+              <span className={styles.setupWaitingAccent}><Clock size={14} /></span>
               Waiting for <strong className={styles.setupWaitingStrong}>&nbsp;{creatorName}&nbsp;</strong> to start the draft
             </div>
           )}
@@ -777,7 +782,7 @@ export default function League() {
                     className={styles.draftTypeBtn}
                     data-active={draftType === t ? 'true' : 'false'}
                   >
-                    {t === 'SNAKE' ? '🐍 Snake' : '🏷️ Auction'}
+                    {t === 'SNAKE' ? 'Snake' : 'Auction'}
                   </button>
                 ))}
               </div>
@@ -814,7 +819,7 @@ export default function League() {
           {tab === 'overview'  && <Overview league={league} matches={matches} myClub={myClub} awards={awards} onPhysioUpgrade={handlePhysioUpgrade} onRefresh={refresh} onSwitchTab={setTab} />}
           {tab === 'squad'     && (myClub ? <Squad squad={myClub.squad} physioLevel={myClub.physioLevel} budget={myClub.budget} nextMatchday={nextMatchday} onHeal={handleHeal} onTrain={handleTrain} /> : <p className={styles.noClubText}>You don't have a club in this league.</p>)}
           {tab === 'fixtures'  && (matches.length === 0
-            ? <div className={styles.emptyStateWrap}><div className={styles.emptyStateIcon}>📅</div><p>Fixtures will appear after the draft.</p></div>
+            ? <div className={styles.emptyStateWrap}><div className={styles.emptyStateIcon}><Calendar size={40} /></div><p>Fixtures will appear after the draft.</p></div>
             : <Fixtures matches={matches} clubs={league.clubs} myClubId={myClub?.id} currentDay={league.currentDay} leagueId={league.id} />)}
           {tab === 'standings' && <Standings clubs={league.clubs} myClubId={myClub?.id} leagueId={league.id} prevPositions={prevPositions} matches={matches} history={league.history} />}
           {tab === 'stats'     && <Stats leagueId={league.id} status={league.status} />}

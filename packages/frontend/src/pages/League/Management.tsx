@@ -1,5 +1,8 @@
 import { useState } from 'react'
+import type { ReactNode } from 'react'
+import { Search, Clipboard, Dumbbell, Megaphone, Building2, Shirt, Wine } from 'lucide-react'
 import { api } from '../../api/client'
+import { BallIcon } from '../../components/icons'
 import type { LeagueData, ClubData } from './types'
 import styles from './Management.module.css'
 
@@ -20,18 +23,18 @@ const UPGRADE_COSTS_PCT: Record<UpgradeType, number[]> = {
 const BOOST_COST_PCT = 0.025
 const BOOST_STATS = ['pace', 'shooting', 'passing', 'dribbling', 'defending', 'physical'] as const
 
-const STAFF_UPGRADES: { type: UpgradeType; label: string; icon: string; desc: (lvl: number) => string }[] = [
-  { type: 'scout',     label: 'Scout',             icon: '🔍', desc: l => l === 0 ? 'Unlock scout reports' : l === 1 ? 'Shows opponent results' : l === 2 ? 'Shows formation & stats' : 'Shows likely lineup' },
-  { type: 'coach',     label: 'Asst. Coach',        icon: '📋', desc: l => l === 0 ? 'Unlock coach advice' : l === 1 ? 'Formation suggestion' : l === 2 ? 'Formation + lineup tips' : 'Full tactical breakdown' },
-  { type: 'trainer',   label: 'Trainer',            icon: '🏋️', desc: l => l === 0 ? 'No training boost' : l === 1 ? '+2% dev speed' : l === 2 ? '+5% dev speed' : '+10% dev speed' },
-  { type: 'marketing', label: 'Marketing',          icon: '📣', desc: l => l === 0 ? 'No match bonus' : l === 1 ? '+5% match income' : l === 2 ? '+10% match income' : '+18% match income' },
+const STAFF_UPGRADES: { type: UpgradeType; label: string; icon: ReactNode; desc: (lvl: number) => string }[] = [
+  { type: 'scout',     label: 'Scout',            icon: <Search size={18} />,    desc: l => l === 0 ? 'Unlock scout reports' : l === 1 ? 'Shows opponent results' : l === 2 ? 'Shows formation & stats' : 'Shows likely lineup' },
+  { type: 'coach',     label: 'Asst. Coach',      icon: <Clipboard size={18} />, desc: l => l === 0 ? 'Unlock coach advice' : l === 1 ? 'Formation suggestion' : l === 2 ? 'Formation + lineup tips' : 'Full tactical breakdown' },
+  { type: 'trainer',   label: 'Trainer',          icon: <Dumbbell size={18} />,  desc: l => l === 0 ? 'No training boost' : l === 1 ? '+2% dev speed' : l === 2 ? '+5% dev speed' : '+10% dev speed' },
+  { type: 'marketing', label: 'Marketing',        icon: <Megaphone size={18} />, desc: l => l === 0 ? 'No match bonus' : l === 1 ? '+5% match income' : l === 2 ? '+10% match income' : '+18% match income' },
 ]
 
-const FACILITY_UPGRADES: { type: UpgradeType; label: string; icon: string; desc: (lvl: number) => string }[] = [
-  { type: 'stadium',   label: 'Stadium',            icon: '🏟️', desc: l => l === 0 ? 'No home bonus' : l === 1 ? '+8% home income' : l === 2 ? '+15% home income' : '+25% home income' },
-  { type: 'training',  label: 'Training Facility',  icon: '⚽', desc: l => l === 0 ? 'No fitness boost' : l === 1 ? '+2 fitness/day' : l === 2 ? '+4 fitness/day' : '+7 fitness/day' },
-  { type: 'kit',       label: 'Kit Quality',        icon: '👕', desc: l => l === 0 ? 'No morale bonus' : l === 1 ? '+2 morale/day' : l === 2 ? '+4 morale/day' : '+6 morale/day' },
-  { type: 'vip',       label: 'VIP Area',           icon: '🥂', desc: l => l === 0 ? 'No passive income' : l === 1 ? '+0.1% budget/day' : l === 2 ? '+0.2% budget/day' : '+0.4% budget/day' },
+const FACILITY_UPGRADES: { type: UpgradeType; label: string; icon: ReactNode; desc: (lvl: number) => string }[] = [
+  { type: 'stadium',   label: 'Stadium',           icon: <Building2 size={18} />,     desc: l => l === 0 ? 'No home bonus' : l === 1 ? '+8% home income' : l === 2 ? '+15% home income' : '+25% home income' },
+  { type: 'training',  label: 'Training Facility', icon: <BallIcon size={18} />,       desc: l => l === 0 ? 'No fitness boost' : l === 1 ? '+2 fitness/day' : l === 2 ? '+4 fitness/day' : '+7 fitness/day' },
+  { type: 'kit',       label: 'Kit Quality',       icon: <Shirt size={18} />,         desc: l => l === 0 ? 'No morale bonus' : l === 1 ? '+2 morale/day' : l === 2 ? '+4 morale/day' : '+6 morale/day' },
+  { type: 'vip',       label: 'VIP Area',          icon: <Wine size={18} />,          desc: l => l === 0 ? 'No passive income' : l === 1 ? '+0.1% budget/day' : l === 2 ? '+0.2% budget/day' : '+0.4% budget/day' },
 ]
 
 const UPGRADE_FIELD_MAP: Record<UpgradeType, string> = {
@@ -42,7 +45,7 @@ const UPGRADE_FIELD_MAP: Record<UpgradeType, string> = {
 // ─── UpgradeCard ──────────────────────────────────────────────────────────────
 
 function UpgradeCard({ label, icon, currentLevel, type, desc, startingBudget, budget, leagueId, onUpgraded }: {
-  label: string; icon: string; currentLevel: number; type: UpgradeType
+  label: string; icon: ReactNode; currentLevel: number; type: UpgradeType
   desc: (lvl: number) => string; startingBudget: number; budget: number
   leagueId: string; onUpgraded: (type: UpgradeType, newLevel: number, newBudget: number) => void
 }) {

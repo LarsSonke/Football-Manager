@@ -57,7 +57,7 @@ export function AuctionPanel({
                 <div style={{ width: 44, height: 52, background: 'var(--bg-card-2)', borderRadius: 4, overflow: 'hidden', flexShrink: 0 }}>
                   {nomPlayer.photoUrl
                     ? <img src={nomPlayer.photoUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} />
-                    : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>👤</div>
+                    : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>?</div>
                   }
                 </div>
                 <div>

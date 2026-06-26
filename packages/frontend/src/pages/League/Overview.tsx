@@ -877,7 +877,10 @@ export default function Overview({ league, matches, myClub, awards, onPhysioUpgr
                   data-me={isMe ? 'true' : 'false'}
                 >
                   <div className={styles.leagueTablePos} style={{ color: posColor }}>{i + 1}</div>
-                  <div className={styles.leagueTableClub}>{club.name}</div>
+                  <div className={styles.leagueTableClub}>
+                    <ClubBadge name={club.name} size={20} logoConfig={club.logoConfig} />
+                    {club.name}
+                  </div>
                   <div className={styles.leagueTableWDL}>
                     <span className={styles.leagueTableW}>{club.wins}W</span>
                     <span className={styles.leagueTableD}>{club.draws}D</span>

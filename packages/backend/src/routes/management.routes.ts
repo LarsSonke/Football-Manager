@@ -58,11 +58,13 @@ router.patch('/:id/tactic', async (req: AuthRequest, res) => {
 // ─── Logo ─────────────────────────────────────────────────────────────────────
 
 const logoSchema = z.object({
-  shape:  z.enum(['shield', 'circle', 'hexagon', 'rounded']),
-  bg:     z.string().regex(/^#[0-9a-fA-F]{6}$/),
-  accent: z.string().regex(/^#[0-9a-fA-F]{6}$/),
-  emblem: z.enum(['none', 'star', 'bolt', 'crown', 'diamond', 'cross', 'chevron', 'ring']),
-  text:   z.string().min(1).max(3),
+  shape:     z.enum(['shield', 'circle', 'hexagon', 'rounded']),
+  bg:        z.string().regex(/^#[0-9a-fA-F]{6}$/),
+  accent:    z.string().regex(/^#[0-9a-fA-F]{6}$/),
+  textColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+  emblem:    z.enum(['none', 'star', 'bolt', 'crown', 'diamond', 'cross', 'chevron', 'ring', 'flames', 'sword', 'castle', 'wings', 'arrow', 'trident']),
+  text:      z.string().min(1).max(3),
+  division:  z.enum(['none', 'half-v', 'half-h', 'sash', 'quarters']).optional(),
 })
 
 router.patch('/:id/logo', async (req: AuthRequest, res) => {
@@ -84,6 +86,39 @@ router.patch('/:id/logo', async (req: AuthRequest, res) => {
       data: { logoConfig: parsed.data },
     })
     res.json(updated)
+  } catch (err: any) {
+    res.status(400).json({ error: err.message })
+  }
+})
+
+// ─── Club name ────────────────────────────────────────────────────────────────
+
+router.patch('/:id/name', async (req: AuthRequest, res) => {
+  const parsed = z.object({ name: z.string().min(3).max(50) }).safeParse(req.body)
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0].message })
+    return
+  }
+  try {
+    const club = await prisma.club.findFirst({
+      where: { leagueId: req.params.id, userId: req.userId! },
+    })
+    if (!club) {
+      res.status(403).json({ error: 'You do not have a club in this league' })
+      return
+    }
+    const conflict = await prisma.club.findFirst({
+      where: { leagueId: req.params.id, name: { equals: parsed.data.name, mode: 'insensitive' }, id: { not: club.id } },
+    })
+    if (conflict) {
+      res.status(409).json({ error: 'Another club in this league already has that name' })
+      return
+    }
+    const updated = await prisma.club.update({
+      where: { id: club.id },
+      data: { name: parsed.data.name },
+    })
+    res.json({ ok: true, name: updated.name })
   } catch (err: any) {
     res.status(400).json({ error: err.message })
   }

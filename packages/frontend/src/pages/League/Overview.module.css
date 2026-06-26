@@ -1064,6 +1064,9 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .leagueTableRow[data-me="true"] .leagueTableClub {

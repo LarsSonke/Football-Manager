@@ -176,6 +176,24 @@ export default function Management({ league, myClub, isCreator, onRefresh }: {
     finally { setWindowLoading(false) }
   }
 
+  const [renaming, setRenaming] = useState(false)
+  const [nameInput, setNameInput] = useState(myClub.name)
+  const [nameErr, setNameErr] = useState('')
+  const [nameLoading, setNameLoading] = useState(false)
+
+  async function handleRename() {
+    const trimmed = nameInput.trim()
+    if (trimmed.length < 3 || trimmed.length > 50) { setNameErr('Name must be 3–50 characters'); return }
+    setNameLoading(true); setNameErr('')
+    try {
+      await api.patch(`/leagues/${league.id}/name`, { name: trimmed })
+      setRenaming(false)
+      onRefresh()
+    } catch (e: any) {
+      setNameErr(e.response?.data?.error ?? 'Rename failed')
+    } finally { setNameLoading(false) }
+  }
+
   const boostCost = Math.round(league.startingBudget * BOOST_COST_PCT)
   const otherClubs = league.clubs.filter(c => c.id !== myClub.id)
 
@@ -188,6 +206,46 @@ export default function Management({ league, myClub, isCreator, onRefresh }: {
         <div>
           <div className={styles.budgetLabel}>Available Budget</div>
           <div className={styles.budgetValue}>€{(budget / 1000).toFixed(1)}k</div>
+        </div>
+      </div>
+
+      {/* Club Name */}
+      <div className={styles.card}>
+        <div className="card-header"><span className="accent-bar" /><span className={styles.secLabel}>Club Identity</span></div>
+        <div style={{ padding: '4px 0 2px' }}>
+          {renaming ? (
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              <input
+                value={nameInput}
+                onChange={e => { setNameInput(e.target.value); setNameErr('') }}
+                maxLength={50}
+                autoFocus
+                onKeyDown={e => { if (e.key === 'Enter') handleRename(); if (e.key === 'Escape') setRenaming(false) }}
+                style={{
+                  flex: '1 1 180px', padding: '8px 12px', fontSize: 15, fontWeight: 800,
+                  fontFamily: 'var(--font-display)', letterSpacing: '0.04em', textTransform: 'uppercase',
+                  background: 'var(--bg-base)', border: '2px solid var(--border-md)',
+                  borderRadius: 4, color: 'var(--text-1)', outline: 'none',
+                }}
+              />
+              <button className="btn btn-green" onClick={handleRename} disabled={nameLoading} style={{ flexShrink: 0 }}>
+                {nameLoading ? '…' : 'Save'}
+              </button>
+              <button className="btn btn-ghost" onClick={() => { setRenaming(false); setNameInput(myClub.name); setNameErr('') }} style={{ flexShrink: 0 }}>
+                Cancel
+              </button>
+              {nameErr && <div style={{ width: '100%', fontSize: 12, color: 'var(--red)', marginTop: 2 }}>{nameErr}</div>}
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: 'var(--text-1)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                {myClub.name}
+              </span>
+              <button className="btn btn-outline" style={{ fontSize: 11, padding: '4px 12px' }} onClick={() => { setRenaming(true); setNameInput(myClub.name) }}>
+                Rename
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

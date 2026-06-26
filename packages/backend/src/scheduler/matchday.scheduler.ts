@@ -88,7 +88,18 @@ async function simulateLeagueMatchday(leagueId: string): Promise<void> {
     })
   }))
 
-  const results = await Promise.all(matches.map(match => {
+  const results = await Promise.all(matches.map(async match => {
+    const homeAvail = match.homeClub.squad.filter(p => !p.injured && p.suspendedMatchday !== nextDay).length
+    const awayAvail = match.awayClub.squad.filter(p => !p.injured && p.suspendedMatchday !== nextDay).length
+    const homeForfeit = homeAvail < 11
+    const awayForfeit = awayAvail < 11
+
+    if (homeForfeit || awayForfeit) {
+      const hs = !homeForfeit && awayForfeit ? 3 : 0
+      const as_ = !awayForfeit && homeForfeit ? 3 : 0
+      return saveForfeit(match, hs, as_)
+    }
+
     const homeTactic = match.homeClub.isAI
       ? adaptTacticForOpponent(
           match.homeClub,
@@ -190,6 +201,27 @@ async function simulateLeagueMatchday(leagueId: string): Promise<void> {
   } catch {}
 }
 
+async function saveForfeit(
+  match: { id: string; homeClubId: string; awayClubId: string; competition: string | null },
+  homeScore: number,
+  awayScore: number,
+): Promise<{ matchId: string; homeClubId: string; awayClubId: string; homeScore: number; awayScore: number; competition: string; stats: { home: object; away: object } }> {
+  const empty = { shots: 0, shotsOnTarget: 0, xG: 0, possession: 50, yellowCards: 0, redCards: 0 }
+  await prisma.match.update({
+    where: { id: match.id },
+    data: { homeScore, awayScore, status: 'SIMULATED', simulatedAt: new Date(), stats: { home: empty, away: empty } },
+  })
+  const homeWin = homeScore > awayScore, awayWin = awayScore > homeScore, draw = homeScore === awayScore
+  const homeUpd: Record<string, unknown> = { goalsFor: { increment: homeScore }, goalsAgainst: { increment: awayScore } }
+  const awayUpd: Record<string, unknown> = { goalsFor: { increment: awayScore }, goalsAgainst: { increment: homeScore } }
+  if (homeWin) { homeUpd.wins = { increment: 1 }; homeUpd.points = { increment: 3 }; awayUpd.losses = { increment: 1 } }
+  else if (awayWin) { awayUpd.wins = { increment: 1 }; awayUpd.points = { increment: 3 }; homeUpd.losses = { increment: 1 } }
+  else { homeUpd.draws = { increment: 1 }; homeUpd.points = { increment: 1 }; awayUpd.draws = { increment: 1 }; awayUpd.points = { increment: 1 } }
+  await prisma.club.update({ where: { id: match.homeClubId }, data: homeUpd as any })
+  await prisma.club.update({ where: { id: match.awayClubId }, data: awayUpd as any })
+  return { matchId: match.id, homeClubId: match.homeClubId, awayClubId: match.awayClubId, homeScore, awayScore, competition: match.competition ?? 'LEAGUE', stats: { home: empty, away: empty } }
+}
+
 async function broadcastMatchesLive(leagueId: string, matchIds: string[]): Promise<void> {
   if (matchIds.length === 0) return
 
@@ -227,34 +259,54 @@ async function broadcastMatchesLive(leagueId: string, matchIds: string[]): Promi
   const scores: Record<string, { home: number; away: number }> = {}
   for (const m of matchRows) scores[m.id] = { home: 0, away: 0 }
 
-  // Replay events at ~150ms per gap minute, capped at 800ms
-  let prevMinute = 0
+  // Group events by minute for O(1) lookup
+  const eventsByMinute: Record<number, typeof allEvents> = {}
   for (const evt of allEvents) {
-    const gap = evt.minute - prevMinute
-    if (gap > 0) await new Promise(r => setTimeout(r, Math.min(gap * 150, 800)))
-    prevMinute = evt.minute
+    if (!eventsByMinute[evt.minute]) eventsByMinute[evt.minute] = []
+    eventsByMinute[evt.minute].push(evt)
+  }
 
-    const m = matchMap[evt.matchId]
-    if (!m) continue
-    const d = evt.detail as any
-    if (evt.type === 'GOAL') {
-      if (d?.team === 'home') scores[evt.matchId].home++
-      else if (d?.team === 'away') scores[evt.matchId].away++
+  // Tick through all 90 minutes at ~100ms each (~9s total broadcast)
+  const MS_PER_MINUTE = 100
+  for (let minute = 1; minute <= 90; minute++) {
+    await new Promise(r => setTimeout(r, MS_PER_MINUTE))
+    const evts = eventsByMinute[minute] ?? []
+
+    for (const evt of evts) {
+      const m = matchMap[evt.matchId]
+      if (!m) continue
+      const d = evt.detail as any
+      if (evt.type === 'GOAL') {
+        if (d?.team === 'home') scores[evt.matchId].home++
+        else if (d?.team === 'away') scores[evt.matchId].away++
+      }
+      getIO().to(`league:${leagueId}`).emit('match:live', {
+        type: 'event',
+        matchId: evt.matchId,
+        minute,
+        eventType: evt.type,
+        detail: evt.detail,
+        homeScore: scores[evt.matchId].home,
+        awayScore: scores[evt.matchId].away,
+      })
     }
 
-    getIO().to(`league:${leagueId}`).emit('match:live', {
-      type: 'event',
-      matchId: evt.matchId,
-      minute: evt.minute,
-      eventType: evt.type,
-      detail: evt.detail,
-      homeScore: scores[evt.matchId].home,
-      awayScore: scores[evt.matchId].away,
-    })
+    // Emit a tick every 5 quiet minutes so the live ticker stays updated
+    if (evts.length === 0 && minute % 5 === 0) {
+      for (const m of matchRows) {
+        getIO().to(`league:${leagueId}`).emit('match:live', {
+          type: 'tick',
+          matchId: m.id,
+          minute,
+          homeScore: scores[m.id].home,
+          awayScore: scores[m.id].away,
+        })
+      }
+    }
   }
 
   // Small pause then send final confirmed results
-  await new Promise(r => setTimeout(r, 600))
+  await new Promise(r => setTimeout(r, 400))
   for (const m of matchRows) {
     getIO().to(`league:${leagueId}`).emit('match:live', {
       type: 'end',

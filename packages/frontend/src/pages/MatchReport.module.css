@@ -1,35 +1,51 @@
+/* ─── Design tokens ──────────────────────────────────────────────────────────
+   ink    : #08080a   (page bg, hero bg)
+   steel  : #16161a   (card bg)
+   paper  : #f4f1ea   (primary text, borders)
+   accent : #e5202f   (red)
+   gold   : #e9c46a
+   ─────────────────────────────────────────────────────────────────────────── */
+
 /* ─── Page shell ─────────────────────────────────────────────────────────── */
 .page {
   min-height: 100vh;
-  background: var(--bg);
-  padding: 24px 16px;
+  background: #08080a;
+  padding: 28px 16px 48px;
 }
 
 .inner {
-  max-width: 860px;
+  max-width: 900px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
 }
 
-/* Loading / error states */
+/* ─── Loading / error states ─────────────────────────────────────────────── */
 .loadingState {
   min-height: 100vh;
-  background: var(--bg);
+  background: #08080a;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-2);
+  font-family: var(--font-display);
+  font-size: 18px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(244, 241, 234, 0.40);
 }
 
 .errorState {
   min-height: 100vh;
-  background: var(--bg);
+  background: #08080a;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--red);
+  font-family: var(--font-display);
+  font-size: 18px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #e5202f;
 }
 
 /* ─── Nav bar ────────────────────────────────────────────────────────────── */
@@ -40,12 +56,19 @@
 }
 
 .backLink {
-  color: var(--text-2);
-  font-size: 13px;
+  color: rgba(244, 241, 234, 0.50);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.10em;
   text-decoration: none;
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  transition: color 0.15s;
+}
+.backLink:hover {
+  color: #f4f1ea;
 }
 
 .navRight {
@@ -55,147 +78,209 @@
 }
 
 .replayBtn {
-  background: rgba(54, 226, 126, 0.1);
-  border: 1px solid rgba(54, 226, 126, 0.3);
-  border-radius: var(--radius-xs);
-  padding: 5px 12px;
+  background: #e5202f;
+  border: none;
+  border-radius: 2px;
+  padding: 6px 14px;
   cursor: pointer;
-  color: var(--green);
+  color: #f4f1ea;
+  font-family: var(--font-display);
   font-size: 12px;
-  font-weight: 700;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  transition: opacity 0.15s;
 }
+.replayBtn:hover { opacity: 0.85; }
 
 .prevNextBtn {
-  background: var(--bg-card-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xs);
-  padding: 5px 10px;
+  background: #16161a;
+  border: 2px solid rgba(244, 241, 234, 0.10);
+  border-radius: 2px;
+  padding: 5px 12px;
   cursor: pointer;
-  color: var(--text-1);
-  font-size: 13px;
+  color: #f4f1ea;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  transition: border-color 0.15s;
 }
+.prevNextBtn:hover { border-color: rgba(244, 241, 234, 0.30); }
 
 .prevNextBtnDisabled {
   composes: prevNextBtn;
-  color: var(--text-3);
+  color: rgba(244, 241, 234, 0.25);
   cursor: not-allowed;
+}
+.prevNextBtnDisabled:hover { border-color: rgba(244, 241, 234, 0.10); }
+
+/* ─── Section header (accent bar + Anton label) ──────────────────────────── */
+.secHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.secHeaderBar {
+  width: 3px;
+  height: 18px;
+  background: #e5202f;
+  flex-shrink: 0;
+}
+
+.secLabel {
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(244, 241, 234, 0.60);
+}
+
+.secLabelGold {
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #e9c46a;
+}
+
+/* kept for any direct .secLabelGreen references in TSX */
+.secLabelGreen {
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #e9c46a;
 }
 
 /* ─── Generic card ───────────────────────────────────────────────────────── */
 .card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 20px 24px;
+  background: #16161a;
+  border: 2px solid rgba(244, 241, 234, 0.10);
+  border-radius: 2px;
+  padding: 20px 22px;
 }
 
-.secLabel {
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--text-2);
-  margin-bottom: 14px;
-}
-
-.secLabelGreen {
-  composes: secLabel;
-  color: var(--green);
-}
-
-/* ─── Score header card ──────────────────────────────────────────────────── */
+/* ─── Score hero card ────────────────────────────────────────────────────── */
 .scoreCard {
-  composes: card;
-  padding: 28px 32px;
+  background: #08080a;
+  border: 3px solid #f4f1ea;
+  border-radius: 2px;
+  padding: 32px 28px 28px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* diagonal hatch overlay */
+.scoreCard::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent 4px,
+    rgba(255, 255, 255, 0.03) 4px 8px
+  );
+  pointer-events: none;
 }
 
 .matchday {
+  font-family: var(--font-display);
   font-size: 11px;
-  color: var(--text-2);
+  color: rgba(244, 241, 234, 0.45);
   text-transform: uppercase;
-  letter-spacing: 1px;
-  font-weight: 700;
+  letter-spacing: 0.14em;
   text-align: center;
-  margin-bottom: 24px;
+  margin-bottom: 28px;
+  position: relative;
+  z-index: 1;
 }
 
 .scoreGrid {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  gap: 16px;
+  gap: 20px;
+  position: relative;
+  z-index: 1;
 }
 
-/* Home team column */
+/* Home team */
 .homeTeam {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 6px;
+  gap: 8px;
 }
 
 .homeTeamName {
   font-family: var(--font-display);
-  font-size: 18px;
-  font-weight: 800;
+  font-size: 20px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   text-align: right;
 }
 
 .homeTeamNameWinner {
   composes: homeTeamName;
-  color: var(--text-1);
+  color: #f4f1ea;
 }
 
 .homeTeamNameLoser {
   composes: homeTeamName;
-  color: var(--text-2);
+  color: rgba(244, 241, 234, 0.30);
 }
 
 .teamSideLabel {
-  font-size: 10px;
-  color: var(--text-3);
-  font-weight: 600;
+  font-size: 9px;
+  color: rgba(244, 241, 234, 0.35);
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.14em;
 }
 
 .goalLines {
   text-align: right;
-  margin-top: 4px;
+  margin-top: 2px;
 }
 
 .goalLine {
-  font-size: 12px;
-  color: var(--text-2);
-  line-height: 1.7;
+  font-size: 11px;
+  color: rgba(244, 241, 234, 0.55);
+  line-height: 1.8;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  justify-content: flex-end;
 }
 
-/* Away team column */
+/* Away team */
 .awayTeam {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 6px;
+  gap: 8px;
 }
 
 .awayTeamName {
   font-family: var(--font-display);
-  font-size: 18px;
-  font-weight: 800;
+  font-size: 20px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .awayTeamNameWinner {
   composes: awayTeamName;
-  color: var(--text-1);
+  color: #f4f1ea;
 }
 
 .awayTeamNameLoser {
   composes: awayTeamName;
-  color: var(--text-2);
+  color: rgba(244, 241, 234, 0.30);
 }
 
 .awayGoalLines {
-  margin-top: 4px;
+  margin-top: 2px;
 }
 
 /* Score column */
@@ -203,74 +288,90 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .scoreDisplay {
   font-family: var(--font-display);
-  font-size: 64px;
-  font-weight: 900;
-  letter-spacing: 6px;
+  font-size: 88px;
+  letter-spacing: 4px;
   line-height: 1;
-  color: var(--text-1);
+  color: #f4f1ea;
 }
 
 .scoreSep {
-  color: var(--text-3);
-  margin: 0 6px;
+  color: rgba(244, 241, 234, 0.35);
+  margin: 0 4px;
 }
 
 .resultBadge {
-  font-size: 12px;
-  font-weight: 800;
-  padding: 3px 12px;
-  border-radius: 20px;
-  letter-spacing: 0.5px;
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  padding: 4px 14px;
+  border-radius: 2px;
 }
 
 .resultBadgeHomeWin {
   composes: resultBadge;
-  background: rgba(54, 226, 126, 0.12);
-  color: var(--green);
-  border: 1px solid rgba(54, 226, 126, 0.3);
+  background: #e5202f;
+  color: #f4f1ea;
 }
 
 .resultBadgeAwayWin {
   composes: resultBadge;
-  background: rgba(232, 128, 106, 0.12);
-  color: var(--red);
-  border: 1px solid rgba(232, 128, 106, 0.3);
+  background: #e5202f;
+  color: #f4f1ea;
 }
 
 .resultBadgeDraw {
   composes: resultBadge;
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--text-3);
-  border: 1px solid var(--border);
+  background: rgba(244, 241, 234, 0.08);
+  color: rgba(244, 241, 234, 0.60);
+  border: 1px solid rgba(244, 241, 234, 0.15);
 }
 
 .matchDate {
   font-size: 10px;
-  color: var(--text-3);
+  color: rgba(244, 241, 234, 0.35);
+  letter-spacing: 0.06em;
 }
 
 /* ─── MOTM card ──────────────────────────────────────────────────────────── */
 .motmCard {
-  background: linear-gradient(135deg, rgba(54, 226, 126, 0.08) 0%, var(--bg-card) 60%);
-  border: 1px solid rgba(54, 226, 126, 0.25);
-  border-radius: var(--radius);
-  padding: 20px 24px;
+  background: #16161a;
+  border: 2px solid rgba(233, 196, 106, 0.35);
+  border-left: 3px solid #e9c46a;
+  border-radius: 2px;
+  padding: 20px 22px;
+  position: relative;
+  overflow: hidden;
+}
+
+.motmCard::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent 4px,
+    rgba(233, 196, 106, 0.015) 4px 8px
+  );
+  pointer-events: none;
 }
 
 .motmBody {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 18px;
+  position: relative;
+  z-index: 1;
 }
 
 .motmAvatar {
-  width: 56px;
-  height: 56px;
+  width: 58px;
+  height: 58px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -279,32 +380,40 @@
   font-weight: 900;
   color: #000;
   flex-shrink: 0;
+  border: 2px solid rgba(233, 196, 106, 0.40);
 }
 
 .motmInfo {
   flex: 1;
+  min-width: 0;
 }
 
 .motmName {
-  font-size: 17px;
-  font-weight: 800;
-  color: var(--text-1);
-  margin-bottom: 4px;
+  font-family: var(--font-display);
+  font-size: 18px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #f4f1ea;
+  margin-bottom: 6px;
 }
 
 .motmMeta {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .motmMetaItem {
   font-size: 12px;
-  color: var(--text-2);
+  color: rgba(244, 241, 234, 0.55);
+  display: flex;
+  align-items: center;
+  gap: 3px;
 }
 
 .motmPosTag {
-  font-size: 10px;
+  font-size: 9px;
 }
 
 .ratingPosTag {
@@ -312,95 +421,127 @@
 }
 
 .motmNatPos {
-  font-size: 10px;
-  color: var(--text-3);
-  background: var(--bg-card-2);
-  border: 1px solid var(--border);
-  border-radius: 3px;
+  font-size: 9px;
+  color: rgba(244, 241, 234, 0.40);
+  background: rgba(244, 241, 234, 0.06);
+  border: 1px solid rgba(244, 241, 234, 0.12);
+  border-radius: 2px;
   padding: 0 4px;
 }
 
 .motmRating {
   font-family: var(--font-display);
-  font-size: 44px;
-  font-weight: 900;
+  font-size: 52px;
+  letter-spacing: 0.02em;
   line-height: 1;
+  flex-shrink: 0;
 }
 
-/* ─── Timeline + Stats grid ──────────────────────────────────────────────── */
+/* ─── Two-column layout ──────────────────────────────────────────────────── */
 .twoCol {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 16px;
+  gap: 20px;
 }
 
-/* Timeline */
+/* ─── Timeline ───────────────────────────────────────────────────────────── */
 .timeline {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 0;
+  position: relative;
+}
+
+/* vertical center line */
+.timeline::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 1px;
+  background: rgba(244, 241, 234, 0.10);
 }
 
 .timelineEmpty {
-  color: var(--text-2);
+  color: rgba(244, 241, 234, 0.35);
   font-size: 13px;
 }
 
 .timelineRow {
   display: grid;
-  grid-template-columns: 1fr 52px 1fr;
+  grid-template-columns: 1fr 56px 1fr;
   align-items: center;
   gap: 4px;
   font-size: 12px;
+  padding: 7px 0;
+  position: relative;
 }
 
 .timelineHome {
   text-align: right;
+  color: #f4f1ea;
+  padding-right: 8px;
 }
 
 .timelineAway {
   text-align: left;
+  color: #f4f1ea;
+  padding-left: 8px;
 }
 
 .timelineCenter {
   text-align: center;
-  color: var(--text-2);
-  font-weight: 700;
-  font-size: 11px;
+  color: rgba(244, 241, 234, 0.50);
+  font-family: var(--font-display);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: #16161a;
+  position: relative;
+  z-index: 1;
+  padding: 3px 2px;
+  border-radius: 2px;
+  border: 1px solid rgba(244, 241, 234, 0.10);
 }
 
 .subOut {
-  color: var(--red);
+  color: #e5202f;
   font-weight: 600;
 }
 
 .subArrow {
-  color: var(--text-3);
+  color: rgba(244, 241, 234, 0.30);
   margin: 0 3px;
+  font-size: 10px;
 }
 
 .subIn {
-  color: var(--green);
+  color: #4ade80;
   font-weight: 600;
 }
 
 .eventScorer {
-  font-weight: 600;
+  font-weight: 700;
+  color: #f4f1ea;
 }
 
 .eventAssist {
   font-size: 11px;
-  color: var(--text-2);
+  color: rgba(244, 241, 234, 0.50);
 }
 
-/* Stats bars */
+/* ─── Stats ──────────────────────────────────────────────────────────────── */
 .statsCard {
   composes: card;
 }
 
 .statsHeader {
   composes: secLabel;
-  margin-bottom: 10px;
 }
 
 .statsTeamRow {
@@ -408,53 +549,62 @@
   justify-content: space-between;
   font-size: 11px;
   font-weight: 700;
-  color: var(--text-2);
-  margin-bottom: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(244, 241, 234, 0.45);
+  margin-bottom: 14px;
 }
 
-/* StatRow component */
 .statRowWrap {
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .statRowLabels {
   display: flex;
   justify-content: space-between;
+  align-items: baseline;
   font-size: 12px;
-  margin-bottom: 4px;
+  margin-bottom: 5px;
+  gap: 8px;
 }
 
 .statRowValue {
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-  color: var(--text-1);
+  font-family: var(--font-display);
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  color: #f4f1ea;
+  min-width: 28px;
 }
 
 .statRowLabel {
-  color: var(--text-2);
-  font-size: 11px;
+  color: rgba(244, 241, 234, 0.45);
+  font-size: 10px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.10em;
+  text-align: center;
+  flex: 1;
 }
 
+/* Symmetric two-sided stat bar — home fills from left in paper, away fills right in accent */
 .statBarTrack {
-  height: 5px;
-  border-radius: 3px;
+  height: 4px;
+  border-radius: 0;
   overflow: hidden;
   display: flex;
-  background: rgba(232, 128, 106, 0.5);
+  background: rgba(229, 32, 47, 0.35);
+  position: relative;
 }
 
 .statBarFill {
-  background: var(--green);
-  transition: width 0.6s ease;
+  background: #f4f1ea;
+  transition: width 0.5s ease;
 }
 
 /* ─── Player ratings grid ────────────────────────────────────────────────── */
 .ratingsGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 20px;
 }
 
 .ratingsCard {
@@ -462,28 +612,41 @@
 }
 
 .ratingsTeamLabel {
-  composes: secLabel;
-  margin-bottom: 6px;
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(244, 241, 234, 0.60);
+  margin-bottom: 12px;
+  padding-left: 8px;
+  border-left: 3px solid #e5202f;
 }
 
 .ratingsList {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 2px;
 }
 
 .ratingRow {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 5px 8px;
-  border-radius: 6px;
+  padding: 6px 8px;
+  border-radius: 2px;
+  transition: background 0.15s;
+}
+.ratingRow:hover {
+  background: rgba(244, 241, 234, 0.04);
 }
 
 .ratingRowMotm {
   composes: ratingRow;
-  background: rgba(54, 226, 126, 0.06);
-  border: 1px solid rgba(54, 226, 126, 0.2);
+  background: rgba(233, 196, 106, 0.07);
+  border: 1px solid rgba(233, 196, 106, 0.22);
+}
+.ratingRowMotm:hover {
+  background: rgba(233, 196, 106, 0.11);
 }
 
 .ratingRowNormal {
@@ -497,20 +660,20 @@
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  min-width: 30px;
+  min-width: 32px;
 }
 
 .ratingNatPos {
   font-size: 8px;
-  color: var(--text-3);
+  color: rgba(244, 241, 234, 0.30);
   line-height: 1;
 }
 
 .ratingName {
   flex: 1;
   font-size: 13px;
-  font-weight: 500;
-  color: var(--text-1);
+  font-weight: 400;
+  color: rgba(244, 241, 234, 0.80);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -519,72 +682,93 @@
 .ratingNameScorer {
   composes: ratingName;
   font-weight: 700;
+  color: #f4f1ea;
 }
 
 .ratingMeta {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   flex-shrink: 0;
 }
 
 .ratingIcon {
   font-size: 11px;
+  color: rgba(244, 241, 234, 0.55);
+  display: flex;
+  align-items: center;
+  gap: 2px;
 }
 
 .ratingMins {
   font-size: 10px;
-  color: var(--text-3);
+  color: rgba(244, 241, 234, 0.35);
 }
 
 .ratingValue {
   font-family: var(--font-display);
-  font-weight: 800;
   font-size: 15px;
-  min-width: 34px;
+  letter-spacing: 0.02em;
+  min-width: 36px;
   text-align: right;
 }
 
-/* ─── Replay ticker overlay ──────────────────────────────────────────────── */
+/* ─── Replay modal overlay ───────────────────────────────────────────────── */
 .replayOverlay {
   position: fixed;
   inset: 0;
   z-index: 300;
-  background: rgba(0, 0, 0, 0.92);
+  background: rgba(0, 0, 0, 0.88);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 16px;
+  backdrop-filter: blur(2px);
 }
 
 .replayPanel {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 16px;
+  background: #08080a;
+  border: 3px solid #f4f1ea;
+  border-radius: 2px;
   width: 100%;
-  max-width: 520px;
+  max-width: 540px;
   max-height: 90vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative;
+}
+
+.replayPanel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent 4px,
+    rgba(255, 255, 255, 0.025) 4px 8px
+  );
+  pointer-events: none;
+  z-index: 0;
 }
 
 .replayHeader {
   padding: 14px 20px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 2px solid rgba(244, 241, 234, 0.12);
   display: flex;
   align-items: center;
   gap: 12px;
   flex-shrink: 0;
-  background: var(--bg-base);
+  position: relative;
+  z-index: 1;
 }
 
 .replayTitle {
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
+  font-family: var(--font-display);
+  font-size: 13px;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--text-2);
+  color: rgba(244, 241, 234, 0.70);
   flex: 1;
 }
 
@@ -592,26 +776,43 @@
   background: none;
   border: none;
   cursor: pointer;
-  color: var(--text-2);
+  color: rgba(244, 241, 234, 0.50);
   font-size: 18px;
   line-height: 1;
   padding: 2px 6px;
+  transition: color 0.15s;
 }
+.replayCloseBtn:hover { color: #f4f1ea; }
 
+/* Replay score area */
 .replayScore {
-  padding: 20px 24px 16px;
+  padding: 20px 24px 18px;
   text-align: center;
   flex-shrink: 0;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 2px solid rgba(244, 241, 234, 0.12);
+  position: relative;
+  z-index: 1;
+}
+
+.replayProgressWrap {
+  height: 3px;
+  background: rgba(244,241,234,0.08);
+  margin: 10px 0 6px;
+}
+
+.replayProgressBar {
+  height: 100%;
+  background: #e5202f;
+  transition: width 0.1s linear;
 }
 
 .replayMinute {
-  font-size: 11px;
-  color: var(--text-3);
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-size: 10px;
+  color: rgba(244, 241, 234, 0.40);
   text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 8px;
+  letter-spacing: 0.14em;
+  text-align: center;
 }
 
 .replayScoreGrid {
@@ -623,30 +824,33 @@
 
 .replayTeamHome {
   text-align: right;
-  font-weight: 700;
-  font-size: 14px;
-  color: var(--text-1);
+  font-family: var(--font-display);
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #f4f1ea;
 }
 
 .replayTeamAway {
   text-align: left;
-  font-weight: 700;
-  font-size: 14px;
-  color: var(--text-1);
+  font-family: var(--font-display);
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #f4f1ea;
 }
 
 .replayScoreValue {
   font-family: var(--font-display);
-  font-size: 42px;
-  font-weight: 900;
-  color: var(--text-1);
+  font-size: 48px;
   letter-spacing: 4px;
+  color: #f4f1ea;
   line-height: 1;
 }
 
 .replayScoreSep {
-  color: var(--text-3);
-  margin: 0 4px;
+  color: rgba(244, 241, 234, 0.35);
+  margin: 0 2px;
 }
 
 /* Replay feed */
@@ -656,37 +860,42 @@
   padding: 12px 20px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
+  position: relative;
+  z-index: 1;
 }
 
 .replayKickoff {
   text-align: center;
-  color: var(--text-3);
-  font-size: 13px;
+  color: rgba(244, 241, 234, 0.35);
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   padding: 24px 0;
 }
 
 .replayEventRow {
   display: grid;
-  grid-template-columns: 1fr 48px 1fr;
+  grid-template-columns: 1fr 52px 1fr;
   align-items: center;
   gap: 8px;
   font-size: 12px;
   padding: 6px 8px;
-  border-radius: 6px;
-  transition: all 0.3s;
+  border-radius: 2px;
+  transition: all 0.25s;
 }
 
 .replayEventLatestGoal {
   composes: replayEventRow;
-  background: rgba(54, 226, 126, 0.1);
-  border: 1px solid rgba(54, 226, 126, 0.25);
+  background: rgba(229, 32, 47, 0.12);
+  border: 1px solid rgba(229, 32, 47, 0.35);
 }
 
 .replayEventLatest {
   composes: replayEventRow;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(244, 241, 234, 0.05);
+  border: 1px solid rgba(244, 241, 234, 0.10);
 }
 
 .replayEventOld {
@@ -705,35 +914,41 @@
 
 .replayEventGoal {
   font-weight: 700;
-  color: var(--text-1);
+  color: #f4f1ea;
 }
 
 .replayEventNormal {
   font-weight: 400;
-  color: var(--text-2);
+  color: rgba(244, 241, 234, 0.60);
 }
 
 .replaySubArrow {
-  color: var(--text-3);
+  color: rgba(244, 241, 234, 0.30);
   margin: 0 3px;
+  font-size: 10px;
 }
 
 .replaySubIn {
-  color: var(--green);
+  color: #4ade80;
   font-weight: 600;
 }
 
 .replayCenter {
   text-align: center;
-  font-weight: 700;
-  color: var(--text-3);
-  font-size: 11px;
-  line-height: 1.3;
+  font-family: var(--font-display);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: rgba(244, 241, 234, 0.45);
+  line-height: 1.4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
 }
 
 .replayNoEvents {
   text-align: center;
-  color: var(--text-3);
+  color: rgba(244, 241, 234, 0.35);
   font-size: 13px;
   padding: 16px 0;
 }
@@ -741,57 +956,71 @@
 /* Replay controls */
 .replayControls {
   padding: 12px 20px;
-  border-top: 1px solid var(--border);
+  border-top: 2px solid rgba(244, 241, 234, 0.12);
   display: flex;
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .replayPlayBtn {
-  background: var(--bg-base);
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  background: #16161a;
+  border: 2px solid rgba(244, 241, 234, 0.15);
+  border-radius: 2px;
   padding: 6px 14px;
   cursor: pointer;
+  font-family: var(--font-display);
   font-size: 13px;
-  font-weight: 700;
-  color: var(--text-1);
+  letter-spacing: 0.06em;
+  color: #f4f1ea;
   min-width: 48px;
+  transition: border-color 0.15s;
 }
+.replayPlayBtn:hover { border-color: rgba(244, 241, 234, 0.40); }
 
 .replayRestartBtn {
-  background: var(--bg-base);
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  background: rgba(229, 32, 47, 0.12);
+  border: 2px solid rgba(229, 32, 47, 0.35);
+  border-radius: 2px;
   padding: 6px 14px;
   cursor: pointer;
+  font-family: var(--font-display);
   font-size: 13px;
-  font-weight: 700;
-  color: var(--green);
+  letter-spacing: 0.06em;
+  color: #e5202f;
+  transition: background 0.15s;
 }
+.replayRestartBtn:hover { background: rgba(229, 32, 47, 0.20); }
 
 .speedBtns {
   display: flex;
-  gap: 4px;
+  gap: 3px;
 }
 
 .speedBtn {
-  background: var(--bg-base);
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  background: #16161a;
+  border: 2px solid rgba(244, 241, 234, 0.10);
+  border-radius: 2px;
   padding: 4px 10px;
   cursor: pointer;
+  font-family: var(--font-display);
   font-size: 11px;
-  font-weight: 700;
-  color: var(--text-2);
+  letter-spacing: 0.06em;
+  color: rgba(244, 241, 234, 0.45);
+  transition: border-color 0.15s, color 0.15s;
+}
+.speedBtn:hover {
+  border-color: rgba(244, 241, 234, 0.30);
+  color: #f4f1ea;
 }
 
 .speedBtnActive {
   composes: speedBtn;
-  background: rgba(54, 226, 126, 0.15);
-  border-color: rgba(54, 226, 126, 0.4);
-  color: var(--green);
+  background: rgba(229, 32, 47, 0.15);
+  border-color: rgba(229, 32, 47, 0.45);
+  color: #e5202f;
 }
 
 .replayControlsSpacer {
@@ -799,7 +1028,9 @@
 }
 
 .replayFtLabel {
+  font-family: var(--font-display);
   font-size: 11px;
-  color: var(--green);
-  font-weight: 700;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: #e9c46a;
 }

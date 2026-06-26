@@ -227,7 +227,7 @@ function LiveTicker({ matches, myClubId, onDismiss }: { matches: Map<string, Liv
         <div className={`${styles.liveTickerCard} ${myMatch.status === 'live' ? styles.liveTickerCardLive : ''}`}>
           <div className={`${styles.liveTickerHeader} ${myMatch.status === 'live' ? styles.liveTickerHeaderLive : ''}`}>
             <span className={`${styles.liveTickerStatus} ${myMatch.status === 'live' ? styles.liveTickerStatusLive : ''}`}>
-              {myMatch.status === 'live' ? '● LIVE' : '✓ FT'}
+              {myMatch.status === 'live' ? `● ${myMatch.currentMinute}'` : '✓ FT'}
             </span>
             <span className={styles.liveTickerHeaderSpacer} />
             <button onClick={onDismiss} className={styles.liveTickerCloseBtn}>×</button>
@@ -402,11 +402,19 @@ export default function League() {
             homeClub: data.homeClub!,
             awayClub: data.awayClub!,
             homeScore: 0, awayScore: 0,
+            currentMinute: 0,
             events: [], status: 'live',
           })
           return next
         })
         setShowLiveTicker(true)
+      } else if (data.type === 'tick') {
+        setLiveMatches(prev => {
+          const next = new Map(prev)
+          const m = next.get(data.matchId)
+          if (m) next.set(data.matchId, { ...m, currentMinute: data.minute ?? m.currentMinute })
+          return next
+        })
       } else if (data.type === 'event') {
         setLiveMatches(prev => {
           const next = new Map(prev)
@@ -414,6 +422,7 @@ export default function League() {
           if (m) {
             next.set(data.matchId, {
               ...m,
+              currentMinute: data.minute ?? m.currentMinute,
               homeScore: data.homeScore ?? m.homeScore,
               awayScore: data.awayScore ?? m.awayScore,
               events: [...m.events, { minute: data.minute!, eventType: data.eventType!, detail: data.detail, homeScore: data.homeScore ?? m.homeScore, awayScore: data.awayScore ?? m.awayScore }],
@@ -425,7 +434,7 @@ export default function League() {
         setLiveMatches(prev => {
           const next = new Map(prev)
           const m = next.get(data.matchId)
-          if (m) next.set(data.matchId, { ...m, homeScore: data.homeScore ?? m.homeScore, awayScore: data.awayScore ?? m.awayScore, status: 'ended' })
+          if (m) next.set(data.matchId, { ...m, currentMinute: 90, homeScore: data.homeScore ?? m.homeScore, awayScore: data.awayScore ?? m.awayScore, status: 'ended' })
           return next
         })
       }

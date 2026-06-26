@@ -109,6 +109,7 @@ export interface LiveMatchState {
   awayClub: { id: string; name: string }
   homeScore: number
   awayScore: number
+  currentMinute: number
   events: Array<{ minute: number; eventType: string; detail: unknown; homeScore: number; awayScore: number }>
   status: 'live' | 'ended'
 }

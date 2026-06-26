@@ -55,6 +55,15 @@ interface MatchDetail {
 
 // ─── Small helpers ────────────────────────────────────────────────────────────
 
+function SectionHeader({ label, gold }: { label: string; gold?: boolean }) {
+  return (
+    <div className={styles.secHeader}>
+      <div className={styles.secHeaderBar} />
+      <span className={gold ? styles.secLabelGold : styles.secLabel}>{label}</span>
+    </div>
+  )
+}
+
 function StatRow({ label, home, away, format = (n: number) => String(n) }: {
   label: string; home: number; away: number; format?: (n: number) => string
 }) {
@@ -77,32 +86,36 @@ function StatRow({ label, home, away, format = (n: number) => String(n) }: {
 // ─── Replay Ticker ────────────────────────────────────────────────────────────
 
 const REPLAY_SPEEDS = [
-  { label: '1×', ms: 1200 },
-  { label: '2×', ms: 600 },
-  { label: '4×', ms: 300 },
+  { label: '1×', ms: 120 },
+  { label: '4×', ms: 30 },
+  { label: '16×', ms: 8 },
 ]
+const TOTAL_MINUTES = 90
 
 function ReplayTicker({ match, onClose }: { match: MatchDetail; onClose: () => void }) {
   const allEvents = [...match.events].sort((a, b) => a.minute - b.minute)
-  const [shown, setShown] = useState<number>(0)
+  const [currentMinute, setCurrentMinute] = useState(0)
   const [running, setRunning] = useState(true)
   const [speedIdx, setSpeedIdx] = useState(0)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const feedRef = useRef<HTMLDivElement>(null)
 
-  const visibleEvents = allEvents.slice(0, shown)
+  const visibleEvents = allEvents.filter(e => e.minute <= currentMinute)
   const goals = visibleEvents.filter(e => e.type === 'GOAL')
   const homeScore = goals.filter(e => e.team === 'home').length
   const awayScore = goals.filter(e => e.team === 'away').length
-
-  const currentMinute = shown === 0 ? 0 : shown >= allEvents.length ? 90 : allEvents[shown - 1]?.minute ?? 0
+  const done = currentMinute >= TOTAL_MINUTES
 
   useEffect(() => {
-    if (!running || shown >= allEvents.length) return
-    timerRef.current = setTimeout(() => setShown(n => n + 1), REPLAY_SPEEDS[speedIdx].ms)
+    if (!running || done) return
+    timerRef.current = setTimeout(() => setCurrentMinute(m => m + 1), REPLAY_SPEEDS[speedIdx].ms)
     return () => { if (timerRef.current) clearTimeout(timerRef.current) }
-  }, [running, shown, speedIdx, allEvents.length])
+  }, [running, currentMinute, speedIdx, done])
 
-  const done = shown >= allEvents.length
+  // Auto-scroll feed to bottom as new events appear
+  useEffect(() => {
+    if (feedRef.current) feedRef.current.scrollTop = feedRef.current.scrollHeight
+  }, [visibleEvents.length])
 
   function eventIcon(type: string): ReactNode {
     if (type === 'GOAL' || type === 'OWN_GOAL') return <BallIcon size={14} />
@@ -125,11 +138,8 @@ function ReplayTicker({ match, onClose }: { match: MatchDetail; onClose: () => v
           <button onClick={onClose} className={styles.replayCloseBtn}>✕</button>
         </div>
 
-        {/* Score */}
+        {/* Score + progress */}
         <div className={styles.replayScore}>
-          <div className={styles.replayMinute}>
-            {done ? 'Full Time' : `${currentMinute}'`}
-          </div>
           <div className={styles.replayScoreGrid}>
             <div className={styles.replayTeamHome}>{match.homeClub.name}</div>
             <div className={styles.replayScoreValue}>
@@ -137,20 +147,22 @@ function ReplayTicker({ match, onClose }: { match: MatchDetail; onClose: () => v
             </div>
             <div className={styles.replayTeamAway}>{match.awayClub.name}</div>
           </div>
+          <div className={styles.replayProgressWrap}>
+            <div className={styles.replayProgressBar} style={{ width: `${(currentMinute / TOTAL_MINUTES) * 100}%` }} />
+          </div>
+          <div className={styles.replayMinute}>
+            {done ? 'Full Time' : `${currentMinute}'`}
+          </div>
         </div>
 
-        {/* Events feed */}
-        <div className={styles.replayFeed}>
-          {shown === 0 && (
-            <div className={styles.replayKickoff}>Kick off!</div>
-          )}
-          {[...visibleEvents].reverse().map((e, i) => {
+        {/* Events feed — chronological, scrolls to latest */}
+        <div className={styles.replayFeed} ref={feedRef}>
+          <div className={styles.replayKickoff}>Kick off!</div>
+          {visibleEvents.map((e) => {
             const isHome = e.team === 'home'
             const isSub = e.type === 'SUBSTITUTION'
             const isGoal = e.type === 'GOAL' || e.type === 'OWN_GOAL'
-            const rowClass = i === 0
-              ? (isGoal ? styles.replayEventLatestGoal : styles.replayEventLatest)
-              : styles.replayEventOld
+            const rowClass = isGoal ? styles.replayEventLatestGoal : styles.replayEventLatest
             const sideClass = isGoal ? styles.replayEventGoal : styles.replayEventNormal
             return (
               <div key={e.id} className={rowClass}>
@@ -188,7 +200,7 @@ function ReplayTicker({ match, onClose }: { match: MatchDetail; onClose: () => v
             </button>
           ) : (
             <button
-              onClick={() => { setShown(0); setRunning(true) }}
+              onClick={() => { setCurrentMinute(0); setRunning(true) }}
               className={styles.replayRestartBtn}
             >
               ↺ Replay
@@ -282,7 +294,7 @@ export default function MatchReport() {
       {showReplay && <ReplayTicker match={match} onClose={() => setShowReplay(false)} />}
       <div className={styles.inner}>
 
-        {/* Back + prev/next */}
+        {/* ── Nav ──────────────────────────────────────────── */}
         <div className={styles.nav}>
           <Link to={`/league/${leagueId}?tab=${backTab}`} className={styles.backLink}>
             ← Back to league
@@ -317,7 +329,7 @@ export default function MatchReport() {
           </div>
         </div>
 
-        {/* ── Score header ──────────────────────────────── */}
+        {/* ── Score hero ────────────────────────────────────── */}
         <div className={styles.scoreCard}>
           <div className={styles.matchday}>
             Matchday {match.matchday} · Full Time
@@ -326,7 +338,7 @@ export default function MatchReport() {
           <div className={styles.scoreGrid}>
             {/* Home team */}
             <div className={styles.homeTeam}>
-              <ClubBadge name={match.homeClub.name} size={56} logoConfig={match.homeClub.logoConfig} />
+              <ClubBadge name={match.homeClub.name} size={80} logoConfig={match.homeClub.logoConfig} />
               <div className={homeWin ? styles.homeTeamNameWinner : styles.homeTeamNameLoser}>
                 {match.homeClub.name}
               </div>
@@ -355,7 +367,7 @@ export default function MatchReport() {
 
             {/* Away team */}
             <div className={styles.awayTeam}>
-              <ClubBadge name={match.awayClub.name} size={56} logoConfig={match.awayClub.logoConfig} />
+              <ClubBadge name={match.awayClub.name} size={80} logoConfig={match.awayClub.logoConfig} />
               <div className={awayWin ? styles.awayTeamNameWinner : styles.awayTeamNameLoser}>
                 {match.awayClub.name}
               </div>
@@ -369,10 +381,10 @@ export default function MatchReport() {
           </div>
         </div>
 
-        {/* ── MOTM ──────────────────────────────────────── */}
+        {/* ── Man of the Match ──────────────────────────────── */}
         {motm && (
           <div className={styles.motmCard}>
-            <div className={styles.secLabelGreen}>Man of the Match</div>
+            <SectionHeader label="Man of the Match" gold />
             <div className={styles.motmBody}>
               <div
                 className={styles.motmAvatar}
@@ -400,12 +412,12 @@ export default function MatchReport() {
           </div>
         )}
 
-        {/* ── Timeline + Stats side by side ─────────────── */}
+        {/* ── Timeline + Stats side by side ─────────────────── */}
         <div className={styles.twoCol}>
 
           {/* Timeline */}
           <div className={styles.card}>
-            <div className={styles.secLabel}>Timeline</div>
+            <SectionHeader label="Timeline" />
             {timeline.length === 0 ? (
               <div className={styles.timelineEmpty}>No events recorded.</div>
             ) : (
@@ -451,7 +463,7 @@ export default function MatchReport() {
           {/* Stats */}
           {match.stats ? (
             <div className={styles.statsCard}>
-              <div className={styles.statsHeader}>Match Stats</div>
+              <SectionHeader label="Match Stats" />
               <div className={styles.statsTeamRow}>
                 <span>{match.homeClub.name}</span>
                 <span>{match.awayClub.name}</span>
@@ -478,7 +490,7 @@ export default function MatchReport() {
           ) : <div />}
         </div>
 
-        {/* ── Player ratings ────────────────────────────── */}
+        {/* ── Player ratings ─────────────────────────────────── */}
         {allPerfs.length > 0 && (
           <div className={styles.ratingsGrid}>
             {([

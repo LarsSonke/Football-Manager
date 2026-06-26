@@ -12,7 +12,7 @@ router.use(requireAuth)
 
 const createSchema = z.object({
   name: z.string().min(3).max(50),
-  startingBudget: z.number().int().min(10_000).max(1_000_000),
+  startingBudget: z.number().int().min(1_000_000).max(100_000_000),
   maxClubs: z.number().int().min(2).max(18).default(18),
   seasonLength: z.number().int().min(10).max(40).default(34),
   squadSize: z.number().int().min(11).max(30).default(25),
@@ -68,7 +68,7 @@ router.post('/:id/join', async (req: AuthRequest, res) => {
 
 const updateSchema = z.object({
   name: z.string().min(3).max(50).optional(),
-  startingBudget: z.number().int().min(10_000).max(1_000_000).optional(),
+  startingBudget: z.number().int().min(1_000_000).max(100_000_000).optional(),
   maxClubs: z.number().int().min(2).max(18).optional(),
   seasonLength: z.number().int().min(10).max(40).optional(),
   matchTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),

@@ -6,6 +6,18 @@ import { useIsMobile } from './types'
 import type { ClubData, SquadPlayer, FreeAgent, TransferListing } from './types'
 import styles from './Transfers.module.css'
 
+function suggestedPrice(baseValue: number, form: number, morale: number, boosts = 0): number {
+  const formFactor = 1 + (form - 60) * 0.005
+  const moraleFactor = 1 + (morale - 60) * 0.002
+  const boostFactor = 1 + boosts * 0.05
+  const raw = baseValue * formFactor * moraleFactor * boostFactor
+  return Math.max(100_000, Math.round(raw / 100_000) * 100_000)
+}
+
+function fmtPrice(n: number): string {
+  return n >= 1_000_000 ? `€${(n / 1_000_000).toFixed(1)}M` : `€${Math.round(n / 1_000)}k`
+}
+
 export default function Transfers({ leagueId, myClub, squadSize, transferWindowOpen, onRefresh }: {
   leagueId: string
   myClub: ClubData
@@ -125,6 +137,7 @@ export default function Transfers({ leagueId, myClub, squadSize, transferWindowO
             <span className={posClass(pl.position)} style={{ fontSize: 9 }}>{pl.position}</span>
             <span className={styles.playerAge}>Age {pl.age}</span>
             {p.injured && <span className={styles.playerInjured}>INJ</span>}
+            {!p.injured && p.form >= 76 && <span style={{ fontSize: 9, fontWeight: 800, color: '#cf9438', background: 'rgba(207,148,56,0.12)', padding: '1px 4px', borderRadius: 3, letterSpacing: '0.04em' }}>IF</span>}
           </div>
         </div>
         <span className={styles.playerOvr} style={{ color: ovrColor(pl.overall) }}>{pl.overall}</span>
@@ -174,6 +187,7 @@ export default function Transfers({ leagueId, myClub, squadSize, transferWindowO
                     <span className={posClass(pl.position)} style={{ fontSize: 9 }}>{pl.position}</span>
                     <span className={styles.playerAge}>Age {pl.age}</span>
                     {inst.injured && <span className={styles.playerInjured}>INJ</span>}
+                    {!inst.injured && inst.form >= 76 && <span style={{ fontSize: 9, fontWeight: 800, color: '#cf9438', background: 'rgba(207,148,56,0.12)', padding: '1px 4px', borderRadius: 3, letterSpacing: '0.04em' }}>IF</span>}
                   </div>
                 </div>
                 {!isMobile && <span className={styles.playerClub}>{l.sellerClub.name}</span>}
@@ -183,15 +197,22 @@ export default function Transfers({ leagueId, myClub, squadSize, transferWindowO
                   <span className={styles.playerStat} data-level={inst.morale >= 70 ? 'high' : inst.morale >= 50 ? 'mid' : 'low'}>{inst.morale}</span>
                   <span className={styles.playerStat} data-level={inst.form >= 70 ? 'high' : inst.form >= 50 ? 'mid' : 'low'}>{inst.form}</span>
                 </>}
-                <button
-                  className={styles.btnBuy}
-                  onClick={() => handleBuy(l.instanceId)}
-                  disabled={!!actionId || squadFull || myClub.budget < l.askingPrice}
-                  style={{ opacity: actionId === l.instanceId ? 0.5 : canBuy ? 1 : undefined }}
-                  title={myClub.budget < l.askingPrice ? `Need €${(l.askingPrice / 1_000_000).toFixed(1)}M` : ''}
-                >
-                  {actionId === l.instanceId ? '…' : `€${l.askingPrice >= 1_000_000 ? (l.askingPrice / 1_000_000).toFixed(1) + 'M' : (l.askingPrice / 1_000).toFixed(0) + 'k'}`}
-                </button>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+                  <button
+                    className={styles.btnBuy}
+                    onClick={() => handleBuy(l.instanceId)}
+                    disabled={!!actionId || squadFull || myClub.budget < l.askingPrice}
+                    style={{ opacity: actionId === l.instanceId ? 0.5 : canBuy ? 1 : undefined }}
+                    title={myClub.budget < l.askingPrice ? `Need ${fmtPrice(l.askingPrice)}` : ''}
+                  >
+                    {actionId === l.instanceId ? '…' : fmtPrice(l.askingPrice)}
+                  </button>
+                  {l.marketValue && l.marketValue !== l.askingPrice && (
+                    <span style={{ fontSize: 10, color: l.askingPrice < l.marketValue * 0.95 ? 'var(--green)' : l.askingPrice > l.marketValue * 1.05 ? 'var(--accent)' : 'var(--ash)', whiteSpace: 'nowrap' }}>
+                      MV {fmtPrice(l.marketValue)}
+                    </span>
+                  )}
+                </div>
               </div>
             )
           })}
@@ -269,7 +290,11 @@ export default function Transfers({ leagueId, myClub, squadSize, transferWindowO
               ) : (
                 <button
                   className={styles.btnList}
-                  onClick={() => { setListFor(p); setListPrice(String(p.player.baseValue)) }}
+                  onClick={() => {
+                    const boosts = (p.boosts ?? []).length
+                    setListFor(p)
+                    setListPrice(String(suggestedPrice(p.player.baseValue, p.form, p.morale, boosts)))
+                  }}
                   disabled={!!actionId || squadTooSmall}
                 >List</button>
               )}
@@ -305,9 +330,21 @@ export default function Transfers({ leagueId, myClub, squadSize, transferWindowO
               onChange={e => setListPrice(e.target.value)}
               className={styles.dialogInput}
             />
-            <div className={styles.dialogMarketValue}>
-              Market value: €{(listFor.player.baseValue / 1_000_000).toFixed(1)}M
-            </div>
+            {(() => {
+              const boosts = (listFor.boosts ?? []).length
+              const mv = suggestedPrice(listFor.player.baseValue, listFor.form, listFor.morale, boosts)
+              const premium = Math.round((mv / listFor.player.baseValue - 1) * 100)
+              return (
+                <div className={styles.dialogMarketValue}>
+                  Suggested: {fmtPrice(mv)}
+                  {premium !== 0 && (
+                    <span style={{ marginLeft: 6, fontSize: 11, color: premium > 0 ? 'var(--green)' : 'var(--accent)' }}>
+                      {premium > 0 ? `+${premium}%` : `${premium}%`} form premium
+                    </span>
+                  )}
+                </div>
+              )
+            })()}
             <div className={styles.dialogActions}>
               <button className="btn btn-ghost" onClick={() => setListFor(null)}>Cancel</button>
               <button

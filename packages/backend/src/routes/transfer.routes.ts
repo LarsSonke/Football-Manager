@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { requireAuth, type AuthRequest } from '../middleware/auth'
 import * as transferService from '../services/transfer.service'
 import { prisma } from '../prisma'
+import { calcMarketValue } from '../utils/marketValue'
 
 const router = Router({ mergeParams: true })
 router.use(requireAuth)
@@ -107,7 +108,26 @@ router.get('/:id/market', async (req: AuthRequest, res) => {
       },
       orderBy: { createdAt: 'desc' },
     })
-    res.json(listings)
+
+    const instanceIds = listings.map(l => l.instanceId)
+    const boostGroups = instanceIds.length > 0
+      ? await prisma.playerBoost.groupBy({
+          by: ['instanceId'],
+          where: { instanceId: { in: instanceIds }, matchdaysLeft: { gt: 0 } },
+          _count: { instanceId: true },
+        })
+      : []
+    const boostMap = Object.fromEntries(boostGroups.map(b => [b.instanceId, b._count.instanceId]))
+
+    res.json(listings.map(l => ({
+      ...l,
+      marketValue: calcMarketValue(
+        l.instance.player.baseValue,
+        l.instance.form,
+        l.instance.morale,
+        boostMap[l.instanceId] ?? 0,
+      ),
+    })))
   } catch (err: any) {
     res.status(400).json({ error: err.message })
   }

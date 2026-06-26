@@ -407,7 +407,7 @@ export async function placeBid(leagueId: string, clubId: string, amount: number)
 
   // AI counter-bid (other AI clubs that value this player)
   const inst = await prisma.playerInstance.findUnique({ where: { id: state.instanceId }, include: { player: { select: { overall: true } } } })
-  const playerValue = inst?.player.overall ? inst.player.overall * 500 : 10000
+  const playerValue = inst?.player.overall ? inst.player.overall * 50_000 : 1_000_000
   const aiClubs = await prisma.club.findMany({ where: { id: { in: session.pickOrder }, isAI: true } })
   for (const ai of aiClubs) {
     if (ai.id === clubId) continue

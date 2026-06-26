@@ -188,6 +188,7 @@ export interface TransferListing {
   id: string
   instanceId: string
   askingPrice: number
+  marketValue?: number
   sellerClub: { id: string; name: string }
   instance: {
     id: string; morale: number; form: number; fitness: number

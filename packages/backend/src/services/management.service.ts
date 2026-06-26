@@ -2,14 +2,18 @@ import { prisma } from '../prisma'
 
 // ─── Physio ───────────────────────────────────────────────────────────────────
 
-const PHYSIO_UPGRADE_COSTS = [15_000, 30_000] // level 0→1, 1→2
+const PHYSIO_UPGRADE_COSTS = [1_500_000, 3_000_000] // level 0→1, 1→2
+
+function fmtCost(n: number): string {
+  return n >= 1_000_000 ? `€${(n / 1_000_000).toFixed(1)}M` : `€${Math.round(n / 1_000)}k`
+}
 
 export async function upgradePhysio(leagueId: string, userId: string) {
   const club = await prisma.club.findFirst({ where: { leagueId, userId } })
   if (!club) throw new Error('You do not have a club in this league')
   if (club.physioLevel >= 2) throw new Error('Physio already at max level')
   const cost = PHYSIO_UPGRADE_COSTS[club.physioLevel]
-  if (club.budget < cost) throw new Error(`Insufficient budget — need €${(cost / 1000).toFixed(0)}k`)
+  if (club.budget < cost) throw new Error(`Insufficient budget — need ${fmtCost(cost)}`)
   return prisma.club.update({
     where: { id: club.id },
     data: { physioLevel: { increment: 1 }, budget: { decrement: cost } },
@@ -19,7 +23,7 @@ export async function upgradePhysio(leagueId: string, userId: string) {
 // Heal cost: €1,000/day remaining, reduced by physio level
 function healCost(daysLeft: number, physioLevel: number): number {
   const discount = physioLevel >= 2 ? 0.3 : physioLevel >= 1 ? 0.6 : 1.0
-  return Math.round(daysLeft * 1_000 * discount)
+  return Math.round(daysLeft * 100_000 * discount)
 }
 
 export async function healPlayer(leagueId: string, userId: string, instanceId: string) {
@@ -29,7 +33,7 @@ export async function healPlayer(leagueId: string, userId: string, instanceId: s
   if (!instance || instance.clubId !== club.id) throw new Error('Player not found in your squad')
   if (!instance.injured) throw new Error('Player is not injured')
   const cost = healCost(instance.injuryDaysLeft, club.physioLevel)
-  if (club.budget < cost) throw new Error(`Insufficient budget — need €${(cost / 1000).toFixed(1)}k`)
+  if (club.budget < cost) throw new Error(`Insufficient budget — need ${fmtCost(cost)}`)
   await prisma.$transaction([
     prisma.playerInstance.update({ where: { id: instanceId }, data: { injured: false, injuryDaysLeft: 0 } }),
     prisma.club.update({ where: { id: club.id }, data: { budget: { decrement: cost } } }),
@@ -51,9 +55,9 @@ function posGroup(pos: string): number {
 export function calcTrainCost(fromPos: string, toPos: string): number | null {
   const fg = posGroup(fromPos), tg = posGroup(toPos)
   if (fg === 0 || tg === 0) return null  // GK <-> outfield not allowed
-  if (fg === tg) return 3_000
-  if (Math.abs(fg - tg) === 1) return 7_000
-  return 12_000
+  if (fg === tg) return 300_000
+  if (Math.abs(fg - tg) === 1) return 700_000
+  return 1_200_000
 }
 
 export async function trainPlayer(
@@ -74,7 +78,7 @@ export async function trainPlayer(
   if (instance.player.position === targetPosition) throw new Error('Player already plays there naturally')
   const cost = calcTrainCost(instance.player.position, targetPosition)
   if (cost === null) throw new Error('Cannot train a goalkeeper to an outfield position or vice versa')
-  if (club.budget < cost) throw new Error(`Insufficient budget — need €${(cost / 1000).toFixed(0)}k`)
+  if (club.budget < cost) throw new Error(`Insufficient budget — need ${fmtCost(cost)}`)
   await prisma.$transaction([
     prisma.playerInstance.update({ where: { id: instanceId }, data: { trainedPosition: targetPosition } }),
     prisma.club.update({ where: { id: club.id }, data: { budget: { decrement: cost } } }),
@@ -175,7 +179,7 @@ export async function upgradeClub(leagueId: string, userId: string, upgradeType:
 
   const pcts = UPGRADE_COSTS_PCT[upgradeType]
   const cost = Math.round(club.league.startingBudget * pcts[currentLevel])
-  if (club.budget < cost) throw new Error(`Insufficient budget — need €${Math.round(cost / 1000)}k`)
+  if (club.budget < cost) throw new Error(`Insufficient budget — need ${fmtCost(cost)}`)
 
   return prisma.club.update({
     where: { id: club.id },
@@ -210,7 +214,7 @@ export async function purchaseBoost(leagueId: string, userId: string, instanceId
   if (existing > 0) throw new Error(`Player already has an active ${stat} boost`)
 
   const cost = Math.round(club.league.startingBudget * BOOST_COST_PCT)
-  if (club.budget < cost) throw new Error(`Insufficient budget — need €${Math.round(cost / 1000)}k`)
+  if (club.budget < cost) throw new Error(`Insufficient budget — need ${fmtCost(cost)}`)
 
   await prisma.$transaction([
     prisma.playerBoost.create({

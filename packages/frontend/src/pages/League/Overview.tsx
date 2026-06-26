@@ -342,19 +342,19 @@ export default function Overview({ league, matches, myClub, awards, onPhysioUpgr
                   <button
                     className="btn"
                     style={{
-                      background: myClub.budget >= [15_000, 30_000][myClub.physioLevel] ? 'rgba(229,32,47,0.12)' : 'transparent',
+                      background: myClub.budget >= [1_500_000, 3_000_000][myClub.physioLevel] ? 'rgba(229,32,47,0.12)' : 'transparent',
                       color: 'var(--paper)',
-                      border: `2px solid ${myClub.budget >= [15_000, 30_000][myClub.physioLevel] ? 'var(--accent)' : 'rgba(244,241,234,.2)'}`,
+                      border: `2px solid ${myClub.budget >= [1_500_000, 3_000_000][myClub.physioLevel] ? 'var(--accent)' : 'rgba(244,241,234,.2)'}`,
                       width: '100%',
                       fontSize: 13,
                       letterSpacing: '.06em',
                     }}
                     onClick={() => { onPhysioUpgrade(); setOverlay(null) }}
-                    disabled={myClub.budget < [15_000, 30_000][myClub.physioLevel]}
+                    disabled={myClub.budget < [1_500_000, 3_000_000][myClub.physioLevel]}
                   >
-                    {myClub.budget < [15_000, 30_000][myClub.physioLevel]
-                      ? `Not enough budget · Need €${[15, 30][myClub.physioLevel]}k`
-                      : `Upgrade to Level ${myClub.physioLevel + 1} · €${[15, 30][myClub.physioLevel]}k`}
+                    {myClub.budget < [1_500_000, 3_000_000][myClub.physioLevel]
+                      ? `Not enough budget · Need €${[1.5, 3][myClub.physioLevel]}M`
+                      : `Upgrade to Level ${myClub.physioLevel + 1} · €${[1.5, 3][myClub.physioLevel]}M`}
                   </button>
                   <div className={styles.physioOverlayUpgradeNote}>
                     {myClub.physioLevel === 0 ? 'Unlock basic treatment for injured players' : 'Unlock advanced recovery — lower costs, faster return'}

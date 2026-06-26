@@ -55,7 +55,7 @@ export default function Dashboard() {
   const [joinName, setJoinName] = useState('')
   const [form, setForm] = useState<CreateForm>({
     name: '',
-    startingBudget: 100000,
+    startingBudget: 10_000_000,
     maxClubs: 18,
     seasonLength: 34,
     squadSize: 25,
@@ -76,7 +76,7 @@ export default function Dashboard() {
       const r = await api.get('/leagues/mine')
       setLeagues(r.data)
       setPanel('none')
-      setForm({ name: '', startingBudget: 100000, maxClubs: 18, seasonLength: 34, squadSize: 25, hasCup: false })
+      setForm({ name: '', startingBudget: 10_000_000, maxClubs: 18, seasonLength: 34, squadSize: 25, hasCup: false })
     } catch (err: any) {
       setError(err.response?.data?.error ?? 'Failed to create league')
     } finally {
@@ -160,10 +160,10 @@ export default function Dashboard() {
                 <div>
                   <label className={styles.fieldLabel}>Starting budget</label>
                   <div className={styles.sliderValueAccent}>
-                    €{(form.startingBudget / 1000).toFixed(0)}M
+                    €{(form.startingBudget / 1_000_000).toFixed(0)}M
                   </div>
                   <input
-                    type="range" min={10000} max={500000} step={10000}
+                    type="range" min={1_000_000} max={100_000_000} step={1_000_000}
                     value={form.startingBudget}
                     onChange={(e) => setForm({ ...form, startingBudget: Number(e.target.value) })}
                     className={styles.rangeInput}
@@ -296,7 +296,7 @@ export default function Dashboard() {
                     </div>
                     <div className={styles.cardMeta}>
                       <span>{entry.name}</span>
-                      <span className={styles.metaBudget}>€{(entry.budget / 1000).toFixed(0)}M</span>
+                      <span className={styles.metaBudget}>€{(entry.budget / 1_000_000).toFixed(1)}M</span>
                       {(entry.league.status === 'ACTIVE' || entry.league.status === 'FINISHED') && (
                         <span>Day {entry.league.currentDay}/{entry.league.seasonLength}</span>
                       )}

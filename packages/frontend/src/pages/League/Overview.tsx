@@ -126,11 +126,17 @@ export default function Overview({ league, matches, myClub, awards, onPhysioUpgr
   const [signingDeal, setSigningDeal] = useState<number | null>(null)
   const [sponsorMsg, setSponsorMsg] = useState('')
   const [overlay, setOverlay] = useState<'sponsors' | 'physio' | 'condition' | null>(null)
+  const [news, setNews] = useState<{ type: string; headline: string; detail: string; matchday: number }[]>([])
 
   useEffect(() => {
     if (!myClub || league.status !== 'ACTIVE') return
     api.get(`/leagues/${league.id}/sponsors`).then(r => setSponsorData(r.data)).catch(() => {})
   }, [league.id, league.status, myClub?.id])
+
+  useEffect(() => {
+    if (league.status !== 'ACTIVE' && league.status !== 'FINISHED') return
+    api.get(`/leagues/${league.id}/news`).then(r => setNews(r.data)).catch(() => {})
+  }, [league.id, league.status, league.currentDay])
 
   async function handleSignDeal(index: number) {
     setSigningDeal(index)
@@ -847,6 +853,36 @@ export default function Overview({ league, matches, myClub, awards, onPhysioUpgr
                 <TOTWPitch players={awards.teamOfTheWeek} />
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════ LEAGUE NEWS ══════════════════════════════ */}
+      {news.length > 0 && (
+        <div className={styles.newsSection}>
+          <div className={styles.newsHeader}>
+            <span className={styles.newsHeaderTitle}>League Bulletin</span>
+            <span className={styles.newsHeaderDay}>MD {league.currentDay}</span>
+          </div>
+          <div className={styles.newsList}>
+            {news.map((item, i) => {
+              const dotColor =
+                item.type === 'result'   ? 'var(--paper)' :
+                item.type === 'scorer'   ? 'var(--gold)'  :
+                item.type === 'streak'   ? (item.headline.includes('winning') || item.headline.includes('unbeaten') ? 'var(--green)' : 'var(--accent)') :
+                item.type === 'injury'   ? 'var(--accent)' :
+                item.type === 'transfer' ? 'var(--cyan)' :
+                'var(--ash)'
+              return (
+                <div key={i} className={styles.newsItem}>
+                  <div className={styles.newsItemDot} style={{ background: dotColor }} />
+                  <div className={styles.newsItemBody}>
+                    <div className={styles.newsItemHeadline}>{item.headline}</div>
+                    <div className={styles.newsItemDetail}>{item.detail}</div>
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </div>
       )}

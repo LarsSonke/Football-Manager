@@ -5,6 +5,7 @@ import * as leagueService from '../services/league.service'
 import * as draftService from '../services/draft.service'
 import { prisma } from '../prisma'
 import { simulateLeagueMatchday, simulateSeasonFast } from '../scheduler/matchday.scheduler'
+import { getLeagueNews } from '../services/news.service'
 
 const router = Router()
 router.use(requireAuth)
@@ -218,6 +219,15 @@ router.post('/:id/new-season', async (req: AuthRequest, res) => {
   try {
     const result = await leagueService.startNewSeason(req.params.id, req.userId!)
     res.json({ ok: true, growthChanges: result.growthChanges })
+  } catch (err: any) {
+    res.status(400).json({ error: err.message })
+  }
+})
+
+router.get('/:id/news', async (req: AuthRequest, res) => {
+  try {
+    const items = await getLeagueNews(req.params.id)
+    res.json(items)
   } catch (err: any) {
     res.status(400).json({ error: err.message })
   }

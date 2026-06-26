@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import type { ReactNode } from 'react'
 import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { io, type Socket } from 'socket.io-client'
-import { Trophy, BarChart2, Clock, Calendar } from 'lucide-react'
+import { Trophy, BarChart2, Clock, Calendar, Grid2X2, ArrowLeftRight, Mail, Settings, TrendingUp, Swords } from 'lucide-react'
 import { useAuth } from '../../stores/auth.store'
 import { api } from '../../api/client'
 import { ClubBadge, LogoMaker } from '../../components/ClubBadge'
@@ -177,9 +177,9 @@ function SeasonEndOverlay({ league, myClub, isCreator, startingNewSeason, onNewS
 // ─── Nav items ────────────────────────────────────────────────────────────────
 
 const NAV: { key: Tab; label: string; icon: ReactNode }[] = [
-  { key: 'overview',   label: 'Overview',   icon: '◈' },
+  { key: 'overview',   label: 'Overview',   icon: <Swords size={14} /> },
   { key: 'squad',      label: 'Squad',      icon: '◉' },
-  { key: 'fixtures',   label: 'Fixtures',   icon: '▦' },
+  { key: 'fixtures',   label: 'Fixtures',   icon: <Calendar size={14} /> },
   { key: 'standings',  label: 'Standings',  icon: '≡' },
   { key: 'stats',      label: 'Stats',      icon: <BarChart2 size={14} /> },
 ]
@@ -521,11 +521,11 @@ export default function League() {
   const hasLineupWarnings = (injuredStarters.length + suspendedStarters.length + lowFitnessStarters.length) > 0
   const navItems: { key: Tab; label: string; icon: ReactNode }[] = [
     ...NAV,
-    ...(myClub ? [{ key: 'tactics' as Tab, label: 'Tactics', icon: '⊞' }] : []),
-    ...(myClub && league.status === 'ACTIVE' ? [{ key: 'transfers' as Tab, label: 'Transfers', icon: '⇄' }] : []),
-    ...(myClub && league.status === 'ACTIVE' ? [{ key: 'messages' as Tab, label: 'Messages', icon: '✉' }] : []),
-    ...(isCreator ? [{ key: 'manage' as Tab, label: 'Manage', icon: '⊛' }] : []),
-    ...(myClub && league.status === 'ACTIVE' ? [{ key: 'management' as Tab, label: 'Club', icon: '⬆' }] : []),
+    ...(myClub ? [{ key: 'tactics' as Tab, label: 'Tactics', icon: <Grid2X2 size={14} /> }] : []),
+    ...(myClub && league.status === 'ACTIVE' ? [{ key: 'transfers' as Tab, label: 'Transfers', icon: <ArrowLeftRight size={14} /> }] : []),
+    ...(myClub && league.status === 'ACTIVE' ? [{ key: 'messages' as Tab, label: 'Messages', icon: <Mail size={14} /> }] : []),
+    ...(isCreator ? [{ key: 'manage' as Tab, label: 'Manage', icon: <Settings size={14} /> }] : []),
+    ...(myClub && league.status === 'ACTIVE' ? [{ key: 'management' as Tab, label: 'Upgrades', icon: <TrendingUp size={14} /> }] : []),
     ...(league.hasCup ? [{ key: 'cup' as Tab, label: 'Cup', icon: <Trophy size={14} /> }] : []),
   ]
 

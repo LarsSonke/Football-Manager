@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useParams, Link, useLocation, useNavigate } from 'react-router-dom'
 import { api } from '../api/client'
@@ -6,6 +6,8 @@ import { ClubBadge, type LogoConfig } from '../components/ClubBadge'
 import { getBadgeColor, ratingColor, posClass } from '../utils/helpers'
 import { BallIcon, CardIcon, SubIcon } from '../components/icons'
 import styles from './MatchReport.module.css'
+import { getCommentary, getKickoff, getHalftime, getFulltime } from '../utils/commentary'
+import type { CommentaryContext } from '../utils/commentary'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -106,6 +108,39 @@ function ReplayTicker({ match, onClose }: { match: MatchDetail; onClose: () => v
   const awayScore = goals.filter(e => e.team === 'away').length
   const done = currentMinute >= TOTAL_MINUTES
 
+  const commentaryMap = useMemo<Record<string, string | null>>(() => {
+    const map: Record<string, string | null> = {}
+    for (const e of match.events) {
+      const isHome = e.team === 'home'
+      const ctx: CommentaryContext = {
+        minute: e.minute,
+        playerName: e.playerName,
+        assistName: e.assistName,
+        clubName: isHome ? match.homeClub.name : match.awayClub.name,
+        oppName: isHome ? match.awayClub.name : match.homeClub.name,
+        homeScore: match.homeScore ?? 0,
+        awayScore: match.awayScore ?? 0,
+        team: e.team,
+        homeClub: match.homeClub.name,
+        awayClub: match.awayClub.name,
+        xg: e.xg,
+      }
+      map[e.id] = getCommentary(e.type, ctx)
+    }
+    return map
+  }, [match])
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const kickoffLine = useMemo(() => getKickoff(), [])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const halftimeLine = useMemo(() => getHalftime(), [])
+  const fulltimeLine = useMemo(() => {
+    const h = match.homeScore ?? 0, a = match.awayScore ?? 0
+    if (h > a) return getFulltime('win', match.homeClub.name)
+    if (a > h) return getFulltime('win', match.awayClub.name)
+    return getFulltime('draw', '')
+  }, [match.homeScore, match.awayScore, match.homeClub.name, match.awayClub.name])
+
   useEffect(() => {
     if (!running || done) return
     timerRef.current = setTimeout(() => setCurrentMinute(m => m + 1), REPLAY_SPEEDS[speedIdx].ms)
@@ -157,39 +192,60 @@ function ReplayTicker({ match, onClose }: { match: MatchDetail; onClose: () => v
 
         {/* Events feed — chronological, scrolls to latest */}
         <div className={styles.replayFeed} ref={feedRef}>
-          <div className={styles.replayKickoff}>Kick off!</div>
-          {visibleEvents.map((e) => {
-            const isHome = e.team === 'home'
-            const isSub = e.type === 'SUBSTITUTION'
-            const isGoal = e.type === 'GOAL' || e.type === 'OWN_GOAL'
-            const rowClass = isGoal ? styles.replayEventLatestGoal : styles.replayEventLatest
-            const sideClass = isGoal ? styles.replayEventGoal : styles.replayEventNormal
-            return (
-              <div key={e.id} className={rowClass}>
-                {isHome ? (
-                  <div className={`${styles.replayEventHome} ${sideClass}`}>
-                    <span>{e.playerName ?? '?'}</span>
-                    {isSub && <span className={styles.replaySubArrow}>▶</span>}
-                    {isSub && <span className={styles.replaySubIn}>{e.assistName ?? '?'}</span>}
+          <div className={styles.replayKickoff}>{kickoffLine}</div>
+          {(() => {
+            const items: ReactNode[] = []
+            let halftimeInserted = false
+            for (const e of visibleEvents) {
+              if (!halftimeInserted && currentMinute > 45 && e.minute > 45) {
+                items.push(
+                  <div key="halftime" className={styles.replayHalftime}>{halftimeLine}</div>
+                )
+                halftimeInserted = true
+              }
+              const isHome = e.team === 'home'
+              const isSub = e.type === 'SUBSTITUTION'
+              const isGoal = e.type === 'GOAL' || e.type === 'OWN_GOAL'
+              const rowClass = isGoal ? styles.replayEventLatestGoal : styles.replayEventLatest
+              const sideClass = isGoal ? styles.replayEventGoal : styles.replayEventNormal
+              const commentary = commentaryMap[e.id]
+              items.push(
+                <div key={e.id}>
+                  <div className={rowClass}>
+                    {isHome ? (
+                      <div className={`${styles.replayEventHome} ${sideClass}`}>
+                        <span>{e.playerName ?? '?'}</span>
+                        {isSub && <span className={styles.replaySubArrow}>▶</span>}
+                        {isSub && <span className={styles.replaySubIn}>{e.assistName ?? '?'}</span>}
+                      </div>
+                    ) : <div />}
+                    <div className={styles.replayCenter}>
+                      <div>{eventIcon(e.type)}</div>
+                      <div>{e.minute}'</div>
+                    </div>
+                    {!isHome ? (
+                      <div className={`${styles.replayEventAway} ${sideClass}`}>
+                        {isSub && <span className={styles.replaySubIn}>{e.assistName ?? '?'}</span>}
+                        {isSub && <span className={styles.replaySubArrow}>▶</span>}
+                        <span>{e.playerName ?? '?'}</span>
+                      </div>
+                    ) : <div />}
                   </div>
-                ) : <div />}
-                <div className={styles.replayCenter}>
-                  <div>{eventIcon(e.type)}</div>
-                  <div>{e.minute}'</div>
+                  {commentary && <div className={styles.replayCommentary}>{commentary}</div>}
                 </div>
-                {!isHome ? (
-                  <div className={`${styles.replayEventAway} ${sideClass}`}>
-                    {isSub && <span className={styles.replaySubIn}>{e.assistName ?? '?'}</span>}
-                    {isSub && <span className={styles.replaySubArrow}>▶</span>}
-                    <span>{e.playerName ?? '?'}</span>
-                  </div>
-                ) : <div />}
-              </div>
-            )
-          })}
+              )
+            }
+            if (!halftimeInserted && currentMinute > 45) {
+              items.push(
+                <div key="halftime" className={styles.replayHalftime}>{halftimeLine}</div>
+              )
+            }
+            return items
+          })()}
           {done && allEvents.length === 0 && (
             <div className={styles.replayNoEvents}>No events recorded.</div>
           )}
+          {done && <div className={styles.replayFulltime}>{fulltimeLine}</div>}
         </div>
 
         {/* Controls */}

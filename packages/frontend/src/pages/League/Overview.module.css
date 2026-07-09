@@ -892,6 +892,13 @@
   color: var(--gold);
 }
 
+.totwHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
 .totwLabel {
   font-family: var(--font-narrow);
   font-size: 10px;
@@ -899,7 +906,94 @@
   color: var(--text-3);
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  margin-bottom: 10px;
+}
+
+.totwViewBtn {
+  font-family: var(--font-narrow);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ash);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.15s;
+}
+
+.totwViewBtn:hover {
+  color: var(--paper);
+}
+
+/* ── TOTWList ─────────────────────────────────────────────────────────────── */
+.totwList {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.totwListRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(244,241,234,0.06);
+}
+
+.totwListRow:last-child {
+  border-bottom: none;
+}
+
+.totwListPos {
+  font-size: 8px;
+  padding: 1px 4px;
+  flex-shrink: 0;
+  width: 32px;
+  text-align: center;
+}
+
+.totwListName {
+  font-family: var(--font-narrow);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--paper);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.totwListClub {
+  font-family: var(--font-narrow);
+  font-size: 10px;
+  color: var(--ash);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 110px;
+}
+
+.totwListRating {
+  font-family: var(--font-display);
+  font-size: 13px;
+  color: var(--gold);
+  flex-shrink: 0;
+  width: 30px;
+  text-align: right;
+}
+
+.totwListStat {
+  font-family: var(--font-narrow);
+  font-size: 10px;
+  color: var(--ash);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  width: 36px;
+  justify-content: flex-end;
 }
 
 /* ── TOTWPitch ────────────────────────────────────────────────────────────── */
@@ -909,6 +1003,66 @@
   padding-bottom: 62%;
   overflow: hidden;
   background: #1a5c28;
+}
+
+.totwPitchOverlayField {
+  position: relative;
+  width: 100%;
+  padding-bottom: 58%;
+  overflow: hidden;
+  background: #1a5c28;
+}
+
+/* ── TOTW Overlay ─────────────────────────────────────────────────────────── */
+.totwOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.82);
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.totwOverlayPanel {
+  background: var(--steel);
+  border: 3px solid var(--paper);
+  width: 100%;
+  max-width: 720px;
+  overflow: hidden;
+}
+
+.totwOverlayHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 2px solid var(--paper);
+  background: var(--ink);
+}
+
+.totwOverlayTitle {
+  font-family: var(--font-display);
+  font-size: 14px;
+  letter-spacing: 0.12em;
+  color: var(--paper);
+  text-transform: uppercase;
+}
+
+.totwOverlayClose {
+  background: none;
+  border: none;
+  color: var(--ash);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.totwOverlayClose:hover {
+  color: var(--paper);
 }
 
 .totwPitchSvg {
@@ -1645,89 +1799,303 @@
   }
 }
 
-/* ── League News Feed ─────────────────────────────────────────────────────── */
-.newsSection {
+/* ── News Wire ─────────────────────────────────────────────────────────────── */
+.newsWire {
   border: 3px solid var(--paper);
-  background: var(--steel);
+  background: var(--ink);
   overflow: hidden;
 }
 
-.newsHeader {
+.nwHeader {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 16px 8px;
+  gap: 12px;
+  padding: 9px 16px;
   border-bottom: 2px solid var(--paper);
   background: var(--ink);
 }
 
-.newsHeaderTitle {
+.nwHeaderTitle {
   font-family: var(--font-display);
-  font-size: 13px;
-  letter-spacing: 0.12em;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
   color: var(--paper);
   text-transform: uppercase;
-  flex: 1;
-}
-
-.newsHeaderDay {
-  font-family: var(--font-narrow);
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  color: var(--ash);
-  text-transform: uppercase;
-}
-
-.newsList {
-  display: flex;
-  flex-direction: column;
-}
-
-.newsItem {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 9px 16px;
-  border-bottom: 1px solid rgba(244,241,234,0.06);
-  transition: background 0.15s;
-}
-
-.newsItem:last-child {
-  border-bottom: none;
-}
-
-.newsItem:hover {
-  background: rgba(244,241,234,0.04);
-}
-
-.newsItemDot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  margin-top: 5px;
   flex-shrink: 0;
 }
 
-.newsItemBody {
+.nwHeaderRule {
   flex: 1;
-  min-width: 0;
+  height: 1px;
+  background: rgba(244,241,234,0.2);
 }
 
-.newsItemHeadline {
+.nwHeaderLive {
   font-family: var(--font-narrow);
-  font-size: 13px;
+  font-size: 10px;
   font-weight: 700;
-  color: var(--paper);
-  line-height: 1.3;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+  flex-shrink: 0;
 }
 
-.newsItemDetail {
+.nwBody {
+  display: flex;
+  height: 250px;
+  overflow: hidden;
+}
+
+/* ── Accordion panel ─────────────────────────────────────────────────────────── */
+.nwPanel {
+  flex: 0 0 70px;
+  overflow: hidden;
+  border-right: 3px solid var(--paper);
+  display: flex;
+  cursor: pointer;
+  position: relative;
+  transition: flex 0.6s cubic-bezier(0.76, 0, 0.24, 1);
+}
+
+.nwPanel:last-child {
+  border-right: none;
+}
+
+.nwPanel:hover:not(.nwPanelOpen) {
+  background: rgba(244,241,234,0.04);
+}
+
+.nwPanelOpen {
+  flex: 1 0 0;
+  cursor: default;
+}
+
+/* ── Spine (collapsed view) ──────────────────────────────────────────────────── */
+.nwSpine {
+  width: 70px;
+  flex-shrink: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 14px 0 12px;
+  gap: 10px;
+  transition: opacity 0.2s;
+}
+
+.nwPanelOpen .nwSpine {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s;
+}
+
+.nwSpineNum {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+  transition: color 0.2s;
+}
+
+.nwSpineTitle {
   font-family: var(--font-narrow);
   font-size: 11px;
-  color: var(--ash);
-  margin-top: 1px;
-  letter-spacing: 0.03em;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(244,241,234,0.32);
+  writing-mode: vertical-lr;
+  overflow: hidden;
+  white-space: nowrap;
+  flex: 1;
+  line-height: 1.2;
+}
+
+.nwSpineDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 1px;
+  flex-shrink: 0;
+}
+
+/* ── Open panel content ──────────────────────────────────────────────────────── */
+.nwContent {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: row;
+  animation: nwContentIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.28s both;
+}
+
+.nwContentLeft {
+  flex: 1;
+  min-width: 0;
+  padding: 16px 20px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  position: relative;
+  background: var(--ink);
+  background-image:
+    repeating-linear-gradient(
+      108deg,
+      rgba(255,255,255,0.055) 0px,
+      rgba(255,255,255,0.055) 1px,
+      transparent 1px,
+      transparent 7px,
+      rgba(255,255,255,0.022) 7px,
+      rgba(255,255,255,0.022) 8px,
+      transparent 8px,
+      transparent 18px
+    );
+  z-index: 1;
+}
+
+.nwContentLeft::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: -70px;
+  bottom: 0;
+  width: 70px;
+  background: linear-gradient(to right, var(--ink) 0%, transparent 100%);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.nwContentImage {
+  width: 34%;
+  flex-shrink: 0;
+  position: relative;
+  background-color: var(--ink);
+  background-image: var(--nw-img, none);
+  background-size: cover;
+  background-position: center;
+}
+
+.nwContentImage::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at 65% 45%,
+    var(--nw-accent, rgba(255,255,255,0.3)) 0%,
+    transparent 68%
+  );
+  opacity: 0.35;
+  mix-blend-mode: screen;
+  z-index: 1;
+}
+
+@keyframes nwContentIn {
+  from { opacity: 0; transform: translateX(16px) }
+  to   { opacity: 1; transform: translateX(0) }
+}
+
+.nwCatTag {
+  display: inline-block;
+  padding: 4px 12px;
+  transform: skewX(-8deg);
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+
+.nwCatTagText {
+  display: block;
+  font-family: var(--font-narrow);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #fff;
+  transform: skewX(8deg);
+}
+
+.nwHeadline {
+  font-family: var(--font-display);
+  font-size: 34px;
+  font-weight: 900;
+  line-height: 0.88;
+  letter-spacing: -0.01em;
+  color: var(--paper);
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.nwSummary {
+  font-family: var(--font-narrow);
+  font-size: 13px;
+  color: rgba(244,241,234,0.5);
+  letter-spacing: 0.02em;
+  line-height: 1.5;
+  flex: 1;
+  overflow: hidden;
+}
+
+.nwFooter {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-shrink: 0;
+  padding-bottom: 14px;
+  margin-top: auto;
+}
+
+.nwMeta {
+  font-family: var(--font-narrow);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(244,241,234,0.25);
+}
+
+.nwStat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+}
+
+.nwStatValue {
+  font-family: var(--font-display);
+  font-size: 46px;
+  font-weight: 900;
+  line-height: 0.82;
+  letter-spacing: -0.02em;
+}
+
+.nwStatLabel {
+  font-family: var(--font-narrow);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(244,241,234,0.3);
+}
+
+/* ── Progress timer ──────────────────────────────────────────────────────────── */
+.nwProgress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: rgba(244,241,234,0.06);
+}
+
+.nwProgressFill {
+  height: 100%;
+  opacity: 0.65;
+  animation: nwTimerDrain 7s linear forwards;
+}
+
+@keyframes nwTimerDrain {
+  from { width: 100% }
+  to   { width: 0% }
 }
 
 .newsEmpty {

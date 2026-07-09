@@ -13,9 +13,174 @@ import {
 } from './types'
 import styles from './Overview.module.css'
 
+// ─── AI kit generation ───────────────────────────────────────────────────────
+
+function hashStr(s: string): number {
+  let h = 0
+  for (let i = 0; i < s.length; i++) h = Math.imul(31, h) + s.charCodeAt(i) | 0
+  return Math.abs(h)
+}
+const AI_KIT_COLORS = [
+  '#1e3a5f','#c0392b','#27ae60','#8e44ad','#2980b9','#e67e22',
+  '#16213e','#0f3460','#533483','#e94560','#1a1a2e','#4a0e0e',
+  '#0e4a1a','#2c2c54','#ff6b35','#006d77','#3d405b','#81b29a',
+]
+const AI_KIT_SECONDARIES = [
+  '#ffffff','#f0e68c','#ffd700','#c0c0c0','#ff8c00','#add8e6',
+  '#98fb98','#ff69b4','#dda0dd','#b0e0e6','#fffacd','#e6e6fa',
+]
+const AI_KIT_PATTERNS = [
+  'plain','vertical-stripes','hoops','half-and-half',
+  'diagonal-sash','diagonal-quarters','chevron','contrasting-sleeves',
+  'quarters','side-panels','thin-stripes','narrow-sash',
+]
+function generateAiKit(clubName: string): KitConfig {
+  const h = hashStr(clubName)
+  const primary = AI_KIT_COLORS[h % AI_KIT_COLORS.length]
+  const secondary = AI_KIT_SECONDARIES[(h * 7 + 3) % AI_KIT_SECONDARIES.length]
+  const pattern = AI_KIT_PATTERNS[(h >> 5) % AI_KIT_PATTERNS.length]
+  const collars: KitConfig['collar'][] = ['round', 'v-neck', 'polo', 'henley']
+  const collar = collars[(h >> 10) % collars.length]
+  return { primaryColor: primary, secondaryColor: secondary, pattern, collar, sleeve: 'short' }
+}
+function resolveKit(p: AwardEntry): KitConfig {
+  return (p.clubKitConfig as KitConfig | null) ?? generateAiKit(p.clubName)
+}
+
+// ─── NewsWire ─────────────────────────────────────────────────────────────────
+
+type NewsItem = { type: string; headline: string; detail: string; matchday: number }
+
+function nwColor(item: NewsItem): string {
+  if (item.type === 'scorer')   return '#e8c84a'
+  if (item.type === 'result')   return item.headline.toLowerCase().match(/win|beat|thrash/) ? '#36e27e' : item.headline.toLowerCase().match(/lose|loss|defeat|crash/) ? '#cc3333' : '#27cdff'
+  if (item.type === 'streak')   return item.headline.toLowerCase().match(/winning|unbeaten/) ? '#36e27e' : '#cc3333'
+  if (item.type === 'injury')   return '#cc3333'
+  if (item.type === 'transfer') return '#27cdff'
+  if (item.type === 'fan')      return item.headline.toLowerCase().match(/furious|angry|disappoint|sold|upset|devastat/) ? '#cc3333' : '#e8c84a'
+  return '#27cdff'
+}
+function nwBadge(item: NewsItem): string {
+  if (item.type === 'scorer')   return 'TOP SCORER'
+  if (item.type === 'result')   return 'FULL-TIME'
+  if (item.type === 'streak')   return item.headline.toLowerCase().match(/winning|unbeaten/) ? 'HOT STREAK' : 'COLD RUN'
+  if (item.type === 'injury')   return 'TREATMENT ROOM'
+  if (item.type === 'transfer') return 'TRANSFER'
+  if (item.type === 'fan')      return 'STANDS REPORT'
+  return 'BULLETIN'
+}
+function nwImage(item: NewsItem): string | null {
+  if (item.type === 'result')   return '/news/result.jpg'
+  if (item.type === 'scorer')   return '/news/scorer.jpg'
+  if (item.type === 'injury')   return '/news/injury.jpg'
+  if (item.type === 'transfer') return '/news/transfer.jpg'
+  if (item.type === 'streak')   return '/news/streak.jpg'
+  if (item.type === 'fan') {
+    const txt = `${item.headline} ${item.detail}`.toLowerCase()
+    return txt.match(/furious|angry|disappoint|sold|upset|devastat|sad|boo/)
+      ? '/news/fans-disappointed.jpg'
+      : '/news/fans-happy.jpg'
+  }
+  return null
+}
+function nwStat(item: NewsItem): [string, string] {
+  const h = `${item.headline} ${item.detail}`
+  if (item.type === 'result') {
+    const m = h.match(/(\d+)\s*[–\-]\s*(\d+)/)
+    if (m) return [`${m[1]}–${m[2]}`, 'FINAL SCORE']
+  }
+  if (item.type === 'scorer') {
+    const m = h.match(/\b(\d+)\b/)
+    if (m) return [m[1], 'GOALS']
+  }
+  if (item.type === 'streak') {
+    const m = h.match(/\b(\d+)\b/)
+    if (m) return [m[1], item.headline.toLowerCase().match(/winning|unbeaten/) ? 'UNBEATEN' : 'WITHOUT WIN']
+  }
+  if (item.type === 'injury') {
+    const m = h.match(/\b(\d+)\b/)
+    if (m) return [m[1], 'DAYS OUT']
+  }
+  if (item.type === 'transfer') {
+    const m = h.match(/€[\d.]+[MKmk]?|\b\d+[MKmk]\b/)
+    if (m) return [m[0], 'FEE']
+  }
+  return [String(item.matchday), 'MATCHDAY']
+}
+
+function NewsWire({ news }: { news: NewsItem[] }) {
+  const [activeIdx, setActiveIdx] = useState(0)
+
+  useEffect(() => {
+    if (news.length <= 1) return
+    const id = setTimeout(() => setActiveIdx(i => (i + 1) % news.length), 7_000)
+    return () => clearTimeout(id)
+  }, [activeIdx, news.length])
+
+  return (
+    <div className={styles.newsWire}>
+      <div className={styles.nwHeader}>
+        <span className={styles.nwHeaderTitle}>News Wire</span>
+        <span className={styles.nwHeaderRule} />
+        <span className={styles.nwHeaderLive}>■ Live Feed</span>
+      </div>
+      <div className={styles.nwBody}>
+        {news.map((item, i) => {
+          const isOpen = i === activeIdx
+          const color = nwColor(item)
+          const spineTitle = item.headline.split(/\s+/).slice(0, 4).join(' ')
+          const [statValue, statLabel] = nwStat(item)
+          return (
+            <div
+              key={i}
+              className={`${styles.nwPanel}${isOpen ? ` ${styles.nwPanelOpen}` : ''}`}
+              onClick={() => !isOpen && setActiveIdx(i)}
+            >
+              <div className={styles.nwSpine}>
+                <span className={styles.nwSpineNum} style={{ color: isOpen ? '#fff' : color }}>
+                  {String(i + 1).padStart(2, '0')}
+                </span>
+                <span className={styles.nwSpineTitle}>{spineTitle}</span>
+                <span className={styles.nwSpineDot} style={{ background: color }} />
+              </div>
+              {isOpen && (
+                <div className={styles.nwContent}>
+                  <div className={styles.nwContentLeft}>
+                    <div className={styles.nwCatTag} style={{ background: color }}>
+                      <span className={styles.nwCatTagText}>{nwBadge(item)}</span>
+                    </div>
+                    <div className={styles.nwHeadline}>{item.headline}</div>
+                    <div className={styles.nwSummary}>{item.detail}</div>
+                    <div className={styles.nwFooter}>
+                      <span className={styles.nwMeta}>MD {item.matchday} · {item.type.toUpperCase()}</span>
+                      <div className={styles.nwStat}>
+                        <span className={styles.nwStatValue} style={{ color }}>{statValue}</span>
+                        <span className={styles.nwStatLabel}>{statLabel}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div
+                    className={styles.nwContentImage}
+                    style={{ '--nw-accent': color, '--nw-img': nwImage(item) ? `url(${nwImage(item)})` : 'none' } as React.CSSProperties}
+                  />
+                  {news.length > 1 && (
+                    <div className={styles.nwProgress}>
+                      <div className={styles.nwProgressFill} key={activeIdx} style={{ background: color }} />
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // ─── TOTWPitch ────────────────────────────────────────────────────────────────
 
-function TOTWPitch({ players }: { players: AwardEntry[] }) {
+function TOTWPitch({ players, overlayMode = false }: { players: AwardEntry[]; overlayMode?: boolean }) {
   const posY: Record<string, number> = {
     GK: 82, CB: 65, LB: 65, RB: 65, LWB: 65, RWB: 65,
     CDM: 52, CM: 42, LM: 42, RM: 42,
@@ -36,8 +201,9 @@ function TOTWPitch({ players }: { players: AwardEntry[] }) {
       positionedPlayers.push({ player: p, x, y })
     })
   }
+  const kitSize = overlayMode ? 54 : 36
   return (
-    <div className={styles.totwPitch}>
+    <div className={overlayMode ? styles.totwPitchOverlayField : styles.totwPitch}>
       <svg viewBox="0 0 100 62" preserveAspectRatio="none" className={styles.totwPitchSvg}>
         {[0,1,2,3,4,5].map(i => <rect key={i} x="0" y={i*10.3} width="100" height="5.2" fill="rgba(0,0,0,0.06)" />)}
         <rect x="2" y="2" width="96" height="58" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="0.5" />
@@ -54,8 +220,10 @@ function TOTWPitch({ players }: { players: AwardEntry[] }) {
           className={styles.totwPlayerWrap}
           style={{ left: `${x}%`, top: `${y}%` }}
         >
-          <PlayerPhoto url={p.photoUrl} name={p.playerName} size={44} style={{ borderRadius: '50%', border: '2.5px solid rgba(255,255,255,0.9)', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.7))' }} />
-          <KitSvg config={p.clubKitConfig as KitConfig | null} size={36} uid={`totw-${p.instanceId}`} />
+          {!overlayMode && (
+            <PlayerPhoto url={p.photoUrl} name={p.playerName} size={44} style={{ borderRadius: '50%', border: '2.5px solid rgba(255,255,255,0.9)', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.7))' }} />
+          )}
+          <KitSvg config={resolveKit(p)} size={kitSize} uid={`totw-${p.instanceId}${overlayMode ? '-ov' : ''}`} />
           <div className={styles.totwNameplate}>
             <div className={styles.totwPlayerName}>{p.playerName.split(' ').slice(-1)[0]}</div>
             <div className={styles.totwPlayerMeta}>
@@ -71,6 +239,53 @@ function TOTWPitch({ players }: { players: AwardEntry[] }) {
           </div>
         </div>
       ))}
+    </div>
+  )
+}
+
+// ─── TOTWList ─────────────────────────────────────────────────────────────────
+
+function TOTWList({ players }: { players: AwardEntry[] }) {
+  const posOrder = ['GK','CB','LB','RB','LWB','RWB','CDM','CM','LM','RM','CAM','LW','RW','CF','SS','ST']
+  const sorted = [...players].sort((a, b) => posOrder.indexOf(a.position) - posOrder.indexOf(b.position))
+  return (
+    <div className={styles.totwList}>
+      {sorted.map(p => (
+        <div key={p.instanceId} className={styles.totwListRow}>
+          <span className={`${posClass(p.position)} ${styles.totwListPos}`}>{p.position}</span>
+          <KitSvg config={resolveKit(p)} size={22} uid={`totwl-${p.instanceId}`} />
+          <span className={styles.totwListName}>{p.playerName}</span>
+          <span className={styles.totwListClub}>{p.clubName}</span>
+          <span className={styles.totwListRating}>{p.rating.toFixed(1)}</span>
+          {(p.goals > 0 || p.assists > 0) && (
+            <span className={styles.totwListStat}>
+              {p.goals > 0 && <><BallIcon size={9} />{p.goals} </>}
+              {p.assists > 0 && <>A{p.assists}</>}
+            </span>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ─── TOTWPitchOverlay ─────────────────────────────────────────────────────────
+
+function TOTWPitchOverlay({ players, onClose }: { players: AwardEntry[]; onClose: () => void }) {
+  useEffect(() => {
+    const fn = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', fn)
+    return () => window.removeEventListener('keydown', fn)
+  }, [onClose])
+  return (
+    <div className={styles.totwOverlay} onClick={onClose}>
+      <div className={styles.totwOverlayPanel} onClick={e => e.stopPropagation()}>
+        <div className={styles.totwOverlayHeader}>
+          <span className={styles.totwOverlayTitle}>TEAM OF THE WEEK</span>
+          <button onClick={onClose} className={styles.totwOverlayClose}>✕</button>
+        </div>
+        <TOTWPitch players={players} overlayMode />
+      </div>
     </div>
   )
 }
@@ -127,6 +342,7 @@ export default function Overview({ league, matches, myClub, awards, onPhysioUpgr
   const [sponsorMsg, setSponsorMsg] = useState('')
   const [overlay, setOverlay] = useState<'sponsors' | 'physio' | 'condition' | null>(null)
   const [news, setNews] = useState<{ type: string; headline: string; detail: string; matchday: number }[]>([])
+  const [showTotwPitch, setShowTotwPitch] = useState(false)
 
   useEffect(() => {
     if (!myClub || league.status !== 'ACTIVE') return
@@ -194,7 +410,7 @@ export default function Overview({ league, matches, myClub, awards, onPhysioUpgr
     const oppPos = sorted.findIndex(c => c.id === oppClub.id) + 1
     const gapToTop = myPos > 1 ? sorted[0].points - myClub.points : 0
     if (myPos === 1) return "Top of the table. Don't let up now."
-    if (gapToTop <= 3) return `${gapToTop} point${gapToTop !== 1 ? 's' : ''} off the top — win and it's alive.`
+    if (gapToTop <= 3) return `${gapToTop} point${gapToTop !== 1 ? 's' : ''} off the top  -  win and it's alive.`
     if (oppPos <= 2) return `A clash against the ${oppPos === 1 ? 'leaders' : 'contenders'}. This is a test.`
     if (last5.length >= 3 && formPts >= 7) return "Good run of form. Don't let up now."
     if (last5.length >= 3 && formPts <= 3) return 'Backs to the wall. This side needs a result.'
@@ -215,7 +431,7 @@ export default function Overview({ league, matches, myClub, awards, onPhysioUpgr
           onClose={() => setOverlay(null)}
         >
           <OnboardingNote>
-            Sign deals with sponsors to earn bonus income. Each deal sets a target goal — reach it by the target matchday and the reward is added to your budget. Signing a deal costs a fee upfront. You can hold up to 3 active deals at once.
+            Sign deals with sponsors to earn bonus income. Each deal sets a target goal  -  reach it by the target matchday and the reward is added to your budget. Signing a deal costs a fee upfront. You can hold up to 3 active deals at once.
           </OnboardingNote>
           <div className={styles.overlayBody}>
             {sponsorData ? (
@@ -318,7 +534,7 @@ export default function Overview({ league, matches, myClub, awards, onPhysioUpgr
           onClose={() => setOverlay(null)}
         >
           <OnboardingNote>
-            Your Physio Facility determines how much it costs to heal injured players and how available treatment is. <strong style={{ color: 'var(--paper)' }}>Level 1</strong> — basic treatment, standard costs. <strong style={{ color: 'var(--paper)' }}>Level 2</strong> — faster recovery, reduced fees. Injured players cannot play in matches until healed from the Squad tab.
+            Your Physio Facility determines how much it costs to heal injured players and how available treatment is. <strong style={{ color: 'var(--paper)' }}>Level 1</strong>  -  basic treatment, standard costs. <strong style={{ color: 'var(--paper)' }}>Level 2</strong>  -  faster recovery, reduced fees. Injured players cannot play in matches until healed from the Squad tab.
           </OnboardingNote>
           <div className={styles.overlayBody}>
             {/* Upgrade level bar */}
@@ -357,13 +573,13 @@ export default function Overview({ league, matches, myClub, awards, onPhysioUpgr
                       : `Upgrade to Level ${myClub.physioLevel + 1} · €${[1.5, 3][myClub.physioLevel]}M`}
                   </button>
                   <div className={styles.physioOverlayUpgradeNote}>
-                    {myClub.physioLevel === 0 ? 'Unlock basic treatment for injured players' : 'Unlock advanced recovery — lower costs, faster return'}
+                    {myClub.physioLevel === 0 ? 'Unlock basic treatment for injured players' : 'Unlock advanced recovery  -  lower costs, faster return'}
                   </div>
                 </div>
               )}
               {myClub.physioLevel >= 2 && (
                 <div className={styles.physioOverlayMaxLevel}>
-                  ✓ Max Level — Full recovery support active
+                  ✓ Max Level  -  Full recovery support active
                 </div>
               )}
             </div>
@@ -375,7 +591,7 @@ export default function Overview({ league, matches, myClub, awards, onPhysioUpgr
               </div>
               {squad.filter(p => p.injured).length === 0 ? (
                 <div className={styles.physioOverlayAllClear}>
-                  ✓ All Clear — no injuries in the squad
+                  ✓ All Clear  -  no injuries in the squad
                 </div>
               ) : (
                 squad.filter(p => p.injured).map(p => (
@@ -395,10 +611,10 @@ export default function Overview({ league, matches, myClub, awards, onPhysioUpgr
               )}
             </div>
 
-            {/* Fitness rundown — all squad sorted by fitness */}
+            {/* Fitness rundown  -  all squad sorted by fitness */}
             <div className={styles.physioOverlayFitnessBlock}>
               <div className={styles.physioOverlayFullFitnessLabel}>
-                Full Squad — Fitness
+                Full Squad  -  Fitness
               </div>
               <div className={styles.physioOverlayFitnessRows}>
                 {[...squad].sort((a, b) => a.fitness - b.fitness).map(p => {
@@ -438,7 +654,7 @@ export default function Overview({ league, matches, myClub, awards, onPhysioUpgr
           onClose={() => setOverlay(null)}
         >
           <OnboardingNote>
-            <strong style={{ color: 'var(--paper)' }}>Fitness</strong> drops after matches and recovers during rest days — players below 35 risk injury. <strong style={{ color: 'var(--paper)' }}>Morale</strong> rises with wins and drops with losses — it affects how well players perform. <strong style={{ color: 'var(--paper)' }}>Sharpness</strong> measures tactical familiarity and builds over time as your squad plays together.
+            <strong style={{ color: 'var(--paper)' }}>Fitness</strong> drops after matches and recovers during rest days  -  players below 35 risk injury. <strong style={{ color: 'var(--paper)' }}>Morale</strong> rises with wins and drops with losses  -  it affects how well players perform. <strong style={{ color: 'var(--paper)' }}>Sharpness</strong> measures tactical familiarity and builds over time as your squad plays together.
           </OnboardingNote>
           <div className={styles.overlayBody}>
             {/* Header row */}
@@ -516,7 +732,7 @@ export default function Overview({ league, matches, myClub, awards, onPhysioUpgr
                 {nextMatch ? heroTagline : (() => {
                   const p = myPosition ?? sorted.length
                   if (p === 1) return 'Champions. The title is yours.'
-                  if (p <= 3) return `${p}${myOrdinal} place — a strong campaign.`
+                  if (p <= 3) return `${p}${myOrdinal} place  -  a strong campaign.`
                   if (p <= Math.ceil(sorted.length / 2)) return 'Mid-table finish. More to come.'
                   return 'A tough season. Regroup and come back stronger.'
                 })()}
@@ -561,6 +777,9 @@ export default function Overview({ league, matches, myClub, awards, onPhysioUpgr
         </section>
       )}
 
+      {/* ══════════════════════════════ NEWS WIRE ══════════════════════════════ */}
+      {news.length > 0 && <NewsWire news={news} />}
+
       {/* ══════════════════ ROW A: BUDGET (2fr) + SQUAD CONDITION (1fr) ══════════════════ */}
       {myClub && (() => {
         const wages = myClub.squad.reduce((s, p) => s + p.wage, 0)
@@ -599,8 +818,8 @@ export default function Overview({ league, matches, myClub, awards, onPhysioUpgr
                 <div className={styles.budgetStats}>
                   {([
                     ['Transfer kitty', `€${(myClub.budget / 1_000_000).toFixed(1)}M`, Math.min(100, (myClub.budget / Math.max(league.startingBudget, 1)) * 100), 'var(--paper)'],
-                    ['Wage bill / md', wages > 0 ? `€${(wages / 1000).toFixed(1)}k` : '—', wages > 0 ? Math.min(100, (wages / (myClub.budget / 10 + 1)) * 100) : 0, 'var(--ash)'],
-                    ['Runway', mdRunway !== null ? `${mdRunway}md` : '—', mdRunway !== null ? Math.min(100, (mdRunway / Math.max(remaining, 1)) * 100) : 0, mdRunway !== null && mdRunway < 5 ? 'var(--accent)' : 'var(--ash)'],
+                    ['Wage bill / md', wages > 0 ? `€${(wages / 1000).toFixed(1)}k` : ' - ', wages > 0 ? Math.min(100, (wages / (myClub.budget / 10 + 1)) * 100) : 0, 'var(--ash)'],
+                    ['Runway', mdRunway !== null ? `${mdRunway}md` : ' - ', mdRunway !== null ? Math.min(100, (mdRunway / Math.max(remaining, 1)) * 100) : 0, mdRunway !== null && mdRunway < 5 ? 'var(--accent)' : 'var(--ash)'],
                   ] as [string, string, number, string][]).map(([k, v, pct, c]) => (
                     <div key={k} className={styles.budgetStatRow}>
                       <div className={styles.budgetStatMeta}>
@@ -679,7 +898,7 @@ export default function Overview({ league, matches, myClub, awards, onPhysioUpgr
                       ))
                     ) : (
                       <div className={styles.sponsorsEmptyNote}>
-                        No active deals — tap to browse available sponsors.
+                        No active deals  -  tap to browse available sponsors.
                       </div>
                     )
                   ) : (
@@ -849,40 +1068,18 @@ export default function Overview({ league, matches, myClub, awards, onPhysioUpgr
             </div>
             {awards.teamOfTheWeek.length > 0 && (
               <>
-                <div className={styles.totwLabel}>Team of the Week</div>
-                <TOTWPitch players={awards.teamOfTheWeek} />
+                <div className={styles.totwHeader}>
+                  <span className={styles.totwLabel}>Team of the Week</span>
+                  <button className={styles.totwViewBtn} onClick={() => setShowTotwPitch(true)}>
+                    View on pitch →
+                  </button>
+                </div>
+                <TOTWList players={awards.teamOfTheWeek} />
+                {showTotwPitch && (
+                  <TOTWPitchOverlay players={awards.teamOfTheWeek} onClose={() => setShowTotwPitch(false)} />
+                )}
               </>
             )}
-          </div>
-        </div>
-      )}
-
-      {/* ══════════════════════════════ LEAGUE NEWS ══════════════════════════════ */}
-      {news.length > 0 && (
-        <div className={styles.newsSection}>
-          <div className={styles.newsHeader}>
-            <span className={styles.newsHeaderTitle}>League Bulletin</span>
-            <span className={styles.newsHeaderDay}>MD {league.currentDay}</span>
-          </div>
-          <div className={styles.newsList}>
-            {news.map((item, i) => {
-              const dotColor =
-                item.type === 'result'   ? 'var(--paper)' :
-                item.type === 'scorer'   ? 'var(--gold)'  :
-                item.type === 'streak'   ? (item.headline.includes('winning') || item.headline.includes('unbeaten') ? 'var(--green)' : 'var(--accent)') :
-                item.type === 'injury'   ? 'var(--accent)' :
-                item.type === 'transfer' ? 'var(--cyan)' :
-                'var(--ash)'
-              return (
-                <div key={i} className={styles.newsItem}>
-                  <div className={styles.newsItemDot} style={{ background: dotColor }} />
-                  <div className={styles.newsItemBody}>
-                    <div className={styles.newsItemHeadline}>{item.headline}</div>
-                    <div className={styles.newsItemDetail}>{item.detail}</div>
-                  </div>
-                </div>
-              )
-            })}
           </div>
         </div>
       )}
@@ -932,7 +1129,7 @@ export default function Overview({ league, matches, myClub, awards, onPhysioUpgr
                 onClick={() => onSwitchTab?.('standings')}
                 className={styles.leagueTableMoreBtn}
               >
-                +{sorted.length - 6} more clubs — View full table
+                +{sorted.length - 6} more clubs  -  View full table
               </button>
             )}
           </div>

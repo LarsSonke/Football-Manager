@@ -6,6 +6,7 @@ import { KitSvg, type KitConfig } from '../../components/KitSvg'
 import { api } from '../../api/client'
 import { useIsMobile } from './types'
 import type { ClubData, SquadPlayer, LineupSlot, SubSlot, TacticData, CustomSlot } from './types'
+import { TACTICAL_FOCUS_DEFS, TACTICAL_CARD_DEFS } from '../../utils/tacticCards'
 import styles from './Tactics.module.css'
 
 // ─── Formation Constants ──────────────────────────────────────────────────────
@@ -83,37 +84,76 @@ const FORMATION_SLOTS: Record<string, { position: string; x: number; y: number }
 }
 
 const FORMATION_DESC: Record<string, string> = {
-  '4-4-2':     'Balanced classic — strong in midfield width and dual strikers',
+  '4-4-2':     'Balanced classic  -  strong in midfield width and dual strikers',
   '4-3-3':     'Possession-based three-man midfield with wide attackers pressing high',
   '4-3-3 (DM)':'Deep-lying playmaker shields defense while CMs push forward to feed wings',
   '4-2-3-1':   'Double pivot shields a creative CAM, ideal for controlling tempo',
   '4-1-4-1':   'Holding midfielder anchors a compact midfield rectangle',
-  '4-3-2-1':   'Christmas tree — narrow and layered with two shadow strikers behind the target',
-  '4-2-4':     'Ultra-attacking double pivot feeding four forwards — high risk, high reward',
+  '4-3-2-1':   'Christmas tree  -  narrow and layered with two shadow strikers behind the target',
+  '4-2-4':     'Ultra-attacking double pivot feeding four forwards  -  high risk, high reward',
   '3-5-2':     'Wingback-driven system with central midfield overload and direct strikers',
   '3-4-3':     'Aggressive three-back with wide midfielders stretching play and wing trio pressing high',
   '5-3-2':     'Wingbacks provide width while three central mids control the tempo',
-  '5-4-1':     'Defensive fortress — five-man backline absorbs pressure, counter on transitions',
+  '5-4-1':     'Defensive fortress  -  five-man backline absorbs pressure, counter on transitions',
 }
 
-const STYLE_LABELS: Record<string, string> = {
-  possession: 'Possession',
-  counter:    'Counter',
-  pressing:   'Pressing',
-  lowblock:   'Low Block',
+type TacticIdentity = 'possession' | 'gegenpress' | 'counter' | 'wing_play' | 'lowblock' | 'direct'
+
+interface IdentityDef {
+  id: TacticIdentity
+  label: string
+  emoji: string
+  color: string
+  description: string
+  effects: string[]
+  weakness: string
+  defaults: { pressing: number; defLine: number; width: number; tempo: number }
 }
-const STYLE_DESC: Record<string, string> = {
-  possession: 'Short passing, hold the ball, dominate territory and wait for gaps.',
-  counter:    'Sit deep, win the ball, and exploit space behind their defence at pace.',
-  pressing:   'Aggressive press high up the pitch to force turnovers in dangerous areas.',
-  lowblock:   'Compact 10-man block absorbs waves of pressure, hits hard on transitions.',
-}
-const STYLE_TRAITS: Record<string, { bonuses: string[]; cost: string }> = {
-  possession: { bonuses: ['Midfield control +8%',  'Attack +2%',         'Ball retention'], cost: 'Exposed to fast counter attacks' },
-  counter:    { bonuses: ['Attack +6%',             'Low stamina drain',  'Fast transitions'], cost: 'Midfield control −8%' },
-  pressing:   { bonuses: ['Press strength +18%',    'Defense +3%',       'High turnover rate'], cost: 'Stamina drain +22% — very tiring' },
-  lowblock:   { bonuses: ['Defense +10%',           'Stamina drain −22%','Hard to break down'], cost: 'Press −35%, limited buildup' },
-}
+
+const IDENTITY_DEFS: IdentityDef[] = [
+  {
+    id: 'possession', label: 'Possession Football', emoji: '🟢', color: '#36e27e',
+    description: 'Short passing triangles, high ball retention. Patiently wait for gaps to open.',
+    effects: ['Midfield control +8%', 'Ball retention', 'Attack +2%'],
+    weakness: 'Exposed to fast counter attacks',
+    defaults: { pressing: 25, defLine: 55, width: 50, tempo: 20 },
+  },
+  {
+    id: 'gegenpress', label: 'Gegenpress', emoji: '🔴', color: '#cc3333',
+    description: 'Win the ball back immediately when you lose it. High energy, high reward.',
+    effects: ['Press strength +18%', 'Defense +3%', 'Immediate turnovers'],
+    weakness: 'Stamina drain +22%  -  very tiring',
+    defaults: { pressing: 80, defLine: 80, width: 50, tempo: 80 },
+  },
+  {
+    id: 'counter', label: 'Counter Attack', emoji: '🔵', color: '#27cdff',
+    description: 'Sit deep, absorb pressure, then strike with pace in transition.',
+    effects: ['Attack +6%', 'Low stamina drain', 'Fast transitions'],
+    weakness: 'Midfield control −8%',
+    defaults: { pressing: 25, defLine: 25, width: 50, tempo: 80 },
+  },
+  {
+    id: 'wing_play', label: 'Wing Play', emoji: '🟡', color: '#e8c84a',
+    description: 'Stretch the opposition with width, deliver crosses and exploit wide spaces.',
+    effects: ['Width attack bonus', 'Crossing threat', 'Full-back overlaps'],
+    weakness: 'Central midfield weaker',
+    defaults: { pressing: 55, defLine: 55, width: 80, tempo: 50 },
+  },
+  {
+    id: 'lowblock', label: 'Defensive Wall', emoji: '⚫', color: '#94a3b8',
+    description: 'Pack the defensive third, make yourself impossible to break down.',
+    effects: ['Defense +10%', 'Stamina drain −22%', 'Hard to break down'],
+    weakness: 'Press −35%, limited buildup',
+    defaults: { pressing: 25, defLine: 25, width: 20, tempo: 20 },
+  },
+  {
+    id: 'direct', label: 'Direct Football', emoji: '🟣', color: '#a78bfa',
+    description: 'Skip the middlemen. Long balls, second phase attacks and relentless pressure.',
+    effects: ['Attack +8%', 'Forward runs', 'Physicality plays'],
+    weakness: 'Midfield bypassed −15%',
+    defaults: { pressing: 55, defLine: 55, width: 20, tempo: 80 },
+  },
+]
 
 // Positions that may only appear once in a formation
 const UNIQUE_POSITIONS = new Set(['GK', 'LB', 'RB', 'LM', 'RM', 'LW', 'RW'])
@@ -210,63 +250,32 @@ function autoAssign(
   }))
 }
 
-// ─── Tactic stage definitions ─────────────────────────────────────────────────
+// ─── Tactic instruction definitions (3-option) ───────────────────────────────
 
 const PRESSING_STAGES = [
-  { label: 'Off',    value: 15, desc: 'Sit back and hold shape — save energy for attack' },
-  { label: 'Low',   value: 35, desc: 'Light press only when opponents make mistakes' },
-  { label: 'Medium',value: 55, desc: 'Balanced press when out of possession' },
-  { label: 'High',  value: 75, desc: 'Aggressive press to win the ball high up the pitch' },
-  { label: 'Max',   value: 95, desc: 'Full-court press — very high intensity, very tiring' },
+  { label: 'Low',      value: 25, desc: 'Passive  -  hold shape, save energy for attack' },
+  { label: 'Balanced', value: 55, desc: 'Standard press when out of possession' },
+  { label: 'High',     value: 80, desc: 'Aggressive press  -  high turnover rate, more tiring' },
 ]
 const DEFLINE_STAGES = [
-  { label: 'Very Deep', value: 10, desc: 'Deep block — protects space in behind, invites pressure' },
-  { label: 'Deep',      value: 35, desc: 'Solid defensive shape, comfortable with a low block' },
-  { label: 'Standard',  value: 55, desc: 'Balanced line — reasonable cover, reasonable compactness' },
-  { label: 'High',      value: 75, desc: 'Push up to compress midfield and spring the offside trap' },
-  { label: 'Max',       value: 92, desc: 'Extreme high line — maximises offside trap, very risky' },
+  { label: 'Low',    value: 25, desc: 'Deep block  -  protect space in behind, absorb pressure' },
+  { label: 'Medium', value: 55, desc: 'Balanced line  -  solid cover and reasonable compactness' },
+  { label: 'High',   value: 80, desc: 'Push up  -  compress midfield and spring the offside trap' },
 ]
 const WIDTH_STAGES = [
-  { label: 'Very Narrow', value: 10, desc: 'Overload the middle channels — cuts off wide areas' },
-  { label: 'Narrow',      value: 30, desc: 'Central focus with cover wide' },
-  { label: 'Normal',      value: 55, desc: 'Balanced width — reasonable crossing and central play' },
-  { label: 'Wide',        value: 75, desc: 'Stretch opposition defence with wide runs and crosses' },
-  { label: 'Very Wide',   value: 95, desc: 'Maximum width — byline crosses, central gaps open' },
+  { label: 'Narrow',   value: 20, desc: 'Overload central channels  -  less wide threat' },
+  { label: 'Balanced', value: 50, desc: 'Mixed approach  -  flexible in and out wide' },
+  { label: 'Wide',     value: 80, desc: 'Stretch the opposition  -  crossing threat, full-back overlaps' },
 ]
-
-const PRESSING_IMPACTS: Record<number, { recovery: number; stamina: number }> = {
-  15: { recovery: 1, stamina: 1 },
-  35: { recovery: 2, stamina: 2 },
-  55: { recovery: 3, stamina: 3 },
-  75: { recovery: 4, stamina: 4 },
-  95: { recovery: 5, stamina: 5 },
-}
-const DEFLINE_IMPACTS: Record<number, { compact: number; counterRisk: number }> = {
-  10: { compact: 1, counterRisk: 1 },
-  35: { compact: 2, counterRisk: 2 },
-  55: { compact: 3, counterRisk: 3 },
-  75: { compact: 4, counterRisk: 4 },
-  92: { compact: 5, counterRisk: 5 },
-}
-const WIDTH_IMPACTS: Record<number, { wing: number; central: number }> = {
-  10: { wing: 1, central: 5 },
-  30: { wing: 2, central: 4 },
-  55: { wing: 3, central: 3 },
-  75: { wing: 4, central: 2 },
-  95: { wing: 5, central: 1 },
-}
+const TEMPO_STAGES = [
+  { label: 'Slow', value: 20, desc: 'Patient buildup  -  better chance quality, lower intensity' },
+  { label: 'Balanced', value: 50, desc: 'Flexible tempo  -  adjust during the game' },
+  { label: 'Fast', value: 80, desc: 'Direct and intense  -  more attempts, higher risk' },
+]
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function PipBar({ value, color = 'var(--green)' }: { value: number; color?: string }) {
-  return (
-    <div className={styles.pipBar}>
-      {Array.from({ length: 5 }, (_, i) => (
-        <div key={i} className={styles.pip} style={{ background: i < value ? color : 'rgba(255,255,255,0.1)' }} />
-      ))}
-    </div>
-  )
-}
+
 
 function snapToStage(value: number, stages: { value: number }[]): number {
   return stages.reduce((a, b) => Math.abs(b.value - value) < Math.abs(a.value - value) ? b : a).value
@@ -301,6 +310,26 @@ const ROLE_DESCRIPTIONS: Record<string, string> = {
   'false-9':            'Drop deep to link play, pull defenders out of position',
   'complete':           'Versatile all-round player, contributes to all aspects',
   'target-forward':     'Hold up the ball, win aerials, bring others into play',
+}
+
+const ROLE_STAT_EFFECT: Record<string, string> = {
+  'shot-stopper':       '+ GK quality +12%',
+  'sweeper-keeper':     '+ GK quality +6%',
+  'stopper':            '+ Defence +10%',
+  'ball-playing-cb':    '+ Midfield +8%',
+  'attacking-fullback': '+ Chance creation +8%',
+  'fullback':           '+ Defence +6%',
+  'holding':            '+ Defence +8%',
+  'defensive-mid':      '+ Pressing +10%  + Defence +6%',
+  'box-to-box':         '+ Attack +4%  + Pressing +4%',
+  'deep-lying':         '+ Midfield +12%',
+  'playmaker':          '+ Chance creation +12%',
+  'shadow-striker':     '+ Attack +8%  + Chance creation +5%',
+  'winger':             '+ Chance creation +10%',
+  'inside-forward':     '+ Attack +10%  + Finishing +5%',
+  'false-9':            '+ Chance creation +12%  − Finishing −6%',
+  'complete':           '+ Attack +3%  + Defence +3%',
+  'target-forward':     '+ Set piece atk +18%  + Finishing +5%',
 }
 
 function Stars({ value, max = 5 }: { value: number; max?: number }) {
@@ -493,6 +522,9 @@ function PlayerDetailModal({
                         <div className={styles.roleDesc}>
                           {ROLE_DESCRIPTIONS[role] ?? 'Standard role for this position'}
                         </div>
+                        {ROLE_STAT_EFFECT[role] && (
+                          <div className={styles.roleStatEffect}>{ROLE_STAT_EFFECT[role]}</div>
+                        )}
                       </div>
                     </button>
                   )
@@ -509,32 +541,69 @@ function PlayerDetailModal({
   )
 }
 
-type TacticStyle = 'possession' | 'counter' | 'pressing' | 'lowblock'
-
 interface TacticPreset {
   name: string
-  tactic: { formation: string; style: string; pressing: number; defLine: number; width: number; lineup: LineupSlot[] }
+  tactic: { formation: string; style: string; pressing: number; defLine: number; width: number; tempo: number; lineup: LineupSlot[] }
+}
+
+// ─── Tactical Battle matchup ─────────────────────────────────────────────────
+
+function calcMatchup(myStyle: string, oppStyle: string): { stars: number; label: string; detail: string } {
+  const GOOD: [string, string, string][] = [
+    ['counter',    'gegenpress', 'EXPLOIT SPACE'],
+    ['counter',    'pressing',   'EXPLOIT SPACE'],
+    ['possession', 'direct',     'NEUTRALISE'],
+    ['possession', 'counter',    'STARVE COUNTER'],
+    ['wing_play',  'lowblock',   'STRETCH DEFENCE'],
+    ['gegenpress', 'possession', 'DISRUPT BUILD-UP'],
+    ['pressing',   'possession', 'DISRUPT BUILD-UP'],
+    ['lowblock',   'direct',     'ABSORB PRESSURE'],
+    ['lowblock',   'wing_play',  'LIMIT WIDE THREAT'],
+    ['direct',     'gegenpress', 'BYPASS PRESS'],
+  ]
+  const BAD: [string, string, string][] = [
+    ['gegenpress', 'lowblock',   'WALL RESISTS PRESS'],
+    ['pressing',   'lowblock',   'WALL RESISTS PRESS'],
+    ['possession', 'gegenpress', 'PRESS DISRUPTS YOU'],
+    ['possession', 'pressing',   'PRESS DISRUPTS YOU'],
+    ['direct',     'possession', 'POSSESSION WINS'],
+    ['wing_play',  'gegenpress', 'PRESS CUTS WIDE'],
+    ['counter',    'lowblock',   'DEEP BLOCK LIMITS YOU'],
+  ]
+  const good = GOOD.find(m => m[0] === myStyle && m[1] === oppStyle)
+  const bad  = BAD.find(m => m[0] === myStyle && m[1] === oppStyle)
+  if (good) return { stars: 4, label: good[2], detail: 'Your style has a structural advantage.' }
+  if (bad)  return { stars: 2, label: bad[2],  detail: 'Their setup specifically counters your approach.' }
+  return { stars: 3, label: 'EVEN BATTLE', detail: 'Neutral matchup  -  execution will decide this one.' }
 }
 
 // ─── Tactics ──────────────────────────────────────────────────────────────────
 
-export default function Tactics({ leagueId, myClub, onSaved, nextMatchday }: {
+export default function Tactics({ leagueId, myClub, nextOpponent, onSaved, nextMatchday }: {
   leagueId: string
   myClub: ClubData
+  nextOpponent?: ClubData
   onSaved: (tactic: TacticData) => void
   nextMatchday: number
 }) {
   const isMobile = useIsMobile()
   const saved = myClub.tactic
   const [formation, setFormation] = useState(saved?.formation ?? '4-3-3')
-  const [style, setStyle] = useState<TacticStyle>(saved?.style ?? 'possession')
+  const [style, setStyle] = useState<TacticIdentity>(() => {
+    const s = saved?.style ?? 'possession'
+    // Map legacy 'pressing' to 'gegenpress'
+    return (s === 'pressing' ? 'gegenpress' : s) as TacticIdentity
+  })
   const [pressing, setPressing] = useState(snapToStage(saved?.pressingIntensity ?? 55, PRESSING_STAGES))
   const [defLine, setDefLine] = useState(snapToStage(saved?.defensiveLine ?? 55, DEFLINE_STAGES))
   const [width, setWidth] = useState(snapToStage(saved?.width ?? 55, WIDTH_STAGES))
+  const [tempo, setTempo] = useState(snapToStage(saved?.tempo ?? 50, TEMPO_STAGES))
   const [lineup, setLineup] = useState<LineupSlot[]>(() =>
     saved?.lineup?.length === 11 ? saved.lineup : autoAssign(saved?.formation ?? '4-3-3', myClub.squad, nextMatchday)
   )
   const [subs, setSubs] = useState<SubSlot[]>(saved?.subs ?? [])
+  const [tacticalFocus, setTacticalFocus] = useState<string | null>(saved?.tacticalFocus ?? null)
+  const [tacticalCards, setTacticalCards] = useState<string[]>(saved?.tacticalCards ?? [])
   const [customSlots, setCustomSlots] = useState<CustomSlot[]>(() => {
     if (saved?.customSlots?.length) return saved.customSlots.map((s, i) => ({ ...s, id: String(i) }))
     if ((saved?.formation ?? '4-3-3') === 'custom') return (FORMATION_SLOTS['4-3-3'] ?? []).map((s, i) => ({ ...s, id: String(i) }))
@@ -568,7 +637,7 @@ export default function Tactics({ leagueId, myClub, onSaved, nextMatchday }: {
   useEffect(() => {
     if (!mountedRef.current) { mountedRef.current = true; return }
     setIsDirty(true)
-  }, [formation, style, pressing, defLine, width, lineup, subs])
+  }, [formation, style, pressing, defLine, width, tempo, tacticalFocus, tacticalCards, lineup, subs])
 
   useEffect(() => {
     if (!isDirty) return
@@ -576,7 +645,7 @@ export default function Tactics({ leagueId, myClub, onSaved, nextMatchday }: {
     saveTimerRef.current = setTimeout(() => { handleSave() }, 2000)
     return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current) }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isDirty, formation, style, pressing, defLine, width, lineup, subs])
+  }, [isDirty, formation, style, pressing, defLine, width, tempo, tacticalFocus, tacticalCards, lineup, subs])
 
   useEffect(() => {
     return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current) }
@@ -720,11 +789,20 @@ export default function Tactics({ leagueId, myClub, onSaved, nextMatchday }: {
     setLineup(prev => prev.map((s, i) => i === slotIndex ? { ...s, role } : s))
   }
 
+  function selectIdentity(id: TacticIdentity) {
+    const def = IDENTITY_DEFS.find(d => d.id === id)!
+    setStyle(id)
+    setPressing(def.defaults.pressing)
+    setDefLine(def.defaults.defLine)
+    setWidth(def.defaults.width)
+    setTempo(def.defaults.tempo)
+  }
+
   async function handleSave() {
     if (saveTimerRef.current) { clearTimeout(saveTimerRef.current); saveTimerRef.current = null }
     setSaving(true)
     try {
-      const payload: TacticData = { formation, style, pressingIntensity: pressing, defensiveLine: defLine, width, lineup, subs, customSlots: formation === 'custom' ? customSlots.map(({ id: _id, ...s }) => s) : undefined }
+      const payload: TacticData = { formation, style, pressingIntensity: pressing, defensiveLine: defLine, width, tempo, tacticalFocus, tacticalCards, lineup, subs, customSlots: formation === 'custom' ? customSlots.map(({ id: _id, ...s }) => s) : undefined }
       await api.patch(`/leagues/${leagueId}/tactic`, payload)
       onSaved(payload)
       setIsDirty(false)
@@ -740,7 +818,7 @@ export default function Tactics({ leagueId, myClub, onSaved, nextMatchday }: {
   function savePreset() {
     const name = window.prompt('Preset name:', `Preset ${presets.length + 1}`)
     if (!name) return
-    const newPresets: TacticPreset[] = [...presets.slice(0, 3), { name: name.trim(), tactic: { formation, style, pressing, defLine, width, lineup } }]
+    const newPresets: TacticPreset[] = [...presets.slice(0, 3), { name: name.trim(), tactic: { formation, style, pressing, defLine, width, tempo, lineup } }]
     setPresets(newPresets)
     localStorage.setItem(`tactic-presets-${leagueId}`, JSON.stringify(newPresets))
   }
@@ -753,10 +831,11 @@ export default function Tactics({ leagueId, myClub, onSaved, nextMatchday }: {
 
   function loadPreset(preset: TacticPreset) {
     setFormation(preset.tactic.formation)
-    setStyle(preset.tactic.style as TacticStyle)
-    setPressing(preset.tactic.pressing)
-    setDefLine(preset.tactic.defLine)
-    setWidth(preset.tactic.width)
+    setStyle((preset.tactic.style === 'pressing' ? 'gegenpress' : preset.tactic.style) as TacticIdentity)
+    setPressing(snapToStage(preset.tactic.pressing, PRESSING_STAGES))
+    setDefLine(snapToStage(preset.tactic.defLine, DEFLINE_STAGES))
+    setWidth(snapToStage(preset.tactic.width, WIDTH_STAGES))
+    setTempo(snapToStage(preset.tactic.tempo ?? 50, TEMPO_STAGES))
     setLineup(preset.tactic.lineup)
   }
 
@@ -859,12 +938,12 @@ export default function Tactics({ leagueId, myClub, onSaved, nextMatchday }: {
               </span>
               <button className={styles.customClearBtn} onClick={() => { setCustomSlots([]); setLineup([]) }}>Clear all</button>
             </div>
-            <span className={styles.customHint}>Click pitch to add — position auto-detected from location · drag to reposition · click badge to override</span>
+            <span className={styles.customHint}>Click pitch to add  -  position auto-detected from location · drag to reposition · click badge to override</span>
           </div>
         ) : FORMATION_DESC[formation] ? (
           <div className={styles.formationDesc}>
             <span className={styles.formationDescName}>{formation}</span>
-            {' — '}{FORMATION_DESC[formation]}
+            {'  -  '}{FORMATION_DESC[formation]}
           </div>
         ) : null}
 
@@ -1191,11 +1270,73 @@ export default function Tactics({ leagueId, myClub, onSaved, nextMatchday }: {
       {/* Right: settings */}
       <div className={styles.settingsCol}>
 
+        {/* Opponent Report + Tactical Battle */}
+        {nextOpponent && (() => {
+          const oppTactic = nextOpponent.tactic
+          const oppStyle = (oppTactic?.style === 'pressing' ? 'gegenpress' : oppTactic?.style) ?? 'possession'
+          const oppIdentity = IDENTITY_DEFS.find(d => d.id === oppStyle) ?? IDENTITY_DEFS[0]
+          const oppPressing = oppTactic?.pressingIntensity ?? 55
+          const oppDefLine  = oppTactic?.defensiveLine    ?? 50
+          const oppWidth    = oppTactic?.width            ?? 50
+          const oppTempo    = oppTactic?.tempo            ?? 50
+          const matchup     = calcMatchup(style, oppStyle)
+          const stageLabel  = (v: number, stages: { value: number; label: string }[]) =>
+            stages.reduce((a, b) => Math.abs(b.value - v) < Math.abs(a.value - v) ? b : a).label
+          return (
+            <div className={styles.settingsCard}>
+              <div className="card-header">
+                <span className="accent-bar" style={{ background: 'var(--red)' }} />
+                <span className={styles.secLabel}>Opponent Report</span>
+                <span className={styles.oppName}>{nextOpponent.name}</span>
+              </div>
+              <div className={styles.oppBody}>
+                {/* Identity */}
+                <div className={styles.oppIdentityRow}>
+                  <span className={styles.oppIdentityEmoji}>{oppIdentity.emoji}</span>
+                  <div>
+                    <div className={styles.oppIdentityLabel} style={{ color: oppIdentity.color }}>{oppIdentity.label}</div>
+                    <div className={styles.oppIdentityDesc}>{oppIdentity.description}</div>
+                  </div>
+                </div>
+                {/* Instructions */}
+                <div className={styles.oppInstructions}>
+                  {[
+                    { label: 'Pressing',  val: stageLabel(oppPressing, PRESSING_STAGES) },
+                    { label: 'Def. Line', val: stageLabel(oppDefLine,  DEFLINE_STAGES)  },
+                    { label: 'Width',     val: stageLabel(oppWidth,    WIDTH_STAGES)    },
+                    { label: 'Tempo',     val: stageLabel(oppTempo,    TEMPO_STAGES)    },
+                  ].map(({ label, val }) => (
+                    <div key={label} className={styles.oppInstrRow}>
+                      <span className={styles.oppInstrLabel}>{label}</span>
+                      <span className={styles.oppInstrValue}>{val}</span>
+                    </div>
+                  ))}
+                </div>
+                {/* Tactical Battle */}
+                <div className={styles.tacticalBattle}>
+                  <div className={styles.tacticalBattleHeader}>
+                    <span className={styles.tacticalBattleTitle}>Tactical Battle</span>
+                    <span className={styles.tacticalBattleLabel} style={{ color: matchup.stars >= 4 ? 'var(--green)' : matchup.stars <= 2 ? 'var(--red)' : 'var(--gold)' }}>
+                      {matchup.label}
+                    </span>
+                  </div>
+                  <div className={styles.tacticalBattleStars}>
+                    {Array.from({ length: 5 }, (_, i) => (
+                      <span key={i} style={{ color: i < matchup.stars ? (matchup.stars >= 4 ? 'var(--green)' : matchup.stars <= 2 ? 'var(--red)' : 'var(--gold)') : 'rgba(255,255,255,0.1)', fontSize: 18 }}>★</span>
+                    ))}
+                  </div>
+                  <div className={styles.tacticalBattleDetail}>{matchup.detail}</div>
+                </div>
+              </div>
+            </div>
+          )
+        })()}
+
         {/* Team rating */}
         <div className={styles.ratingCard}>
           <div className={styles.ratingLabel}>Team Rating</div>
           <div className={styles.ratingRow}>
-            <span className={styles.ratingValue}>{currentRating ?? '—'}</span>
+            <span className={styles.ratingValue}>{currentRating ?? ' - '}</span>
             {previewRating !== null && currentRating !== null && (
               <>
                 <span className={styles.ratingArrow}>→</span>
@@ -1216,150 +1357,212 @@ export default function Tactics({ leagueId, myClub, onSaved, nextMatchday }: {
           )}
         </div>
 
-        {/* Tactical style */}
+        {/* Team Identity */}
         <div className={styles.settingsCard}>
           <div className="card-header">
             <span className="accent-bar" />
-            <span className={styles.secLabel}>Tactical Style</span>
+            <span className={styles.secLabel}>Team Identity</span>
           </div>
-          <div className={styles.settingsBody}>
-            <div className={styles.styleGrid}>
-              {(Object.keys(STYLE_LABELS) as TacticStyle[]).map(s => (
-                <button key={s} onClick={() => setStyle(s)} className={style === s ? styles.styleBtnActive : styles.styleBtn}>
-                  {STYLE_LABELS[s]}
-                </button>
-              ))}
-            </div>
-            <div className={styles.styleInfo}>
-              <div className={styles.styleDesc}>{STYLE_DESC[style]}</div>
-              <div className={styles.styleTraits}>
-                {STYLE_TRAITS[style].bonuses.map(t => (
-                  <div key={t} className={styles.styleTrait}>
-                    <span className={styles.styleTraitPlus}>+</span>{t}
-                  </div>
-                ))}
-                <div className={styles.styleTraitCost}>
-                  <span className={styles.styleTraitMinus}>−</span>{STYLE_TRAITS[style].cost}
+          <div className={styles.identityGrid}>
+            {IDENTITY_DEFS.map(def => (
+              <button
+                key={def.id}
+                onClick={() => selectIdentity(def.id)}
+                className={style === def.id ? styles.identityCardActive : styles.identityCard}
+                style={{ '--id-color': def.color } as React.CSSProperties}
+              >
+                <span className={styles.identityEmoji}>{def.emoji}</span>
+                <span className={styles.identityLabel}>{def.label}</span>
+              </button>
+            ))}
+          </div>
+          {(() => {
+            const def = IDENTITY_DEFS.find(d => d.id === style)!
+            return (
+              <div className={styles.identityInfo} style={{ '--id-color': def.color } as React.CSSProperties}>
+                <div className={styles.identityDesc}>{def.description}</div>
+                <div className={styles.identityEffects}>
+                  {def.effects.map(e => <span key={e} className={styles.identityEffect}>+ {e}</span>)}
+                  <span className={styles.identityWeakness}>− {def.weakness}</span>
                 </div>
               </div>
-            </div>
-          </div>
+            )
+          })()}
+          {(() => {
+            const fam = myClub.tacticFamiliarity ?? 75
+            const note = fam >= 90 ? 'Peak chemistry' : fam >= 75 ? 'Building chemistry' : fam >= 50 ? 'Learning the system' : 'Adjusting to new tactics'
+            return (
+              <div className={styles.familiarityRow}>
+                <div className={styles.familiarityHeader}>
+                  <span className={styles.familiarityLabel}>Team Familiarity</span>
+                  <span className={styles.familiarityPct}>{fam}%</span>
+                </div>
+                <div className={styles.familiarityTrack}>
+                  <div className={styles.familiarityFill} style={{ width: `${fam}%` }} />
+                </div>
+                <div className={styles.familiarityNote}>{note}</div>
+              </div>
+            )
+          })()}
         </div>
 
-        {/* Settings — stage buttons */}
+        {/* Team Instructions */}
         <div className={styles.settingsCard}>
           <div className="card-header">
             <span className="accent-bar" />
-            <span className={styles.secLabel}>Settings</span>
+            <span className={styles.secLabel}>Team Instructions</span>
           </div>
           <div className={styles.settingsBody}>
 
             {/* Pressing */}
-            {(() => {
-              const active = PRESSING_STAGES.find(s => s.value === pressing)
-              const imp = PRESSING_IMPACTS[pressing]
-              return (
-                <div className={styles.stageRow}>
-                  <div className={styles.stageHeader}>
-                    <span className={styles.stageTitle}>Pressing</span>
-                    <span className={styles.stageActiveLabel}>{active?.label ?? ''}</span>
-                  </div>
-                  <div className={styles.stageBtns}>
-                    {PRESSING_STAGES.map(stage => (
-                      <button key={stage.label} onClick={() => setPressing(stage.value)} title={stage.desc}
-                        className={pressing === stage.value ? styles.stageBtnActive : styles.stageBtn}>
-                        {stage.label}
-                      </button>
-                    ))}
-                  </div>
-                  {active && <div className={styles.stageDesc}>{active.desc}</div>}
-                  {imp && (
-                    <div className={styles.stageImpact}>
-                      <div className={styles.stageImpactCol}>
-                        <span className={styles.stageImpactLabel}>Ball Recovery</span>
-                        <PipBar value={imp.recovery} color="var(--green)" />
-                      </div>
-                      <div className={styles.stageImpactCol}>
-                        <span className={styles.stageImpactLabel}>Stamina Cost</span>
-                        <PipBar value={imp.stamina} color={imp.stamina >= 4 ? 'var(--red)' : imp.stamina >= 3 ? 'var(--gold)' : 'var(--green)'} />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )
-            })()}
+            <div className={styles.stageRow}>
+              <div className={styles.stageHeader}>
+                <span className={styles.stageTitle}>Pressing</span>
+                <span className={styles.stageActiveLabel}>{PRESSING_STAGES.find(s => s.value === pressing)?.label ?? ''}</span>
+              </div>
+              <div className={styles.stageBtns}>
+                {PRESSING_STAGES.map(stage => (
+                  <button key={stage.label} onClick={() => setPressing(stage.value)} title={stage.desc}
+                    className={pressing === stage.value ? styles.stageBtnActive : styles.stageBtn}>
+                    {stage.label}
+                  </button>
+                ))}
+              </div>
+              <div className={styles.stageDesc}>{PRESSING_STAGES.find(s => s.value === pressing)?.desc ?? ''}</div>
+            </div>
 
             {/* Defensive Line */}
-            {(() => {
-              const active = DEFLINE_STAGES.find(s => s.value === defLine)
-              const imp = DEFLINE_IMPACTS[defLine]
-              return (
-                <div className={styles.stageRow}>
-                  <div className={styles.stageHeader}>
-                    <span className={styles.stageTitle}>Defensive Line</span>
-                    <span className={styles.stageActiveLabel}>{active?.label ?? ''}</span>
-                  </div>
-                  <div className={styles.stageBtns}>
-                    {DEFLINE_STAGES.map(stage => (
-                      <button key={stage.label} onClick={() => setDefLine(stage.value)} title={stage.desc}
-                        className={defLine === stage.value ? styles.stageBtnActive : styles.stageBtn}>
-                        {stage.label}
-                      </button>
-                    ))}
-                  </div>
-                  {active && <div className={styles.stageDesc}>{active.desc}</div>}
-                  {imp && (
-                    <div className={styles.stageImpact}>
-                      <div className={styles.stageImpactCol}>
-                        <span className={styles.stageImpactLabel}>Compactness</span>
-                        <PipBar value={imp.compact} color="var(--green)" />
-                      </div>
-                      <div className={styles.stageImpactCol}>
-                        <span className={styles.stageImpactLabel}>Counter Risk</span>
-                        <PipBar value={imp.counterRisk} color={imp.counterRisk >= 4 ? 'var(--red)' : imp.counterRisk >= 3 ? 'var(--gold)' : 'var(--green)'} />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )
-            })()}
+            <div className={styles.stageRow}>
+              <div className={styles.stageHeader}>
+                <span className={styles.stageTitle}>Defensive Line</span>
+                <span className={styles.stageActiveLabel}>{DEFLINE_STAGES.find(s => s.value === defLine)?.label ?? ''}</span>
+              </div>
+              <div className={styles.stageBtns}>
+                {DEFLINE_STAGES.map(stage => (
+                  <button key={stage.label} onClick={() => setDefLine(stage.value)} title={stage.desc}
+                    className={defLine === stage.value ? styles.stageBtnActive : styles.stageBtn}>
+                    {stage.label}
+                  </button>
+                ))}
+              </div>
+              <div className={styles.stageDesc}>{DEFLINE_STAGES.find(s => s.value === defLine)?.desc ?? ''}</div>
+            </div>
 
             {/* Width */}
-            {(() => {
-              const active = WIDTH_STAGES.find(s => s.value === width)
-              const imp = WIDTH_IMPACTS[width]
-              return (
-                <div className={styles.stageRow}>
-                  <div className={styles.stageHeader}>
-                    <span className={styles.stageTitle}>Width</span>
-                    <span className={styles.stageActiveLabel}>{active?.label ?? ''}</span>
-                  </div>
-                  <div className={styles.stageBtns}>
-                    {WIDTH_STAGES.map(stage => (
-                      <button key={stage.label} onClick={() => setWidth(stage.value)} title={stage.desc}
-                        className={width === stage.value ? styles.stageBtnActive : styles.stageBtn}>
-                        {stage.label}
-                      </button>
-                    ))}
-                  </div>
-                  {active && <div className={styles.stageDesc}>{active.desc}</div>}
-                  {imp && (
-                    <div className={styles.stageImpact}>
-                      <div className={styles.stageImpactCol}>
-                        <span className={styles.stageImpactLabel}>Wing Threat</span>
-                        <PipBar value={imp.wing} color="var(--green)" />
-                      </div>
-                      <div className={styles.stageImpactCol}>
-                        <span className={styles.stageImpactLabel}>Central Strength</span>
-                        <PipBar value={imp.central} color="var(--green)" />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )
-            })()}
+            <div className={styles.stageRow}>
+              <div className={styles.stageHeader}>
+                <span className={styles.stageTitle}>Width</span>
+                <span className={styles.stageActiveLabel}>{WIDTH_STAGES.find(s => s.value === width)?.label ?? ''}</span>
+              </div>
+              <div className={styles.stageBtns}>
+                {WIDTH_STAGES.map(stage => (
+                  <button key={stage.label} onClick={() => setWidth(stage.value)} title={stage.desc}
+                    className={width === stage.value ? styles.stageBtnActive : styles.stageBtn}>
+                    {stage.label}
+                  </button>
+                ))}
+              </div>
+              <div className={styles.stageDesc}>{WIDTH_STAGES.find(s => s.value === width)?.desc ?? ''}</div>
+            </div>
+
+            {/* Tempo */}
+            <div className={styles.stageRow}>
+              <div className={styles.stageHeader}>
+                <span className={styles.stageTitle}>Tempo</span>
+                <span className={styles.stageActiveLabel}>{TEMPO_STAGES.find(s => s.value === tempo)?.label ?? ''}</span>
+              </div>
+              <div className={styles.stageBtns}>
+                {TEMPO_STAGES.map(stage => (
+                  <button key={stage.label} onClick={() => setTempo(stage.value)} title={stage.desc}
+                    className={tempo === stage.value ? styles.stageBtnActive : styles.stageBtn}>
+                    {stage.label}
+                  </button>
+                ))}
+              </div>
+              <div className={styles.stageDesc}>{TEMPO_STAGES.find(s => s.value === tempo)?.desc ?? ''}</div>
+            </div>
 
           </div>
+        </div>
+
+        {/* Tactical Focus */}
+        <div className={styles.settingsCard}>
+          <div className="card-header">
+            <span className="accent-bar" />
+            <span className={styles.secLabel}>Match Focus</span>
+          </div>
+          <div className={styles.focusGrid}>
+            {TACTICAL_FOCUS_DEFS.map(def => (
+              <button
+                key={def.id}
+                onClick={() => setTacticalFocus(tacticalFocus === def.id ? null : def.id)}
+                className={tacticalFocus === def.id ? styles.focusCardActive : styles.focusCard}
+                style={{ '--fc-color': def.color } as React.CSSProperties}
+                title={def.description}
+              >
+                <span className={styles.focusEmoji}>{def.emoji}</span>
+                <span className={styles.focusLabel}>{def.label}</span>
+              </button>
+            ))}
+          </div>
+          {tacticalFocus && (() => {
+            const def = TACTICAL_FOCUS_DEFS.find(d => d.id === tacticalFocus)!
+            return (
+              <div className={styles.focusInfo} style={{ '--fc-color': def.color } as React.CSSProperties}>
+                <span className={styles.focusInfoDesc}>{def.description}</span>
+                <div className={styles.focusInfoEffects}>
+                  {def.effects.map(e => <span key={e} className={styles.focusInfoEffect}>+ {e}</span>)}
+                  {def.warning && <span className={styles.focusInfoWarning}>− {def.warning}</span>}
+                </div>
+              </div>
+            )
+          })()}
+        </div>
+
+        {/* Tactical Cards */}
+        <div className={styles.settingsCard}>
+          <div className="card-header">
+            <span className="accent-bar" />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flex: 1 }}>
+              <span className={styles.secLabel}>Tactical Cards</span>
+              <span className={styles.cardsCount}>{tacticalCards.length}/3 equipped</span>
+            </div>
+          </div>
+          <div className={styles.cardsGrid}>
+            {TACTICAL_CARD_DEFS.map(def => {
+              const active = tacticalCards.includes(def.id)
+              const full   = tacticalCards.length >= 3 && !active
+              return (
+                <button
+                  key={def.id}
+                  disabled={full}
+                  onClick={() => setTacticalCards(prev =>
+                    active ? prev.filter(c => c !== def.id) : [...prev, def.id]
+                  )}
+                  className={active ? styles.tacticalCardActive : full ? styles.tacticalCardDisabled : styles.tacticalCard}
+                  style={{ '--tc-color': def.color } as React.CSSProperties}
+                  title={def.description}
+                >
+                  <span className={styles.tacticalCardEmoji}>{def.emoji}</span>
+                  <span className={styles.tacticalCardLabel}>{def.label}</span>
+                  {active && <span className={styles.tacticalCardCheck}>✓</span>}
+                </button>
+              )
+            })}
+          </div>
+          {tacticalCards.length > 0 && (
+            <div className={styles.cardsActive}>
+              {tacticalCards.map(id => {
+                const def = TACTICAL_CARD_DEFS.find(d => d.id === id)!
+                return (
+                  <div key={id} className={styles.cardsActiveItem} style={{ '--tc-color': def.color } as React.CSSProperties}>
+                    <span>{def.emoji} {def.label}</span>
+                    <span className={styles.cardsActiveEffect}>{def.effects[0]}</span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
 
         {/* Substitutions */}
@@ -1383,7 +1586,7 @@ export default function Tactics({ leagueId, myClub, onSaved, nextMatchday }: {
                       onChange={e => setSubs(prev => prev.map((s, j) => j === i ? { ...s, outInstanceId: e.target.value } : s))}
                       className={styles.subSelect}
                     >
-                      <option value="">— Off —</option>
+                      <option value=""> -  Off  - </option>
                       {lineup.map(slot => {
                         const p = instanceMap[slot.instanceId]
                         return p ? <option key={slot.instanceId} value={slot.instanceId}>{p.player.name} ({slot.position})</option> : null
@@ -1395,7 +1598,7 @@ export default function Tactics({ leagueId, myClub, onSaved, nextMatchday }: {
                       onChange={e => setSubs(prev => prev.map((s, j) => j === i ? { ...s, inInstanceId: e.target.value } : s))}
                       className={styles.subSelect}
                     >
-                      <option value="">— On —</option>
+                      <option value=""> -  On  - </option>
                       {bench.map(p => <option key={p.id} value={p.id}>{p.player.name} ({p.player.position})</option>)}
                     </select>
                     <button onClick={() => setSubs(prev => prev.filter((_, j) => j !== i))} className={styles.subRemoveBtn}>✕</button>
@@ -1446,7 +1649,7 @@ export default function Tactics({ leagueId, myClub, onSaved, nextMatchday }: {
             <span className={styles.secLabel}>Position Fit</span>
           </div>
           <div className={styles.settingsBody}>
-            {[['var(--green)', 'Natural position — full rating'], ['var(--gold)', '~ Adjacent position — slight penalty'], ['var(--red)', '! Wrong position — large penalty']].map(([c, l]) => (
+            {[['var(--green)', 'Natural position  -  full rating'], ['var(--gold)', '~ Adjacent position  -  slight penalty'], ['var(--red)', '! Wrong position  -  large penalty']].map(([c, l]) => (
               <div key={l} className={styles.fitLegendRow}>
                 <span className={styles.fitDot} style={{ background: c }} />
                 {l}
@@ -1476,7 +1679,7 @@ export default function Tactics({ leagueId, myClub, onSaved, nextMatchday }: {
               </button>
             )}
             {presets.length >= 4 && (
-              <div className={styles.presetsMaxNote}>Max 4 presets — delete one to save a new preset</div>
+              <div className={styles.presetsMaxNote}>Max 4 presets  -  delete one to save a new preset</div>
             )}
           </div>
         </div>

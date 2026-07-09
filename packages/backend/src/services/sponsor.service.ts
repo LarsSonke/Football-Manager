@@ -50,7 +50,7 @@ export async function getAvailableDeals(leagueId: string, userId: string) {
 
   const squad = club.squad.sort((a, b) => b.player.overall - a.player.overall)
 
-  // 1. PLAY_PLAYER — pick a random squad member
+  // 1. PLAY_PLAYER  -  pick a random squad member
   if (squad.length > 0) {
     const target = squad[Math.floor(Math.random() * Math.min(squad.length, 15))]
     const sp = pickSponsor(used); used.add(sp.name)
@@ -85,7 +85,7 @@ export async function getAvailableDeals(leagueId: string, userId: string) {
     })
   }
 
-  // 4. SCORE_GOALS — score 3+ goals
+  // 4. SCORE_GOALS  -  score 3+ goals
   {
     const sp = pickSponsor(used); used.add(sp.name)
     const cost = Math.round(4_500 * scale)
@@ -96,7 +96,7 @@ export async function getAvailableDeals(leagueId: string, userId: string) {
     })
   }
 
-  // 5. PLAYER_RATING — top player rated 7.5+
+  // 5. PLAYER_RATING  -  top player rated 7.5+
   if (squad.length > 0) {
     const star = squad[0]
     const sp = pickSponsor(used); used.add(sp.name)
@@ -138,7 +138,7 @@ export async function signSponsorDeal(
   if (dealIndex < 0 || dealIndex >= deals.length) throw new Error('Invalid deal index')
 
   const deal = deals[dealIndex]
-  if (club.budget < deal.cost) throw new Error(`Insufficient budget — need €${(deal.cost / 1000).toFixed(1)}k`)
+  if (club.budget < deal.cost) throw new Error(`Insufficient budget  -  need €${(deal.cost / 1000).toFixed(1)}k`)
 
   const [created] = await prisma.$transaction([
     prisma.sponsorDeal.create({
@@ -200,7 +200,7 @@ export async function checkSponsorMissions(leagueId: string, matchday: number): 
       m => m.homeClubId === deal.clubId || m.awayClubId === deal.clubId,
     )
     if (!match) {
-      // No match this day — fail the deal
+      // No match this day  -  fail the deal
       await prisma.sponsorDeal.update({ where: { id: deal.id }, data: { status: 'FAILED' } })
       continue
     }

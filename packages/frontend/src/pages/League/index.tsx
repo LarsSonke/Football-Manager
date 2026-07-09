@@ -151,7 +151,7 @@ function SeasonEndOverlay({ league, myClub, isCreator, startingNewSeason, onNewS
         {/* Player development note */}
         {isCreator && (
           <div className={styles.seasonEndDevNote}>
-            Starting a new season will age all players by 1 year — young players with high potential will grow, veterans may begin to decline.
+            Starting a new season will age all players by 1 year  -  young players with high potential will grow, veterans may begin to decline.
           </div>
         )}
 
@@ -206,23 +206,26 @@ function LiveTicker({ matches, myClubId, onDismiss }: { matches: Map<string, Liv
     const name = evt.eventType === 'SUBSTITUTION'
       ? (d?.outName ?? '?')
       : (d?.playerName ?? d?.name ?? '?')
+    const nameStyle = evt.eventType === 'GOAL' ? styles.liveTickerEventNameGoal
+      : evt.eventType === 'RED_CARD' ? styles.liveTickerEventNameRed
+      : styles.liveTickerEventName
+    const icon = EVENT_ICON[evt.eventType] ?? '•'
     return (
-      <div key={`${evt.minute}-${evt.eventType}`} className={styles.liveTickerEvent}>
+      <div key={`${evt.minute}-${evt.eventType}-${name}`} className={styles.liveTickerEvent}>
+        <div className={styles.liveTickerEventHome}>
+          {isHome && <><span>{icon}</span><span className={nameStyle}>{name}</span></>}
+        </div>
         <span className={styles.liveTickerEventMinute}>{evt.minute}'</span>
-        <span>{EVENT_ICON[evt.eventType] ?? '•'}</span>
-        <span className={
-          evt.eventType === 'GOAL' ? styles.liveTickerEventNameGoal
-          : evt.eventType === 'RED_CARD' ? styles.liveTickerEventNameRed
-          : styles.liveTickerEventName
-        }>{name}</span>
-        <span className={styles.liveTickerEventClub}>({isHome ? m.homeClub.name : m.awayClub.name})</span>
+        <div className={styles.liveTickerEventAway}>
+          {!isHome && <><span className={nameStyle}>{name}</span><span>{icon}</span></>}
+        </div>
       </div>
     )
   }
 
   return (
     <div className={styles.liveTickerWrap}>
-      {/* My match — prominent */}
+      {/* My match  -  prominent */}
       {myMatch && (
         <div className={`${styles.liveTickerCard} ${myMatch.status === 'live' ? styles.liveTickerCardLive : ''}`}>
           <div className={`${styles.liveTickerHeader} ${myMatch.status === 'live' ? styles.liveTickerHeaderLive : ''}`}>
@@ -249,7 +252,7 @@ function LiveTicker({ matches, myClubId, onDismiss }: { matches: Map<string, Liv
         </div>
       )}
 
-      {/* Other matches — compact */}
+      {/* Other matches  -  compact */}
       {otherMatches.length > 0 && (
         <div className={styles.liveTickerCard}>
           <div className={styles.liveTickerOtherHeader}>Other Matches</div>
@@ -292,7 +295,6 @@ export default function League() {
   const setTab = (t: Tab) => setSearchParams(p => { const n = new URLSearchParams(p); n.set('tab', t); return n }, { replace: true })
   const [notification, setNotification] = useState<string | null>(null)
   const [startingDraft, setStartingDraft] = useState(false)
-  const [draftType, setDraftType] = useState<'SNAKE' | 'AUCTION'>('SNAKE')
   const [error, setError] = useState('')
   const [showSeasonEnd, setShowSeasonEnd] = useState(false)
   const [startingNewSeason, setStartingNewSeason] = useState(false)
@@ -471,7 +473,7 @@ export default function League() {
     setError('')
     setStartingDraft(true)
     try {
-      await api.post(`/leagues/${id}/draft/start`, { type: draftType })
+      await api.post(`/leagues/${id}/draft/start`)
       navigate(`/league/${id}/draft`)
     } catch (err: any) {
       setError(err.response?.data?.error ?? 'Failed to start draft')
@@ -524,6 +526,17 @@ export default function League() {
   const creatorName = league.clubs.filter(c => !c.isAI)[0]?.user?.username ?? 'the league creator'
   const starterIds = new Set(myClub?.tactic?.lineup?.map(s => s.instanceId) ?? [])
   const nextMatchday = league.currentDay + 1
+  const nextOpponent = (() => {
+    if (!myClub) return undefined
+    const nextFixture = matches.find(m =>
+      m.status === 'SCHEDULED' &&
+      m.matchday === nextMatchday &&
+      (m.homeClubId === myClub.id || m.awayClubId === myClub.id)
+    )
+    if (!nextFixture) return undefined
+    const oppId = nextFixture.homeClubId === myClub.id ? nextFixture.awayClubId : nextFixture.homeClubId
+    return league.clubs.find(c => c.id === oppId)
+  })()
   const injuredStarters = myClub?.squad.filter(p => starterIds.has(p.id) && p.injured) ?? []
   const suspendedStarters = myClub?.squad.filter(p => starterIds.has(p.id) && p.suspendedMatchday === nextMatchday) ?? []
   const lowFitnessStarters = myClub?.squad.filter(p => starterIds.has(p.id) && !p.injured && p.suspendedMatchday !== nextMatchday && p.fitness < 35) ?? []
@@ -782,27 +795,13 @@ export default function League() {
             </div>
           )}
           {league.status === 'SETUP' && isCreator && (
-            <div>
-              <div className={styles.draftTypeRow}>
-                {(['SNAKE', 'AUCTION'] as const).map(t => (
-                  <button
-                    key={t}
-                    onClick={() => setDraftType(t)}
-                    className={styles.draftTypeBtn}
-                    data-active={draftType === t ? 'true' : 'false'}
-                  >
-                    {t === 'SNAKE' ? 'Snake' : 'Auction'}
-                  </button>
-                ))}
-              </div>
-              <button className="btn btn-green" onClick={handleStartDraft} disabled={startingDraft}>
-                {startingDraft ? 'Starting...' : 'Start Draft'}
-              </button>
-            </div>
+            <button className="btn btn-green" onClick={handleStartDraft} disabled={startingDraft}>
+              {startingDraft ? 'Opening...' : 'Open Transfer Window'}
+            </button>
           )}
           {league.status === 'DRAFTING' && (
             <button className="btn btn-gold" onClick={() => navigate(`/league/${id}/draft`)}>
-              Go to Draft →
+              Transfer Window →
             </button>
           )}
           {!isMobile && (
@@ -826,7 +825,7 @@ export default function League() {
         {/* Page content */}
         <div className={styles.pageBody}>
           {tab === 'overview'  && <Overview league={league} matches={matches} myClub={myClub} awards={awards} onPhysioUpgrade={handlePhysioUpgrade} onRefresh={refresh} onSwitchTab={setTab} />}
-          {tab === 'squad'     && (myClub ? <Squad squad={myClub.squad} physioLevel={myClub.physioLevel} budget={myClub.budget} nextMatchday={nextMatchday} onHeal={handleHeal} onTrain={handleTrain} /> : <p className={styles.noClubText}>You don't have a club in this league.</p>)}
+          {tab === 'squad'     && (myClub ? <Squad squad={myClub.squad} physioLevel={myClub.physioLevel} budget={myClub.budget} wageCap={league.wageCap} nextMatchday={nextMatchday} onHeal={handleHeal} onTrain={handleTrain} /> : <p className={styles.noClubText}>You don't have a club in this league.</p>)}
           {tab === 'fixtures'  && (matches.length === 0
             ? <div className={styles.emptyStateWrap}><div className={styles.emptyStateIcon}><Calendar size={40} /></div><p>Fixtures will appear after the draft.</p></div>
             : <Fixtures matches={matches} clubs={league.clubs} myClubId={myClub?.id} currentDay={league.currentDay} leagueId={league.id} />)}
@@ -835,7 +834,7 @@ export default function League() {
           {tab === 'tactics'   && myClub && (
             myClub.squad.length === 0
               ? <div className={styles.emptyStateWrap}><div className={styles.emptyStateIcon}>⊞</div><p>Set your tactics after the draft.</p></div>
-              : <Tactics leagueId={id!} myClub={myClub} nextMatchday={league.currentDay + 1} onSaved={tactic => setLeague(prev => {
+              : <Tactics leagueId={id!} myClub={myClub} nextMatchday={league.currentDay + 1} nextOpponent={nextOpponent} onSaved={tactic => setLeague(prev => {
                   if (!prev) return prev
                   return { ...prev, clubs: prev.clubs.map(c => c.id === myClub.id ? { ...c, tactic } : c) }
                 })} />

@@ -94,7 +94,7 @@ function getShirtPath(collar: KitConfig['collar'], sleeve: KitConfig['sleeve']):
     return 'M 38,12 L 50,26 L 62,12 L 84,23 L 93,44 L 78,44 L 78,112 L 22,112 L 22,44 L 7,44 L 16,23 Z'
   }
 
-  // round / polo / henley — all use the curved neckline path
+  // round / polo / henley  -  all use the curved neckline path
   if (isLong) {
     return 'M 38,12 Q 50,6 62,12 L 84,23 L 92,82 L 78,82 L 78,112 L 22,112 L 22,82 L 8,82 L 16,23 Z'
   }
@@ -212,7 +212,7 @@ export const KitSvg = React.memo(function KitSvg({
     const clip = `url(#${clipId})`
 
     switch (pattern) {
-      // Patterns that use a <pattern> def — fill a full rect
+      // Patterns that use a <pattern> def  -  fill a full rect
       case 'vertical-stripes':
       case 'thin-stripes':
       case 'pinstripes':

@@ -1,22 +1,49 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { io, type Socket } from 'socket.io-client'
 import { useAuth } from '../../stores/auth.store'
 import { api } from '../../api/client'
-import type { DraftPickEvent } from '@football/shared'
 import { posClass } from '../../utils/helpers'
 import { Navbar } from '../../components/Navbar'
-import type {
-  PlayerData, AvailablePlayer, PickRecord, PickedPlayer,
-  DraftState, ClubInfo,
-} from './types'
+import type { AuctionSummary, BudgetStats, MarketPageData } from './types'
 import { PlayerDetailModal } from './PlayerDetailModal'
-import { CompareModal } from './CompareModal'
-import { PlayerPool } from './PlayerPool'
-import { AuctionPanel } from './AuctionPanel'
-import { SquadPanel } from './SquadPanel'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function formatCountdown(endsAt: string): string {
+  const diff = new Date(endsAt).getTime() - Date.now()
+  if (diff <= 0) return 'Ended'
+  const h = Math.floor(diff / 3600000)
+  const m = Math.floor((diff % 3600000) / 60000)
+  if (h >= 24) return `${Math.floor(h / 24)}d ${h % 24}h`
+  if (h > 0) return `${h}h ${m}m`
+  const s = Math.floor((diff % 60000) / 1000)
+  return `${m}m ${s}s`
+}
+
+function formatEur(n: number): string {
+  if (n >= 1_000_000) return `€${(n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 2)}M`
+  if (n >= 1_000) return `€${(n / 1_000).toFixed(0)}k`
+  return `€${n}`
+}
+
+function statusColor(a: AuctionSummary): string {
+  if (a.status === 'WON' && a.isLeading) return 'var(--green)'
+  if (a.status === 'WON') return 'var(--text-3)'
+  if (a.isLeading) return 'var(--green)'
+  if (a.myBid !== null && !a.isLeading) return '#f59e0b'
+  return 'var(--text-2)'
+}
+
+function statusLabel(a: AuctionSummary): string {
+  if (a.status === 'WON' && a.isLeading) return 'WON'
+  if (a.status === 'WON') return 'SOLD'
+  if (a.status === 'UNSOLD') return 'UNSOLD'
+  if (a.status === 'SCHEDULED') return 'COMING SOON'
+  if (a.isLeading) return 'LEADING'
+  if (a.myBid !== null) return 'OUTBID'
+  return 'BID'
+}
 
 const POS_GROUPS: Record<string, string[]> = {
   GK: ['GK'],
@@ -25,527 +52,699 @@ const POS_GROUPS: Record<string, string[]> = {
   ATT: ['LW', 'RW', 'CF', 'ST'],
 }
 
-const IDEAL_FORMATION: Record<string, number> = {
-  GK: 1, CB: 2, LB: 1, RB: 1, CDM: 1, CM: 2, CAM: 1, LW: 1, RW: 1, ST: 2,
+// ─── AuctionCard ──────────────────────────────────────────────────────────────
+
+interface CardProps {
+  auction: AuctionSummary
+  onBid: (a: AuctionSummary) => void
+  onWatch: (a: AuctionSummary) => void
+  onDetail: (a: AuctionSummary) => void
 }
 
-function getRecommendedPositions(myPicksArg: PickRecord[], pickedMapArg: Record<string, PickedPlayer>): string[] {
-  const counts: Record<string, number> = {}
-  myPicksArg.forEach(p => {
-    const pl = pickedMapArg[p.playerId]
-    if (pl) counts[pl.position] = (counts[pl.position] ?? 0) + 1
-  })
-  return Object.entries(IDEAL_FORMATION)
-    .filter(([pos, needed]) => (counts[pos] ?? 0) < needed)
-    .map(([pos]) => pos)
+function AuctionCard({ auction: a, onBid, onWatch, onDetail }: CardProps) {
+  const [countdown, setCountdown] = useState(() => formatCountdown(a.endsAt))
+  useEffect(() => {
+    const t = setInterval(() => setCountdown(formatCountdown(a.endsAt)), 1000)
+    return () => clearInterval(t)
+  }, [a.endsAt])
+
+  const isActive = a.status === 'OPEN'
+  const isScheduled = a.status === 'SCHEDULED'
+
+  return (
+    <div
+      style={{
+        background: 'var(--bg-card)',
+        border: `1px solid ${a.isLeading ? 'rgba(54,226,126,0.35)' : a.myBid !== null && !a.isLeading && isActive ? 'rgba(245,158,11,0.35)' : 'var(--border)'}`,
+        borderRadius: 'var(--radius)',
+        padding: '14px 16px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 10,
+        cursor: 'pointer',
+        transition: 'border-color 0.15s',
+      }}
+      onClick={() => onDetail(a)}
+    >
+      {/* Player header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span className={posClass(a.player.position)} style={{ fontSize: 9 }}>{a.player.position}</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {a.player.name}
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--text-2)' }}>
+            {a.player.nationality ?? ' - '} · {a.player.age}y
+          </div>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: 'var(--text-1)', lineHeight: 1 }}>
+            {a.player.overall}
+          </div>
+          <div style={{ fontSize: 10, color: 'var(--text-3)' }}>OVR</div>
+        </div>
+      </div>
+
+      {/* Stat mini-bar */}
+      <div style={{ display: 'flex', gap: 4, fontSize: 10, color: 'var(--text-3)' }}>
+        {[
+          ['PAC', a.player.pace],
+          ['SHO', a.player.shooting],
+          ['PAS', a.player.passing],
+          ['DRI', a.player.dribbling],
+          ['DEF', a.player.defending],
+          ['PHY', a.player.physical],
+        ].map(([label, val]) => (
+          <div key={label as string} style={{ flex: 1, textAlign: 'center' }}>
+            <div style={{ fontWeight: 700, color: 'var(--text-2)', fontSize: 11 }}>{val}</div>
+            <div>{label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Wage estimate */}
+      <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
+        Wage: <span style={{ color: 'var(--text-2)', fontWeight: 600 }}>€{(a.player.overall * 200 / 1000).toFixed(0)}k/md</span>
+        <span style={{ marginLeft: 6, color: 'var(--text-3)' }}>· MV {formatEur(a.player.baseValue)}</span>
+      </div>
+
+      {/* Bid info */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          {isScheduled ? (
+            <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
+              Releases {formatCountdown(a.releasedAt)}
+            </div>
+          ) : (
+            <>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)' }}>
+                {a.bidCount > 0 ? formatEur(a.currentBid) : `Opening: ${formatEur(a.openingBid)}`}
+              </div>
+              <div style={{ fontSize: 10, color: 'var(--text-2)' }}>
+                {a.bidCount} bid{a.bidCount !== 1 ? 's' : ''} · ⏱ {countdown}
+              </div>
+            </>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: 6 }} onClick={e => e.stopPropagation()}>
+          <button
+            onClick={() => onWatch(a)}
+            style={{
+              background: a.isWatching ? 'rgba(54,226,126,0.15)' : 'var(--bg-card-2)',
+              border: `1px solid ${a.isWatching ? 'rgba(54,226,126,0.4)' : 'var(--border)'}`,
+              color: a.isWatching ? 'var(--green)' : 'var(--text-3)',
+              borderRadius: 'var(--radius-sm)',
+              padding: '5px 8px',
+              cursor: 'pointer',
+              fontSize: 12,
+            }}
+            title={a.isWatching ? 'Watching' : 'Watch'}
+          >
+            {a.isWatching ? '★' : '☆'}
+          </button>
+          {isActive && !a.isLeading && (
+            <button
+              className="btn btn-green"
+              style={{ padding: '5px 14px', fontSize: 12, fontWeight: 700 }}
+              onClick={() => onBid(a)}
+            >
+              BID
+            </button>
+          )}
+          {isActive && a.isLeading && (
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--green)', padding: '5px 8px', border: '1px solid rgba(54,226,126,0.3)', borderRadius: 'var(--radius-sm)' }}>
+              LEADING
+            </span>
+          )}
+          {!isActive && a.status !== 'SCHEDULED' && (
+            <span style={{ fontSize: 11, fontWeight: 700, color: statusColor(a), padding: '5px 8px', border: `1px solid ${statusColor(a)}40`, borderRadius: 'var(--radius-sm)' }}>
+              {statusLabel(a)}
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  )
 }
 
-// ─── Draft Page ───────────────────────────────────────────────────────────────
+// ─── BidModal ─────────────────────────────────────────────────────────────────
 
-export default function Draft() {
+interface BidModalProps {
+  auction: AuctionSummary
+  availableBudget: number
+  onClose: () => void
+  onSubmit: (auctionId: string, amount: number, maxBid?: number) => Promise<void>
+}
+
+function BidModal({ auction: a, availableBudget, onClose, onSubmit }: BidModalProps) {
+  const minBid = a.bidCount > 0 ? a.currentBid + 50_000 : a.openingBid
+  const [amount, setAmount] = useState('')
+  const [useProxy, setUseProxy] = useState(false)
+  const [maxBid, setMaxBid] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [countdown, setCountdown] = useState(() => formatCountdown(a.endsAt))
+
+  useEffect(() => {
+    const t = setInterval(() => setCountdown(formatCountdown(a.endsAt)), 1000)
+    return () => clearInterval(t)
+  }, [a.endsAt])
+
+  async function handleSubmit() {
+    const amountNum = parseInt(amount.replace(/[^0-9]/g, ''))
+    if (!amountNum || amountNum < minBid) {
+      setError(`Minimum bid is ${formatEur(minBid)}`)
+      return
+    }
+    if (amountNum > availableBudget) {
+      setError(`Exceeds available budget of ${formatEur(availableBudget)}`)
+      return
+    }
+    const maxBidNum = useProxy ? parseInt(maxBid.replace(/[^0-9]/g, '')) || undefined : undefined
+    if (useProxy && maxBidNum && maxBidNum < amountNum) {
+      setError('Max bid must be ≥ your stated bid')
+      return
+    }
+    setError('')
+    setLoading(true)
+    try {
+      await onSubmit(a.id, amountNum, maxBidNum)
+      onClose()
+    } catch (err: any) {
+      setError(err.response?.data?.error ?? err.message ?? 'Bid failed')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-md)', borderRadius: 'var(--radius)', padding: 24, width: 400, maxWidth: '90vw' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
+          <div>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 800 }}>
+              BID ON {a.player.name.toUpperCase()}
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 2 }}>
+              <span className={posClass(a.player.position)} style={{ fontSize: 9, marginRight: 6 }}>{a.player.position}</span>
+              OVR {a.player.overall} · {a.player.age}y · ⏱ {countdown}
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', fontSize: 18, padding: 0 }}>×</button>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {/* Current bid info */}
+          <div style={{ padding: '10px 14px', background: 'var(--bg-card-2)', borderRadius: 'var(--radius-sm)', display: 'flex', justifyContent: 'space-between' }}>
+            <div>
+              <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Current bid</div>
+              <div style={{ fontWeight: 700, fontSize: 15 }}>{a.bidCount > 0 ? formatEur(a.currentBid) : formatEur(a.openingBid)}</div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Minimum next bid</div>
+              <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--green)' }}>{formatEur(minBid)}</div>
+            </div>
+          </div>
+
+          {/* Bid amount */}
+          <div>
+            <label style={{ fontSize: 11, color: 'var(--text-2)', display: 'block', marginBottom: 4 }}>Your bid</label>
+            <input
+              type="number"
+              placeholder={`Min ${formatEur(minBid)}`}
+              value={amount}
+              onChange={e => setAmount(e.target.value)}
+              style={{ width: '100%' }}
+              autoFocus
+            />
+          </div>
+
+          {/* Proxy toggle */}
+          <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '8px 12px', background: useProxy ? 'rgba(54,226,126,0.06)' : 'var(--bg-card-2)', border: `1px solid ${useProxy ? 'rgba(54,226,126,0.25)' : 'var(--border)'}`, borderRadius: 'var(--radius-sm)' }}>
+            <input
+              type="checkbox"
+              checked={useProxy}
+              onChange={e => setUseProxy(e.target.checked)}
+              style={{ accentColor: 'var(--green)' }}
+            />
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 600 }}>Proxy bidding</div>
+              <div style={{ fontSize: 11, color: 'var(--text-2)' }}>System auto-bids up to your max  -  stay competitive without watching</div>
+            </div>
+          </label>
+
+          {useProxy && (
+            <div>
+              <label style={{ fontSize: 11, color: 'var(--text-2)', display: 'block', marginBottom: 4 }}>Maximum bid (proxy limit)</label>
+              <input
+                type="number"
+                placeholder="e.g. 5000000"
+                value={maxBid}
+                onChange={e => setMaxBid(e.target.value)}
+                style={{ width: '100%' }}
+              />
+            </div>
+          )}
+
+          {/* Budget + wage */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-2)' }}>
+            <span>Wage commitment: <span style={{ fontWeight: 700, color: 'var(--text-1)' }}>€{(a.player.overall * 200 / 1000).toFixed(0)}k/md</span></span>
+            <span>Available: <span style={{ fontWeight: 700, color: 'var(--text-1)' }}>{formatEur(availableBudget)}</span></span>
+          </div>
+
+          {error && <p style={{ color: 'var(--red)', fontSize: 12, margin: 0 }}>{error}</p>}
+
+          <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+            <button className="btn btn-outline" style={{ flex: 1 }} onClick={onClose}>Cancel</button>
+            <button className="btn btn-green" style={{ flex: 1, fontWeight: 800 }} onClick={handleSubmit} disabled={loading}>
+              {loading ? 'Placing...' : 'Place Bid'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── BudgetBar ────────────────────────────────────────────────────────────────
+
+function BudgetBar({ stats }: { stats: BudgetStats }) {
+  const pctReserved = stats.totalBudget > 0 ? (stats.reservedBudget / stats.totalBudget) * 100 : 0
+  const pctAvail = stats.totalBudget > 0 ? (stats.availableBudget / stats.totalBudget) * 100 : 0
+  const wageCapEnabled = stats.wageCap > 0
+  const wagePct = wageCapEnabled ? Math.min(100, (stats.wageBill / stats.wageCap) * 100) : 0
+
+  return (
+    <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'center' }}>
+      <div style={{ flex: 1, minWidth: 260 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-2)', marginBottom: 4 }}>
+          <span>Transfer Budget</span>
+          <span><span style={{ color: 'var(--green)', fontWeight: 700 }}>{formatEur(stats.availableBudget)} free</span> · {formatEur(stats.reservedBudget)} reserved</span>
+        </div>
+        <div style={{ height: 6, background: 'var(--bg-card-2)', borderRadius: 3, overflow: 'hidden' }}>
+          <div style={{ height: '100%', background: 'var(--green)', width: `${pctAvail}%`, float: 'left', opacity: 0.8 }} />
+          <div style={{ height: '100%', background: '#f59e0b', width: `${pctReserved}%`, float: 'left', opacity: 0.8 }} />
+        </div>
+      </div>
+      {wageCapEnabled && (
+        <div style={{ flex: 1, minWidth: 200 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-2)', marginBottom: 4 }}>
+            <span>Wage Cap</span>
+            <span style={{ color: wagePct > 90 ? 'var(--red)' : 'var(--text-2)' }}>
+              {formatEur(stats.wageBill)}/md of {formatEur(stats.wageCap)}
+            </span>
+          </div>
+          <div style={{ height: 6, background: 'var(--bg-card-2)', borderRadius: 3, overflow: 'hidden' }}>
+            <div style={{ height: '100%', background: wagePct > 90 ? 'var(--red)' : '#818cf8', width: `${wagePct}%` }} />
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Transfer Market Page ─────────────────────────────────────────────────────
+
+type Tab = 'market' | 'my-bids' | 'watchlist'
+
+export default function TransferMarket() {
   const { id: leagueId } = useParams<{ id: string }>()
-  const { user } = useAuth()
+  useAuth()
   const navigate = useNavigate()
 
-  const TAKE = 60
+  const [pageData, setPageData] = useState<MarketPageData | null>(null)
+  const [auctions, setAuctions] = useState<AuctionSummary[]>([])
+  const [tab, setTab] = useState<Tab>('market')
+  const [loading, setLoading] = useState(false)
 
-  const [draft, setDraft] = useState<DraftState | null>(null)
-  const [clubs, setClubs] = useState<ClubInfo[]>([])
-  const [players, setPlayers] = useState<AvailablePlayer[]>([])
-  const [hasMore, setHasMore] = useState(false)
-  const [page, setPage] = useState(0)
-  const [playersLoading, setPlayersLoading] = useState(false)
-  const [posFilter, setPosFilter] = useState('ALL')
+  // Filters
   const [search, setSearch] = useState('')
+  const [posFilter, setPosFilter] = useState('ALL')
   const [minOvr, setMinOvr] = useState('')
   const [maxOvr, setMaxOvr] = useState('')
-  const [canAfford, setCanAfford] = useState(false)
-  const [picking, setPicking] = useState<string | null>(null)
-  const [timeLeft, setTimeLeft] = useState(90)
-  const [error, setError] = useState('')
-  const [detailPlayer, setDetailPlayer] = useState<PlayerData | null>(null)
-  const [compareList, setCompareList] = useState<PlayerData[]>([])
-  const [auctionCountdown, setAuctionCountdown] = useState<number>(0)
-  const [bidAmount, setBidAmount] = useState('')
-  const [nominateMode, setNominateMode] = useState(false)
-  const [auctionMsg, setAuctionMsg] = useState('')
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const showCompare = compareList.length === 2
-  const clubMap = Object.fromEntries(clubs.map(c => [c.id, c]))
+  // Bid modal
+  const [bidAuction, setBidAuction] = useState<AuctionSummary | null>(null)
+  const [detailAuction, setDetailAuction] = useState<AuctionSummary | null>(null)
 
-  // Refs so refresh() can read current filter state without stale closures
-  const searchRef    = useRef(search)
-  const posFilterRef = useRef(posFilter)
-  const minOvrRef    = useRef(minOvr)
-  const maxOvrRef    = useRef(maxOvr)
-  const canAffordRef = useRef(canAfford)
-  useEffect(() => { searchRef.current    = search    }, [search])
-  useEffect(() => { posFilterRef.current = posFilter }, [posFilter])
-  useEffect(() => { minOvrRef.current    = minOvr    }, [minOvr])
-  useEffect(() => { maxOvrRef.current    = maxOvr    }, [maxOvr])
-  useEffect(() => { canAffordRef.current = canAfford }, [canAfford])
+  // Creator
+  const [finalizing, setFinalizing] = useState(false)
+  const [finError, setFinError] = useState('')
 
-  const fetchPlayers = useCallback(async (opts: {
+  // My bids / watchlist counts
+  const [myBidCount, setMyBidCount] = useState(0)
+  const [watchlistCount, setWatchlistCount] = useState(0)
+
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const fetchPage = useCallback(async () => {
+    if (!leagueId) return
+    try {
+      const r = await api.get(`/draft/${leagueId}`)
+      setPageData(r.data)
+    } catch {}
+  }, [leagueId])
+
+  const fetchAuctions = useCallback(async (currentTab: Tab, filters: {
     q: string; pos: string; minOvr: string; maxOvr: string
-    canAfford: boolean; pageNum: number; append: boolean
-    myBudget: number | null
-    myPicksForRecommend: PickRecord[]
-    pickedMapForRecommend: Record<string, PickedPlayer>
   }) => {
     if (!leagueId) return
-    if (!opts.append) setPlayersLoading(true)
+    setLoading(true)
     try {
-      const params = new URLSearchParams()
-      if (opts.q) params.set('q', opts.q)
-
-      if (opts.pos === 'RECOMMEND') {
-        const needed = getRecommendedPositions(opts.myPicksForRecommend, opts.pickedMapForRecommend)
-        if (needed.length > 0) needed.forEach(p => params.append('pos', p))
-        // RECOMMEND auto-enables can-afford
-        if (opts.myBudget !== null) params.set('maxPrice', String(opts.myBudget))
-      } else {
-        if (opts.pos !== 'ALL') {
-          const positions = POS_GROUPS[opts.pos]
+      if (currentTab === 'market') {
+        const params = new URLSearchParams()
+        if (filters.q) params.set('q', filters.q)
+        if (filters.pos !== 'ALL') {
+          const positions = POS_GROUPS[filters.pos]
           if (positions) positions.forEach(p => params.append('pos', p))
         }
-        if (opts.canAfford && opts.myBudget !== null) params.set('maxPrice', String(opts.myBudget))
+        if (filters.minOvr) params.set('minOvr', filters.minOvr)
+        if (filters.maxOvr) params.set('maxOvr', filters.maxOvr)
+        params.set('take', '80')
+        const r = await api.get(`/draft/${leagueId}/market?${params}`)
+        setAuctions(r.data)
+      } else if (currentTab === 'my-bids') {
+        const r = await api.get(`/draft/${leagueId}/my-bids`)
+        setAuctions(r.data)
+        setMyBidCount(r.data.length)
+      } else {
+        const r = await api.get(`/draft/${leagueId}/watchlist`)
+        setAuctions(r.data)
+        setWatchlistCount(r.data.length)
       }
-
-      if (opts.minOvr) params.set('minOvr', opts.minOvr)
-      if (opts.maxOvr) params.set('maxOvr', opts.maxOvr)
-      params.set('take', String(TAKE + 1))
-      params.set('skip', String(opts.pageNum * TAKE))
-
-      const res = await api.get(`/draft/${leagueId}/players?${params}`)
-      const data = res.data as AvailablePlayer[]
-      const more = data.length > TAKE
-      if (more) data.pop()
-
-      setHasMore(more)
-      setPlayers(prev => opts.append ? [...prev, ...data] : data)
     } finally {
-      if (!opts.append) setPlayersLoading(false)
+      setLoading(false)
     }
   }, [leagueId])
 
-  const fetchPlayersRef    = useRef(fetchPlayers)
-  const myBudgetRef        = useRef<number | null>(null)
-  const myPicksRef         = useRef<PickRecord[]>([])
-  const pickedMapRef       = useRef<Record<string, PickedPlayer>>({})
-  useEffect(() => { fetchPlayersRef.current = fetchPlayers }, [fetchPlayers])
+  const doFetch = useCallback((t: Tab) => {
+    fetchAuctions(t, { q: search, pos: posFilter, minOvr, maxOvr })
+  }, [fetchAuctions, search, posFilter, minOvr, maxOvr])
 
-  function doFetch(pageNum: number, append: boolean) {
-    fetchPlayersRef.current({
-      q: searchRef.current, pos: posFilterRef.current,
-      minOvr: minOvrRef.current, maxOvr: maxOvrRef.current,
-      canAfford: canAffordRef.current, pageNum, append,
-      myBudget: myBudgetRef.current,
-      myPicksForRecommend: myPicksRef.current,
-      pickedMapForRecommend: pickedMapRef.current,
-    })
-  }
-
-  const refresh = useCallback(async () => {
-    if (!leagueId) return
-    const [draftRes, leagueRes] = await Promise.all([
-      api.get(`/draft/${leagueId}`),
-      api.get(`/leagues/${leagueId}`),
-    ])
-    const draftData: DraftState = draftRes.data
-    const clubsData: ClubInfo[] = leagueRes.data.clubs
-    setDraft(draftData)
-    setClubs(clubsData)
-    setTimeLeft(draftData.session.pickTimeLimit ?? 90)
-    setPage(0)
-    // Update refs before fetching
-    const myClubFresh = clubsData.find(c => c.user?.id === user?.id)
-    myBudgetRef.current  = myClubFresh?.budget ?? null
-    myPicksRef.current   = draftData.session.picks
-    pickedMapRef.current = draftData.pickedPlayerMap
-    doFetch(0, false)
+  useEffect(() => {
+    fetchPage()
+    doFetch(tab)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [leagueId, user?.id])
+  }, [leagueId])
 
-  useEffect(() => { refresh() }, [refresh])
+  // Re-fetch when tab changes
+  useEffect(() => { doFetch(tab) }, [tab]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Debounced re-fetch when any filter changes (reset to page 0)
+  // Debounce filter changes (market tab only)
   useEffect(() => {
-    if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
-    searchTimerRef.current = setTimeout(() => {
-      setPage(0)
-      doFetch(0, false)
-    }, search ? 300 : 0)
-    return () => { if (searchTimerRef.current) clearTimeout(searchTimerRef.current) }
+    if (tab !== 'market') return
+    if (searchTimer.current) clearTimeout(searchTimer.current)
+    searchTimer.current = setTimeout(() => doFetch('market'), search ? 300 : 0)
+    return () => { if (searchTimer.current) clearTimeout(searchTimer.current) }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, posFilter, minOvr, maxOvr, canAfford])
+  }, [search, posFilter, minOvr, maxOvr])
 
+  // Poll every 30s to update countdown/statuses
   useEffect(() => {
-    if (timerRef.current) clearInterval(timerRef.current)
-    if (!draft || draft.session.status !== 'ACTIVE') return
-    timerRef.current = setInterval(() => {
-      setTimeLeft(t => Math.max(0, t - 1))
-    }, 1000)
-    return () => { if (timerRef.current) clearInterval(timerRef.current) }
-  }, [draft?.session.currentPick, draft?.session.currentRound, draft?.session.status])
-
-  useEffect(() => {
-    const auction = draft?.session.auctionState
-    if (!auction?.endsAt) { setAuctionCountdown(0); return }
-    const tick = () => {
-      const remaining = Math.max(0, Math.ceil((new Date(auction.endsAt!).getTime() - Date.now()) / 1000))
-      setAuctionCountdown(remaining)
-    }
-    tick()
-    const t = setInterval(tick, 500)
+    const t = setInterval(() => doFetch(tab), 30_000)
     return () => clearInterval(t)
-  }, [draft?.session.auctionState?.endsAt])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab])
 
+  // Socket  -  live bid updates
   useEffect(() => {
     if (!leagueId) return
     const socket: Socket = io()
     socket.emit('join:draft', leagueId)
-    socket.on('draft:pick', (_event: DraftPickEvent) => { refresh() })
-    socket.on('season:started', () => { navigate(`/league/${leagueId}`) })
-    socket.on('auction:nomination', () => { refresh() })
-    socket.on('auction:bid', () => { refresh() })
-    socket.on('auction:awarded', () => { refresh() })
-    socket.on('draft:complete', () => { refresh() })
-    return () => { socket.disconnect() }
-  }, [leagueId, refresh, navigate])
-
-  async function handlePick(playerId: string) {
-    if (!leagueId) return
-    setError('')
-    setPicking(playerId)
-    try {
-      await api.post(`/draft/${leagueId}/pick`, { playerId })
-      setDetailPlayer(null)
-      setCompareList([])
-    } catch (err: any) {
-      setError(err.response?.data?.error ?? 'Pick failed')
-    } finally {
-      setPicking(null)
-    }
-  }
-
-  function toggleCompare(p: PlayerData) {
-    setCompareList(prev => {
-      if (prev.some(x => x.id === p.id)) return prev.filter(x => x.id !== p.id)
-      if (prev.length >= 2) return [prev[1], p]
-      return [...prev, p]
+    socket.on('auction:bid', (data: { auctionId: string; currentBid: number; endsAt: string }) => {
+      setAuctions(prev => prev.map(a =>
+        a.id === data.auctionId
+          ? { ...a, currentBid: data.currentBid, endsAt: data.endsAt, bidCount: a.bidCount + 1 }
+          : a,
+      ))
     })
+    socket.on('window:finalized', () => navigate(`/league/${leagueId}`))
+    return () => { socket.disconnect() }
+  }, [leagueId, navigate])
+
+  async function handleBidSubmit(auctionId: string, amount: number, maxBid?: number) {
+    await api.post(`/draft/${leagueId}/bid`, { auctionId, amount, maxBid })
+    // Refresh budget and auction list
+    await Promise.all([fetchPage(), doFetch(tab)])
   }
 
-  async function handleNominate(instanceId: string) {
-    if (!leagueId) return
-    setAuctionMsg('')
+  async function handleWatch(a: AuctionSummary) {
+    await api.post(`/draft/${leagueId}/watchlist/${a.id}`)
+    setAuctions(prev => prev.map(x => x.id === a.id ? { ...x, isWatching: !x.isWatching } : x))
+  }
+
+  async function handleFinalize() {
+    setFinError('')
+    setFinalizing(true)
     try {
-      await api.post(`/draft/${leagueId}/nominate`, { instanceId })
-      setNominateMode(false)
-      refresh()
+      await api.post(`/draft/${leagueId}/finalize`)
+      navigate(`/league/${leagueId}`)
     } catch (err: any) {
-      setAuctionMsg(err.response?.data?.error ?? 'Failed to nominate')
+      setFinError(err.response?.data?.error ?? 'Failed to finalize')
+      setFinalizing(false)
     }
   }
 
-  async function handleBid() {
-    if (!leagueId) return
-    const amount = parseInt(bidAmount, 10)
-    if (isNaN(amount) || amount <= 0) return
-    setAuctionMsg('')
-    try {
-      await api.post(`/draft/${leagueId}/bid`, { amount })
-      setBidAmount('')
-      refresh()
-    } catch (err: any) {
-      setAuctionMsg(err.response?.data?.error ?? 'Failed to bid')
-    }
-  }
-
-  if (!draft) {
+  if (!pageData) {
     return (
       <div>
-        <nav className="nav"><Link to="/" className="nav-logo"><img src="/logo.png" alt="Football Manager" style={{ height: 32, display: 'block' }} /></Link></nav>
-        <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--text-2)' }}>Loading draft...</div>
+        <Navbar backTo={`/league/${leagueId}`} backLabel="League" />
+        <div style={{ textAlign: 'center', padding: '80px 0', color: 'var(--text-2)' }}>Loading...</div>
       </div>
     )
   }
 
-  const { session, currentClubId, pickedPlayerMap } = draft
-  const myClub = clubs.find(c => c.user?.id === user?.id)
-  const isMyTurn = !!myClub && currentClubId === myClub.id
-  const draftComplete = session.status === 'COMPLETED'
-  const isAuction = session.type === 'AUCTION'
-  const auction = session.auctionState ?? null
-  const isMyNominatorTurn = !!(myClub && auction && session.pickOrder[auction.nominatorIdx % session.pickOrder.length] === myClub.id)
+  const { window: win, budgetStats } = pageData
+  const windowClosed = win.status === 'CLOSED'
 
-  const totalPicks = session.pickOrder.length
-  const overallPickNumber = (session.currentRound - 1) * totalPicks + session.currentPick + 1
-  const totalPicksInDraft = session.roundsTotal * totalPicks
-  const timerPct = (timeLeft / (session.pickTimeLimit || 90)) * 100
-
-  const recentPicks = [...session.picks].reverse().slice(0, 8)
-  const nextPicks: string[] = []
-  for (let i = 0; i < Math.min(5, totalPicks); i++) {
-    nextPicks.push(session.pickOrder[(session.currentPick + i) % totalPicks])
-  }
-  const myPicks = session.picks.filter(p => p.club.id === myClub?.id)
+  const openCount = win.open
+  const scheduledCount = win.scheduled
+  const wonCount = win.won
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-base)' }}>
-      {/* Nav */}
-      <Navbar backTo={`/league/${leagueId}`} backLabel="← League">
-        {myClub && <span style={{ fontSize: 12, color: 'var(--text-2)' }}>€{(myClub.budget / 1000).toFixed(0)}M</span>}
+      <Navbar backTo={`/league/${leagueId}`} backLabel="League">
+        {budgetStats && (
+          <span style={{ fontSize: 12, color: 'var(--green)', fontWeight: 700 }}>
+            {formatEur(budgetStats.availableBudget)} available
+          </span>
+        )}
       </Navbar>
 
-      {/* Header bar */}
-      <div style={{ background: 'linear-gradient(110deg, rgba(54,226,126,0.12) 0%, var(--bg-card) 60%)', border: '1px solid rgba(54,226,126,0.3)', borderTop: 'none', borderLeft: 'none', borderRight: 'none', padding: '12px 24px' }}>
-        <div style={{ maxWidth: 1400, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
-          <div>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 30, fontWeight: 800, letterSpacing: 0.5, lineHeight: 1 }}>
-              ROUND {session.currentRound}
-              <span style={{ color: 'var(--text-2)', fontWeight: 400, fontSize: 20 }}> / {session.roundsTotal}</span>
-            </div>
-            <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 4 }}>Pick {overallPickNumber} of {totalPicksInDraft}</div>
-          </div>
-
-          <div style={{ flex: 1, maxWidth: 340 }}>
-            <div className="stat-bar-wrap" style={{ height: 6 }}>
-              <div className="stat-bar-fill" style={{ width: `${(overallPickNumber / totalPicksInDraft) * 100}%`, background: 'var(--green)' }} />
-            </div>
-          </div>
-
-          {!draftComplete && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ position: 'relative', width: 54, height: 54 }}>
-                <svg width="54" height="54" style={{ transform: 'rotate(-90deg)' }}>
-                  <circle cx="27" cy="27" r="22" fill="none" stroke="var(--border)" strokeWidth="3.5" />
-                  <circle cx="27" cy="27" r="22" fill="none"
-                    stroke={timeLeft <= 10 ? 'var(--red)' : timeLeft <= 20 ? 'var(--gold)' : 'var(--green)'}
-                    strokeWidth="3.5"
-                    strokeDasharray={`${2 * Math.PI * 22}`}
-                    strokeDashoffset={`${2 * Math.PI * 22 * (1 - timerPct / 100)}`}
-                    strokeLinecap="round"
-                    style={{ transition: 'stroke-dashoffset 1s linear, stroke 0.3s' }}
-                  />
-                </svg>
-                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 800, color: timeLeft <= 10 ? 'var(--red)' : 'var(--text-1)' }}>{timeLeft}</div>
+      {/* Header */}
+      <div style={{ background: 'linear-gradient(110deg, rgba(54,226,126,0.1) 0%, var(--bg-card) 60%)', borderBottom: '1px solid var(--border)', padding: '20px 24px' }}>
+        <div style={{ maxWidth: 1400, margin: '0 auto' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 800, letterSpacing: 0.5 }}>
+                TRANSFER WINDOW
               </div>
-              <div style={{ fontSize: 12, color: 'var(--text-2)' }}>{isMyTurn ? 'Your time' : 'Per pick'}</div>
-            </div>
-          )}
-
-          {!draftComplete && currentClubId && (
-            <div style={{ padding: '8px 16px', background: isMyTurn ? 'var(--green-glow)' : 'var(--bg-card-2)', border: `1px solid ${isMyTurn ? 'var(--green)' : 'var(--border)'}`, borderRadius: 'var(--radius-sm)' }}>
-              <div style={{ fontSize: 10, color: isMyTurn ? 'var(--green)' : 'var(--text-2)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>{isMyTurn ? 'Your pick' : 'Now picking'}</div>
-              <div style={{ fontSize: 13, fontWeight: 700, marginTop: 2, color: 'var(--text-1)' }}>{clubMap[currentClubId]?.name ?? '...'}</div>
-            </div>
-          )}
-
-          {draftComplete && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div style={{ padding: '8px 16px', background: 'var(--green-glow)', border: '1px solid var(--green)', borderRadius: 'var(--radius-sm)' }}>
-                <span style={{ color: 'var(--green)', fontWeight: 700, fontSize: 13 }}>Draft Complete!</span>
+              <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 4 }}>
+                {openCount} auctions live · {scheduledCount} upcoming · {wonCount} completed
               </div>
-              <button className="btn btn-green" onClick={() => navigate(`/league/${leagueId}`)}>
-                Go to League →
-              </button>
             </div>
-          )}
+            {budgetStats && (
+              <div style={{ flex: '1 1 300px', maxWidth: 500 }}>
+                <BudgetBar stats={budgetStats} />
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {isMyTurn && !isAuction && (
-        <div style={{ background: 'linear-gradient(90deg, rgba(54,226,126,0.18) 0%, transparent 100%)', borderBottom: '1px solid rgba(54,226,126,0.35)', padding: '13px 24px', textAlign: 'center' }}>
-          <span style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, color: 'var(--green)', letterSpacing: 1 }}>YOUR TURN TO PICK — Select a player below</span>
-        </div>
-      )}
+      <div style={{ maxWidth: 1400, margin: '0 auto', padding: '20px 24px', display: 'grid', gridTemplateColumns: '1fr 280px', gap: 24, alignItems: 'start' }}>
 
-      {isAuction && nominateMode && isMyNominatorTurn && !auction?.instanceId && (
-        <div style={{ background: 'linear-gradient(90deg, rgba(54,226,126,0.18) 0%, transparent 100%)', borderBottom: '1px solid rgba(54,226,126,0.35)', padding: '13px 24px', display: 'flex', alignItems: 'center', gap: 16, justifyContent: 'center' }}>
-          <span style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 800, color: 'var(--green)', letterSpacing: 1 }}>Click a player below to nominate them for auction</span>
-          <button className="btn btn-outline" style={{ fontSize: 12 }} onClick={() => setNominateMode(false)}>Cancel</button>
-        </div>
-      )}
-
-      {/* Compare hint bar */}
-      {compareList.length === 1 && !showCompare && (
-        <div style={{ background: 'rgba(245,166,35,0.08)', borderBottom: '1px solid rgba(245,166,35,0.2)', padding: '10px 24px', display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontSize: 13, color: 'var(--gold)' }}>⇄ Comparing: <strong>{compareList[0].name}</strong> — click ⇄ on another player to compare</span>
-          <button className="btn btn-ghost" style={{ fontSize: 12, padding: '4px 10px', marginLeft: 'auto' }} onClick={() => setCompareList([])}>Clear</button>
-        </div>
-      )}
-
-      {/* Main layout */}
-      <div style={{ maxWidth: 1400, margin: '0 auto', padding: '20px 24px', display: 'grid', gridTemplateColumns: '1fr 320px', gap: 22, alignItems: 'start' }}>
-
-        {/* ── Player list ─────────────────────────────────────── */}
-        <PlayerPool
-          players={players}
-          playersLoading={playersLoading}
-          hasMore={hasMore}
-          page={page}
-          posFilter={posFilter}
-          search={search}
-          minOvr={minOvr}
-          maxOvr={maxOvr}
-          canAfford={canAfford}
-          myClub={myClub}
-          isMyTurn={isMyTurn}
-          isAuction={isAuction}
-          nominateMode={nominateMode}
-          isMyNominatorTurn={isMyNominatorTurn}
-          auctionInstanceId={auction?.instanceId}
-          picking={picking}
-          compareList={compareList}
-          error={error}
-          onPosFilterChange={setPosFilter}
-          onSearchChange={setSearch}
-          onMinOvrChange={setMinOvr}
-          onMaxOvrChange={setMaxOvr}
-          onCanAffordToggle={() => setCanAfford(v => !v)}
-          onClearFilters={() => { setMinOvr(''); setMaxOvr(''); setCanAfford(false); setPosFilter('ALL'); setSearch('') }}
-          onPlayerClick={inst => {
-            if (isAuction && nominateMode) {
-              handleNominate(inst.id)
-            } else {
-              setDetailPlayer(inst.player)
-            }
-          }}
-          onToggleCompare={toggleCompare}
-          onPick={handlePick}
-          onNominate={handleNominate}
-          onLoadMore={() => {
-            const nextPage = page + 1
-            setPage(nextPage)
-            doFetch(nextPage, true)
-          }}
-          onCancelNominate={() => setNominateMode(false)}
-        />
-
-        {/* ── Right sidebar ──────────────────────────────────────── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, position: 'sticky', top: 76 }}>
-
-          {/* Auction panel */}
-          {isAuction && (
-            <AuctionPanel
-              auction={auction}
-              session={session}
-              clubs={clubs}
-              availablePlayers={draft.availablePlayers}
-              myClub={myClub}
-              isMyNominatorTurn={isMyNominatorTurn}
-              auctionCountdown={auctionCountdown}
-              bidAmount={bidAmount}
-              auctionMsg={auctionMsg}
-              onBidAmountChange={setBidAmount}
-              onBid={handleBid}
-              onNominateMode={() => setNominateMode(true)}
-            />
-          )}
-
-          {/* Pick order */}
-          <div className="card" style={{ padding: 0 }}>
-            <div className="card-header">
-              <span className="accent-bar" />
-              <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Pick Order</span>
-            </div>
-            <div style={{ padding: 16 }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {nextPicks.map((cId, i) => {
-                  const club = clubMap[cId]
-                  const isNow = i === 0
-                  const isMe = club?.user?.id === user?.id
-                  return (
-                    <div key={`${cId}-${i}`} style={{
-                      display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px',
-                      background: isNow ? (isMe ? 'var(--green-glow)' : 'var(--bg-card-2)') : 'transparent',
-                      border: `1px solid ${isNow ? (isMe ? 'rgba(54,226,126,0.3)' : 'var(--border-md)') : 'transparent'}`,
-                      borderRadius: 'var(--radius-sm)',
-                    }}>
-                      <div style={{ width: 22, height: 22, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isNow ? (isMe ? 'var(--green)' : 'var(--bg-hover)') : 'var(--bg-card-2)', fontFamily: 'var(--font-display)', fontSize: 12, fontWeight: 800, color: isNow && isMe ? '#000' : 'var(--text-2)', flexShrink: 0 }}>{i + 1}</div>
-                      <div style={{ fontSize: 13, fontWeight: isNow ? 700 : 400, color: isMe ? 'var(--green)' : 'var(--text-1)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{club?.name ?? '...'}</div>
-                      {isNow && <span style={{ fontSize: 10, color: isMe ? 'var(--green)' : 'var(--text-2)', fontWeight: 700 }}>NOW</span>}
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
+        {/* ── Main column ────────────────────────────────────────────────────── */}
+        <div>
+          {/* Tabs */}
+          <div style={{ display: 'flex', gap: 4, marginBottom: 16 }}>
+            {(['market', 'my-bids', 'watchlist'] as Tab[]).map(t => (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                style={{
+                  padding: '7px 14px',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid',
+                  borderColor: tab === t ? 'var(--green)' : 'var(--border)',
+                  background: tab === t ? 'rgba(54,226,126,0.1)' : 'transparent',
+                  color: tab === t ? 'var(--green)' : 'var(--text-2)',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                }}
+              >
+                {t === 'market' ? 'Market' : t === 'my-bids' ? `My Bids${myBidCount > 0 ? ` (${myBidCount})` : ''}` : `Watchlist${watchlistCount > 0 ? ` (${watchlistCount})` : ''}`}
+              </button>
+            ))}
           </div>
 
-          {/* Squad analysis */}
-          {myClub && (
-            <SquadPanel
-              myClub={myClub}
-              myPicks={myPicks}
-              pickedPlayerMap={pickedPlayerMap as Record<string, PickedPlayer & Partial<PlayerData>>}
-              session={session}
-            />
-          )}
-
-          {/* Recent picks */}
-          <div className="card" style={{ padding: 0 }}>
-            <div className="card-header">
-              <span className="accent-bar" />
-              <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Recent Picks</span>
-            </div>
-            <div style={{ padding: 16 }}>
-              {recentPicks.length === 0 ? (
-                <p style={{ color: 'var(--text-2)', fontSize: 12 }}>No picks yet</p>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {recentPicks.map((pick, i) => {
-                    const pp = pickedPlayerMap[pick.playerId]
-                    const isMyPick = pick.club.id === myClub?.id
-                    return (
-                      <div key={pick.id} style={{ padding: '7px 10px', background: isMyPick ? 'rgba(54,226,126,0.05)' : 'transparent', borderRadius: 'var(--radius-sm)', borderLeft: isMyPick ? '2px solid var(--green)' : '2px solid transparent', opacity: i === 0 ? 1 : Math.max(0.4, 1 - i * 0.1) }}>
-                        <div style={{ fontSize: 11, color: isMyPick ? 'var(--green)' : 'var(--text-2)', fontWeight: 600, marginBottom: 2 }}>{pick.club.name} · R{pick.round}P{pick.pickNumber + 1}</div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          {pp?.photoUrl && (
-                            <div style={{ width: 24, height: 28, borderRadius: 4, overflow: 'hidden', background: 'var(--bg-base)', flexShrink: 0 }}>
-                              <img src={pp.photoUrl} alt="" referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} onError={e => { const el = e.currentTarget as HTMLImageElement; el.style.display = 'none'; const p = el.parentElement; if (p) p.setAttribute('data-failed', '1') }} />
-                            </div>
-                          )}
-                          {pp && <span className={posClass(pp.position)} style={{ fontSize: 9 }}>{pp.position}</span>}
-                          <span style={{ fontSize: 12, color: 'var(--text-1)', fontWeight: 600 }}>{pp?.name ?? '...'}</span>
-                          {pp && <span style={{ fontSize: 11, color: 'var(--text-2)' }}>{pp.overall}</span>}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
+          {/* Filters (market only) */}
+          {tab === 'market' && (
+            <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+              <input
+                placeholder="Search player..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                style={{ flex: '1 1 180px', minWidth: 120 }}
+              />
+              <select
+                value={posFilter}
+                onChange={e => setPosFilter(e.target.value)}
+                style={{ flex: '0 0 auto' }}
+              >
+                <option value="ALL">All positions</option>
+                <option value="GK">GK</option>
+                <option value="DEF">DEF</option>
+                <option value="MID">MID</option>
+                <option value="ATT">ATT</option>
+              </select>
+              <input
+                type="number"
+                placeholder="Min OVR"
+                value={minOvr}
+                onChange={e => setMinOvr(e.target.value)}
+                style={{ width: 80 }}
+              />
+              <input
+                type="number"
+                placeholder="Max OVR"
+                value={maxOvr}
+                onChange={e => setMaxOvr(e.target.value)}
+                style={{ width: 80 }}
+              />
+              {(search || posFilter !== 'ALL' || minOvr || maxOvr) && (
+                <button
+                  className="btn btn-outline"
+                  style={{ fontSize: 11 }}
+                  onClick={() => { setSearch(''); setPosFilter('ALL'); setMinOvr(''); setMaxOvr('') }}
+                >
+                  Clear
+                </button>
               )}
             </div>
+          )}
+
+          {/* Auction grid */}
+          {loading && auctions.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-2)' }}>Loading auctions...</div>
+          ) : auctions.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-2)' }}>
+              {tab === 'my-bids' ? 'No active bids' : tab === 'watchlist' ? 'Nothing on your watchlist' : 'No auctions found'}
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
+              {auctions.map(a => (
+                <AuctionCard
+                  key={a.id}
+                  auction={a}
+                  onBid={setBidAuction}
+                  onWatch={handleWatch}
+                  onDetail={a => setDetailAuction(a)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ── Sidebar ──────────────────────────────────────────────────────── */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, position: 'sticky', top: 76 }}>
+
+          {/* Window status card */}
+          <div className="card" style={{ padding: 0 }}>
+            <div className="card-header">
+              <span className="accent-bar" />
+              <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Window Status</span>
+            </div>
+            <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {[
+                { label: 'Live auctions', value: openCount, color: 'var(--green)' },
+                { label: 'Coming soon', value: scheduledCount, color: 'var(--text-2)' },
+                { label: 'Completed', value: wonCount, color: 'var(--text-3)' },
+              ].map(({ label, value, color }) => (
+                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                  <span style={{ color: 'var(--text-2)' }}>{label}</span>
+                  <span style={{ fontWeight: 700, color }}>{value}</span>
+                </div>
+              ))}
+            </div>
           </div>
+
+          {/* How it works */}
+          <div className="card" style={{ padding: 0 }}>
+            <div className="card-header">
+              <span className="accent-bar" />
+              <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase' }}>How it works</span>
+            </div>
+            <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {[
+                ['Open auctions', 'Bid on any live player'],
+                ['Proxy bidding', 'Set a max  -  system auto-bids for you'],
+                ['Anti-snipe', 'Late bids extend the auction by 5 min'],
+                ['Budget reserve', 'Winning bids are locked until resolved'],
+                ['Auto-fill', 'Remaining slots filled after window closes'],
+              ].map(([title, desc]) => (
+                <div key={title}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-1)' }}>{title}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-2)' }}>{desc}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Creator finalize panel */}
+          {!windowClosed && (
+            <div className="card" style={{ padding: 16 }}>
+              <div style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 12 }}>
+                When you're ready, finalize the window. All open auctions will close, and remaining squad slots will be auto-filled.
+              </div>
+              {finError && <p style={{ color: 'var(--red)', fontSize: 12, marginBottom: 8 }}>{finError}</p>}
+              <button
+                className="btn btn-green"
+                style={{ width: '100%', fontWeight: 800 }}
+                disabled={finalizing}
+                onClick={handleFinalize}
+              >
+                {finalizing ? 'Finalizing...' : 'Finalize Window'}
+              </button>
+              <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 6, textAlign: 'center' }}>
+                Only the league creator can do this
+              </p>
+            </div>
+          )}
+
+          {windowClosed && (
+            <div style={{ padding: '12px 16px', background: 'rgba(54,226,126,0.08)', border: '1px solid rgba(54,226,126,0.25)', borderRadius: 'var(--radius)', textAlign: 'center' }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--green)', marginBottom: 4 }}>Window Closed</div>
+              <div style={{ fontSize: 12, color: 'var(--text-2)' }}>Season is starting...</div>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Detail modal */}
-      {detailPlayer && (
-        <PlayerDetailModal
-          p={detailPlayer}
-          isMyTurn={isMyTurn}
-          canAfford={!myClub || myClub.budget >= detailPlayer.baseValue}
-          onPick={() => handlePick(detailPlayer.id)}
-          onClose={() => setDetailPlayer(null)}
-          onToggleCompare={() => { toggleCompare(detailPlayer); setDetailPlayer(null) }}
-          inCompare={compareList.some(c => c.id === detailPlayer.id)}
-          pickingId={picking}
+      {/* Bid modal */}
+      {bidAuction && budgetStats && (
+        <BidModal
+          auction={bidAuction}
+          availableBudget={budgetStats.availableBudget}
+          onClose={() => setBidAuction(null)}
+          onSubmit={handleBidSubmit}
         />
       )}
 
-      {/* Compare modal */}
-      {showCompare && (
-        <CompareModal
-          a={compareList[0]}
-          b={compareList[1]}
-          isMyTurn={isMyTurn}
-          myBudget={myClub?.budget ?? 0}
-          onPick={id => { handlePick(id); setCompareList([]) }}
-          onClose={() => setCompareList([])}
-          pickingId={picking}
+      {/* Detail modal  -  reuse PlayerDetailModal with adapted props */}
+      {detailAuction && (
+        <PlayerDetailModal
+          p={detailAuction.player as any}
+          isMyTurn={detailAuction.status === 'OPEN' && !detailAuction.isLeading}
+          canAfford={budgetStats ? detailAuction.openingBid + 50_000 <= budgetStats.availableBudget : true}
+          onPick={() => { setBidAuction(detailAuction); setDetailAuction(null) }}
+          onClose={() => setDetailAuction(null)}
+          onToggleCompare={() => {}}
+          inCompare={false}
+          pickingId={null}
         />
       )}
     </div>

@@ -33,6 +33,8 @@ export interface SquadPlayer {
   morale: number; form: number; fitness: number; injured: boolean; injuryDaysLeft: number
   suspendedMatchday: number | null; yellowCards: number; trainedPosition: string | null; wage: number
   boosts?: Array<{ stat: string }>
+  discoveredPersonalities?: string[]
+  fanFavouriteScore?: number
 }
 
 export interface LineupSlot { instanceId: string; position: string; role?: string }
@@ -43,10 +45,13 @@ export interface SubSlot {
 }
 export interface TacticData {
   formation: string
-  style: 'possession' | 'counter' | 'pressing' | 'lowblock'
+  style: 'possession' | 'counter' | 'pressing' | 'lowblock' | 'gegenpress' | 'wing_play' | 'direct'
   pressingIntensity: number
   defensiveLine: number
   width: number
+  tempo?: number
+  tacticalFocus?: string | null
+  tacticalCards?: string[]
   lineup: LineupSlot[]
   subs?: SubSlot[]
   customSlots?: { position: string; x: number; y: number }[]
@@ -66,6 +71,10 @@ export interface ClubData {
   user: { id: string; username: string } | null
   squad: SquadPlayer[]
   tactic: TacticData | null
+  fanMood?: number
+  managerSpecialization?: string | null
+  tacticFamiliarity?: number
+  lastTacticIdentity?: string | null
 }
 
 export interface LeagueData {
@@ -76,6 +85,7 @@ export interface LeagueData {
   draftSession: { id: string; status: string; currentRound: number; roundsTotal: number; pickOrder: string[]; currentPick: number } | null
   history?: SeasonSnapshot[] | null
   hasCup?: boolean
+  wageCap?: number
   transferWindowOpen?: boolean
   cupBracket?: unknown
   competitionType?: string

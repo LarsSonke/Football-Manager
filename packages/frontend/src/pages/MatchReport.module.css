@@ -585,7 +585,7 @@
   flex: 1;
 }
 
-/* Symmetric two-sided stat bar — home fills from left in paper, away fills right in accent */
+/* Symmetric two-sided stat bar  -  home fills from left in paper, away fills right in accent */
 .statBarTrack {
   height: 4px;
   border-radius: 0;

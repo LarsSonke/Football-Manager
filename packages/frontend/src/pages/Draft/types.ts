@@ -1,48 +1,72 @@
-// Draft-specific types
-// PlayerData is re-exported from the shared League types (superset of what Draft needs)
 export type { PlayerData } from '../League/types'
-import type { PlayerData } from '../League/types'
 
-export interface AvailablePlayer {
-  id: string; playerId: string; player: PlayerData
+export interface AuctionPlayer {
+  id: string
+  name: string
+  position: string
+  overall: number
+  potential: number
+  age: number
+  nationality: string | null
+  baseValue: number
+  photoUrl: string | null
+  pace: number
+  shooting: number
+  passing: number
+  dribbling: number
+  defending: number
+  physical: number
+  positions?: string[]
+  preferredRoles?: string[]
 }
 
-export interface PickRecord {
-  id: string; round: number; pickNumber: number; price: number; playerId: string
-  club: { id: string; name: string }
+export type AuctionStatus = 'SCHEDULED' | 'OPEN' | 'WON' | 'UNSOLD'
+
+export interface AuctionSummary {
+  id: string
+  instanceId: string
+  player: AuctionPlayer
+  openingBid: number
+  currentBid: number
+  winnerClubId: string | null
+  releasedAt: string
+  endsAt: string
+  status: AuctionStatus
+  bidCount: number
+  myBid: number | null
+  myMaxBid: number | null
+  isLeading: boolean
+  isWatching: boolean
 }
 
-export interface AuctionRound {
-  nominatorIdx: number
-  instanceId: string | null
-  playerId: string | null
-  highBid: number
-  highBidderId: string | null
-  endsAt: string | null
-  budgets: Record<string, number>
+export interface BudgetStats {
+  totalBudget: number
+  reservedBudget: number
+  availableBudget: number
+  wageBill: number
+  wageCap: number
 }
 
-export interface DraftSession {
-  id: string; status: string; type: string
-  currentRound: number; roundsTotal: number
-  currentPick: number; pickOrder: string[]
-  pickTimeLimit: number
-  picks: PickRecord[]
-  auctionState?: AuctionRound | null
+export interface WindowState {
+  id: string
+  status: 'PENDING' | 'OPEN' | 'CLOSED'
+  opensAt: string | null
+  scheduled: number
+  open: number
+  won: number
+  unsold: number
 }
 
-export interface PickedPlayer {
-  id: string; name: string; position: string; overall: number; photoUrl?: string | null
-}
-
-export interface DraftState {
-  session: DraftSession
-  availablePlayers: AvailablePlayer[]
-  currentClubId: string | null
-  pickedPlayerMap: Record<string, PickedPlayer>
+export interface MarketPageData {
+  window: WindowState
+  budgetStats: BudgetStats | null
+  myClubId: string | null
 }
 
 export interface ClubInfo {
-  id: string; name: string; budget: number; isAI: boolean
+  id: string
+  name: string
+  budget: number
+  isAI: boolean
   user: { id: string; username: string } | null
 }

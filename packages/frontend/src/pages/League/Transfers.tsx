@@ -136,6 +136,7 @@ export default function Transfers({ leagueId, myClub, squadSize, transferWindowO
           <div className={styles.playerMeta}>
             <span className={posClass(pl.position)} style={{ fontSize: 9 }}>{pl.position}</span>
             <span className={styles.playerAge}>Age {pl.age}</span>
+            {p.wage > 0 && <span className={styles.playerWage}>€{(p.wage / 1000).toFixed(0)}k/md</span>}
             {p.injured && <span className={styles.playerInjured}>INJ</span>}
             {!p.injured && p.form >= 76 && <span style={{ fontSize: 9, fontWeight: 800, color: '#cf9438', background: 'rgba(207,148,56,0.12)', padding: '1px 4px', borderRadius: 3, letterSpacing: '0.04em' }}>IF</span>}
           </div>
@@ -263,12 +264,12 @@ export default function Transfers({ leagueId, myClub, squadSize, transferWindowO
         )}
       </div>
 
-      {/* Your squad — release panel */}
+      {/* Your squad  -  release panel */}
       <div className={styles.panel}>
         <div className={styles.panelHeader}>
           <div className={styles.panelTitle}>Your Squad</div>
           <span className={styles.panelCount}>{myClub.squad.length}/{squadSize}</span>
-          {squadTooSmall && <span className={styles.panelWarning}>Min 11 — can't release</span>}
+          {squadTooSmall && <span className={styles.panelWarning}>Min 11  -  can't release</span>}
         </div>
         {!isMobile && (
           <div className={styles.colHeadersFreeAgent}>

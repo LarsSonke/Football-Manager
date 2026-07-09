@@ -1,5 +1,6 @@
 ﻿import 'dotenv/config'
 import { PrismaClient } from '@prisma/client'
+import { assignPersonalities } from '../src/services/personality.service'
 
 const prisma = new PrismaClient()
 
@@ -158,6 +159,7 @@ async function main() {
     playStyles: playStyles as string[],
     preferredRoles: preferredRoles as string[],
     baseValue: calcValue(overall as number),
+    personalities: assignPersonalities(),
   }))
 
   await prisma.player.createMany({ data })

@@ -42,7 +42,7 @@ router.post('/:id/release', async (req: AuthRequest, res) => {
     if (league?.status !== 'ACTIVE') { res.status(400).json({ error: 'Can only release players during an active season' }); return }
     if (!league.transferWindowOpen) { res.status(400).json({ error: 'Transfer window is currently closed' }); return }
     if (!club.squad.some(p => p.id === instanceId)) { res.status(403).json({ error: 'Player not in your squad' }); return }
-    if (club.squad.length <= 11) { res.status(400).json({ error: 'Squad too small to release — need at least 11 players' }); return }
+    if (club.squad.length <= 11) { res.status(400).json({ error: 'Squad too small to release  -  need at least 11 players' }); return }
 
     await prisma.transferListing.deleteMany({ where: { instanceId } })
     await prisma.playerInstance.update({
@@ -153,7 +153,7 @@ router.post('/:id/list', async (req: AuthRequest, res) => {
     })
     if (!club) { res.status(403).json({ error: 'No club in this league' }); return }
     if (!club.squad.some(p => p.id === instanceId)) { res.status(403).json({ error: 'Player not in your squad' }); return }
-    if (club.squad.length <= 11) { res.status(400).json({ error: 'Squad too small to list — need at least 12 players' }); return }
+    if (club.squad.length <= 11) { res.status(400).json({ error: 'Squad too small to list  -  need at least 12 players' }); return }
 
     const existing = await prisma.transferListing.findUnique({ where: { instanceId } })
     if (existing) { res.status(400).json({ error: 'Player is already listed' }); return }
@@ -199,19 +199,63 @@ router.post('/:id/buy/:instanceId', async (req: AuthRequest, res) => {
     const buyerClub = await prisma.club.findFirst({
       where: { leagueId: req.params.id, userId: req.userId! },
       include: { squad: true },
+      // also fetch managerSpecialization for NEGOTIATOR
     })
     if (!buyerClub) { res.status(403).json({ error: 'No club in this league' }); return }
     if (buyerClub.id === listing.sellerClubId) { res.status(400).json({ error: "Can't buy your own player" }); return }
     if (buyerClub.squad.length >= league!.squadSize) { res.status(400).json({ error: `Squad full (max ${league!.squadSize})` }); return }
-    if (buyerClub.budget < listing.askingPrice) { res.status(400).json({ error: `Insufficient budget (need €${listing.askingPrice.toLocaleString()})` }); return }
+
+    // NEGOTIATOR: 15% discount on purchase price
+    const negotiatorDiscount = (buyerClub as any).managerSpecialization === 'NEGOTIATOR' ? 0.85 : 1.0
+    const actualPrice = Math.round(listing.askingPrice * negotiatorDiscount)
+
+    if (buyerClub.budget < actualPrice) { res.status(400).json({ error: `Insufficient budget (need €${actualPrice.toLocaleString()})` }); return }
+
+    // Check fan favourite status before completing the sale
+    const soldInst = await prisma.playerInstance.findUnique({
+      where: { id: req.params.instanceId },
+      select: { fanFavouriteScore: true, player: { select: { name: true } } },
+    })
+    const isFanFav = (soldInst?.fanFavouriteScore ?? 0) >= 50
+    const isLegend = (soldInst?.fanFavouriteScore ?? 0) >= 100
 
     await prisma.$transaction([
       prisma.playerInstance.update({ where: { id: req.params.instanceId }, data: { clubId: buyerClub.id } }),
-      prisma.club.update({ where: { id: buyerClub.id }, data: { budget: { decrement: listing.askingPrice } } }),
-      prisma.club.update({ where: { id: listing.sellerClubId }, data: { budget: { increment: listing.askingPrice } } }),
+      prisma.club.update({ where: { id: buyerClub.id }, data: { budget: { decrement: actualPrice } } }),
+      prisma.club.update({ where: { id: listing.sellerClubId }, data: { budget: { increment: actualPrice } } }),
       prisma.transferListing.delete({ where: { instanceId: req.params.instanceId } }),
     ])
-    res.json({ ok: true })
+
+    // Fan favourite penalty: mood drop + squad morale drop + news event
+    if (isFanFav && soldInst) {
+      const moodPenalty = isLegend ? 18 : 10
+      const sellerClub = await prisma.club.findUnique({ where: { id: listing.sellerClubId }, select: { fanMood: true, leagueId: true } })
+      if (sellerClub) {
+        await prisma.club.update({
+          where: { id: listing.sellerClubId },
+          data: { fanMood: Math.max(0, sellerClub.fanMood - moodPenalty) },
+        })
+        // Squad morale hit
+        await prisma.$executeRaw`
+          UPDATE "PlayerInstance"
+          SET morale = GREATEST(0, morale - 3)
+          WHERE "clubId" = ${listing.sellerClubId} AND "leagueId" = ${sellerClub.leagueId}
+        `
+        // Persist news event
+        const leagueRow = await prisma.league.findUnique({ where: { id: sellerClub.leagueId }, select: { newsEvents: true, currentDay: true } })
+        const existing = Array.isArray(leagueRow?.newsEvents) ? (leagueRow.newsEvents as any[]) : []
+        existing.push({
+          type: 'fan',
+          headline: `${soldInst.player.name} sold  -  fans furious`,
+          detail: isLegend ? 'A club legend has been sold. The supporters are devastated.' : 'A fan favourite has left. The mood in the stands has turned.',
+          matchday: leagueRow?.currentDay ?? 0,
+          clubId: listing.sellerClubId,
+        })
+        await prisma.league.update({ where: { id: sellerClub.leagueId }, data: { newsEvents: existing.slice(-30) as any } })
+      }
+    }
+
+    res.json({ ok: true, fanFavouriteSold: isFanFav, legendSold: isLegend, pricePaid: actualPrice, negotiatorDiscount: negotiatorDiscount < 1 })
   } catch (err: any) {
     res.status(400).json({ error: err.message })
   }

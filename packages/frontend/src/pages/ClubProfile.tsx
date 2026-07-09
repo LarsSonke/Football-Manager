@@ -121,7 +121,7 @@ export default function ClubProfile() {
           <div>
             <h1 className={styles.heroName}>{club.name}</h1>
             <div className={styles.heroManager}>
-              {club.isAI ? 'AI Club' : club.user ? `Manager: ${club.user.username}` : '—'}
+              {club.isAI ? 'AI Club' : club.user ? `Manager: ${club.user.username}` : ' - '}
             </div>
             <div className={styles.statsRow}>
               <div className={styles.statPill}>

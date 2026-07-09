@@ -9,7 +9,7 @@ export type DraftType = 'SNAKE' | 'AUCTION'
 export type DraftStatus = 'PENDING' | 'ACTIVE' | 'COMPLETED'
 export type MatchStatus = 'SCHEDULED' | 'SIMULATED'
 export type EventType = 'GOAL' | 'OWN_GOAL' | 'YELLOW_CARD' | 'RED_CARD' | 'SUBSTITUTION' | 'PENALTY_MISS'
-export type TacticStyle = 'possession' | 'counter' | 'pressing' | 'lowblock'
+export type TacticStyle = 'possession' | 'counter' | 'pressing' | 'lowblock' | 'gegenpress' | 'wing_play' | 'direct'
 
 export interface PlayerBase {
   id: string
@@ -42,6 +42,7 @@ export interface TacticConfig {
   pressingIntensity: number  // 0–100
   defensiveLine: number      // 0–100
   width: number              // 0–100
+  tempo: number              // 0–100 (20=slow, 50=balanced, 80=fast)
 }
 
 export interface LineupSlot {

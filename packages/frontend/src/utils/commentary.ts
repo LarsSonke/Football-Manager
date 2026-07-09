@@ -1,4 +1,4 @@
-// Commentary template engine — no API required.
+// Commentary template engine  -  no API required.
 // Templates use {player}, {assist}, {club}, {opp} as placeholders.
 
 export interface CommentaryContext {
@@ -40,7 +40,7 @@ function scoreDiff(ctx: CommentaryContext) {
 
 // ─── Template pools ───────────────────────────────────────────────────────────
 
-// Goals — tap-in / close range (high xg)
+// Goals  -  tap-in / close range (high xg)
 const GOAL_CLOSE = [
   '{player} taps home from close range. Couldn\'t miss.',
   'Right place, right time. {player} finishes coolly inside the six-yard box.',
@@ -50,18 +50,18 @@ const GOAL_CLOSE = [
   'Clinical. {player} takes one touch and rolls it into the corner.',
   'Nobody was picking that up. {player} was first to react.',
   'The keeper had no chance once {player} got in behind. Composed finish.',
-  '{player} side-foots it home. It looked easy — it was anything but.',
+  '{player} side-foots it home. It looked easy  -  it was anything but.',
   '{player} was waiting at the back post. He never misses these.',
 ]
 
-// Goals — good chance (medium xg, with assist)
+// Goals  -  good chance (medium xg, with assist)
 const GOAL_ASSISTED = [
   '{assist} picks out {player} and the finish is top corner. What a combination.',
   'The ball from {assist} is perfectly weighted. {player} makes it look effortless.',
   '{assist} with the vision. {player} with the execution. A wonderful team goal.',
   'The pass from {assist} cuts through the defence. {player} doesn\'t need a second invitation.',
   'One touch from {player} to control, another to finish. {assist} did all the hard work.',
-  '{assist} finds {player} in space. The angle looked difficult — the finish was not.',
+  '{assist} finds {player} in space. The angle looked difficult  -  the finish was not.',
   'Quick feet from {assist} and then a precise ball. {player} finishes first time.',
   '{assist} drives into the box and cuts it back. {player} arrives on cue.',
   'A lovely one-two between {assist} and {player}. The defence was carved open.',
@@ -70,13 +70,13 @@ const GOAL_ASSISTED = [
   'Slick passing, then {assist} threads the needle. {player} finishes clinically.',
 ]
 
-// Goals — solo effort (medium xg, no assist)
+// Goals  -  solo effort (medium xg, no assist)
 const GOAL_SOLO = [
   '{player} does it all himself. Two defenders beaten before the finish.',
   'Nobody could stop {player} there. He drove at them and finished brilliantly.',
   '{player} picks the ball up deep, carries it thirty metres and slots it home.',
   'Individual brilliance from {player}. The defenders didn\'t get close.',
-  '{player} cuts inside and curls it — and it finds the top corner.',
+  '{player} cuts inside and curls it  -  and it finds the top corner.',
   'There was only one player who was going to score from there. {player} does.',
   'He beats one, beats two, and fires it low into the corner. Sensational from {player}.',
   '{player} drifts in from the left and bends one around the keeper. Stunning.',
@@ -84,9 +84,9 @@ const GOAL_SOLO = [
   'A dribble that left two men on the floor. {player} with a goal to remember.',
 ]
 
-// Goals — long range / screamer (low xg)
+// Goals  -  long range / screamer (low xg)
 const GOAL_LONGRANGE = [
-  '{player} lets fly from distance — and it screams into the top corner!',
+  '{player} lets fly from distance  -  and it screams into the top corner!',
   'Nobody expected that. {player} hits it first time from twenty-five yards.',
   'What audacity from {player}. The goalkeeper is rooted to the spot.',
   'That dips late. The keeper has no chance. {player} with a thunderbolt.',
@@ -98,7 +98,7 @@ const GOAL_LONGRANGE = [
   'There is no explanation for that. {player} just hit it and hoped. Perfect.',
 ]
 
-// Goals — headers
+// Goals  -  headers
 const GOAL_HEADER = [
   '{player} rises above everyone and powers a header into the net.',
   'The delivery is inch-perfect and {player} makes no mistake with the header.',
@@ -110,18 +110,18 @@ const GOAL_HEADER = [
   'Another corner, another headed goal. {player} is a menace at set pieces.',
 ]
 
-// Goals — penalty
+// Goals  -  penalty
 const GOAL_PENALTY = [
   '{player} steps up. Steady run-up. Low and hard into the corner. Keeper dives the wrong way.',
   'Ice-cold from {player}. He sends the keeper one way and rolls it the other.',
   '{player} with the penalty. He looks at the keeper, picks his spot, scores. No drama.',
   'The goalkeeper goes early but {player} has already decided. Middle of the net.',
   '{player} stutters in his run and the keeper bites. Side-foot into the bottom right.',
-  'Penalty scored. {player} doesn\'t mess about — straight down the middle.',
-  'High into the roof of the net from {player}. Brave penalty — unbeatable.',
+  'Penalty scored. {player} doesn\'t mess about  -  straight down the middle.',
+  'High into the roof of the net from {player}. Brave penalty  -  unbeatable.',
 ]
 
-// Goals — injury time (contextual)
+// Goals  -  injury time (contextual)
 const GOAL_INJURY_TIME = [
   'Can you believe it?! {player} in injury time! The stadium erupts.',
   'That\'s the last kick. {player} has done it with the clock almost out!',
@@ -135,10 +135,10 @@ const GOAL_INJURY_TIME = [
 // Own goals
 const OWN_GOAL = [
   'It deflects off {player} and wrong-foots his own keeper. Cruel.',
-  '{player} under pressure — and it goes in off his shin. Calamitous defending.',
+  '{player} under pressure  -  and it goes in off his shin. Calamitous defending.',
   'The ball takes a wicked deflection off {player}. The keeper is stranded.',
   '{player} can\'t believe it. He\'s turned it into his own net.',
-  'Unlucky — {player} stretches to clear it and it ends up in the back of the net.',
+  'Unlucky  -  {player} stretches to clear it and it ends up in the back of the net.',
   'A freak bounce catches {player} out and it loops over the goalkeeper. Bizarre.',
   '{player} is inconsolable. He didn\'t mean that.',
 ]
@@ -148,7 +148,7 @@ const PENALTY_MISS = [
   '{player} blazes it over the bar. That\'s a terrible penalty.',
   'The goalkeeper guesses right and gets down to save it. {player} can\'t hide.',
   '{player} hits the post! He\'s sent to his knees.',
-  'The keeper reads it perfectly. {player} had gone for power — not direction.',
+  'The keeper reads it perfectly. {player} had gone for power  -  not direction.',
   '{player} steps up... and hits the crossbar. This could be a decisive miss.',
   'A poor penalty from {player}. The goalkeeper barely has to move.',
   '{player} stutters, the keeper holds his ground, and the ball is saved. Huge miss.',
@@ -171,12 +171,12 @@ const YELLOW_CARD = [
 const RED_CARD = [
   '{player} is off. He lunges in recklessly and leaves the referee no choice.',
   'Straight red! {player} is dismissed for a dangerous challenge. {club} are down to ten.',
-  'The referee goes to his pocket for the second time — and it\'s red for {player}.',
+  'The referee goes to his pocket for the second time  -  and it\'s red for {player}.',
   'Furious reaction from {player}. He\'ll be watching the next match from the stands.',
   '{player} has let his team down badly. A moment of madness ends his afternoon.',
   'The crowd call for red. The referee agrees. {player} trudges off.',
   'Second yellow, and {player} has to go. {club} will need to reorganise quickly.',
-  'A lunge from behind. Dangerous. The referee doesn\'t deliberate — it\'s a red card.',
+  'A lunge from behind. Dangerous. The referee doesn\'t deliberate  -  it\'s a red card.',
 ]
 
 // Substitutions
@@ -185,14 +185,14 @@ const SUBSTITUTION = [
   '{assist} is coming on. The manager wants fresh legs.',
   '{player} is replaced by {assist}. He receives a warm reception leaving the field.',
   'The manager makes a change. {assist} comes on with instructions.',
-  '{player} has given everything — {assist} takes his place.',
+  '{player} has given everything  -  {assist} takes his place.',
   '{assist} strips off and gets on. An attacking change from the touchline.',
   'A tactical switch. {player} comes off and {assist} enters the fray.',
   '{player} holds his hamstring as he walks off. Precautionary perhaps. {assist} on.',
   'The crowd applaud {player} as he leaves. {assist} gets a final word from the manager.',
 ]
 
-// Quiet tick moments — score state based
+// Quiet tick moments  -  score state based
 const TICK_EARLY = [
   'Both sides feeling each other out in the opening exchanges.',
   'A cautious start from both teams. Neither willing to commit.',
@@ -235,7 +235,7 @@ const TICK_LOSING = [
 
 const TICK_LATE_DRAW = [
   'Both managers look nervous on the touchline. A draw suits neither.',
-  'There\'s a goal in this — both sides hunting for a winner.',
+  'There\'s a goal in this  -  both sides hunting for a winner.',
   'The tempo has increased. Neither team is settling for a point.',
   'End-to-end now. The last team to score wins this.',
   'Barely a break in play. Both sets of players are giving everything.',
@@ -338,7 +338,7 @@ export function getCommentary(
 export const KICKOFF_LINES = [
   'The referee blows his whistle. We\'re underway.',
   'Both sides are ready. Let\'s get this started.',
-  'Kick off. Ninety minutes — let\'s see what happens.',
+  'Kick off. Ninety minutes  -  let\'s see what happens.',
   'Here we go. The ball is rolling.',
   'The crowd are loud. The players are ready. Kick off.',
 ]

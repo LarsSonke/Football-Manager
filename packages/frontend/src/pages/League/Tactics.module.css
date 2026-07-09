@@ -484,73 +484,458 @@
   text-transform: uppercase;
 }
 
-/* ─── Tactical style grid ────────────────────────────────────────────────── */
-.styleGrid {
+/* ─── Team Identity grid ─────────────────────────────────────────────────── */
+.identityGrid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 5px;
-  margin-bottom: 10px;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+  padding: 14px 14px 10px;
 }
 
-.styleBtn {
-  padding: 8px 6px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
+.identityCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 6px;
+  border-radius: 8px;
   border: 1.5px solid var(--border);
   background: transparent;
-  color: var(--text-2);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.identityCard:hover {
+  border-color: var(--id-color, var(--border-md));
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.identityCardActive {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 6px;
+  border-radius: 8px;
+  border: 2px solid var(--id-color, var(--green));
+  background: color-mix(in srgb, var(--id-color, var(--green)) 12%, transparent);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.identityEmoji {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.identityLabel {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-1);
   text-align: center;
-  transition: all 0.15s;
+  line-height: 1.3;
 }
 
-.styleBtnActive {
-  composes: styleBtn;
-  border-color: var(--green);
-  background: rgba(54, 226, 126, 0.1);
-  color: var(--green);
-}
-
-.styleInfo {
+.identityInfo {
+  margin: 0 14px 14px;
+  padding: 10px 12px;
   background: var(--bg-base);
   border-radius: 8px;
-  padding: 10px 12px;
+  border-left: 3px solid var(--id-color, var(--green));
 }
 
-.styleDesc {
+.identityDesc {
   font-size: 11px;
   color: var(--text-2);
   line-height: 1.5;
-  margin-bottom: 9px;
+  margin-bottom: 8px;
 }
 
-.styleTraits {
+.identityEffects {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.identityEffect {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--id-color, var(--green));
+}
+
+.identityWeakness {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--red);
+  margin-top: 2px;
+}
+
+/* ─── Familiarity Bar ────────────────────────────────────────────────────── */
+.familiarityRow {
+  margin: 0 14px 14px;
+  padding: 10px 12px;
+  background: var(--bg-base);
+  border-radius: 8px;
+}
+
+.familiarityHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.familiarityLabel {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.familiarityPct {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-1);
+  font-family: var(--font-display);
+}
+
+.familiarityTrack {
+  height: 6px;
+  background: color-mix(in srgb, var(--text-2) 20%, transparent);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.familiarityFill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-2, #36e27e) 0%, var(--green) 100%);
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+.familiarityNote {
+  font-size: 10px;
+  color: var(--text-3);
+}
+
+/* ─── Opponent Report ────────────────────────────────────────────────────── */
+.oppName {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-2);
+  font-family: var(--font-display);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.oppBody {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.oppIdentityRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.oppIdentityEmoji {
+  font-size: 22px;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.oppIdentityLabel {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.oppIdentityDesc {
+  font-size: 11px;
+  color: var(--text-2);
+  line-height: 1.45;
+  margin-top: 3px;
+}
+
+.oppInstructions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+}
+
+.oppInstrRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 8px;
+  background: var(--bg-base);
+  border-radius: 6px;
+}
+
+.oppInstrLabel {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.oppInstrValue {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--text-1);
+}
+
+.tacticalBattle {
+  background: var(--bg-base);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tacticalBattleHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tacticalBattleTitle {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+
+.tacticalBattleLabel {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.tacticalBattleStars {
+  display: flex;
+  gap: 2px;
+  letter-spacing: 2px;
+}
+
+.tacticalBattleDetail {
+  font-size: 11px;
+  color: var(--text-2);
+  line-height: 1.45;
+  font-style: italic;
+}
+
+/* ─── Tactical Focus ─────────────────────────────────────────────────────── */
+.focusGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+  padding: 12px 14px 8px;
+}
+
+.focusCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 9px 6px;
+  border-radius: 8px;
+  border: 1.5px solid var(--border);
+  background: transparent;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.focusCard:hover {
+  border-color: var(--fc-color, var(--border-md));
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.focusCardActive {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 9px 6px;
+  border-radius: 8px;
+  border: 2px solid var(--fc-color, var(--green));
+  background: color-mix(in srgb, var(--fc-color, var(--green)) 14%, transparent);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.focusEmoji {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.focusLabel {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-1);
+  text-align: center;
+  line-height: 1.3;
+}
+
+.focusInfo {
+  margin: 0 14px 12px;
+  padding: 9px 12px;
+  background: var(--bg-base);
+  border-radius: 8px;
+  border-left: 3px solid var(--fc-color, var(--green));
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.focusInfoDesc {
+  font-size: 11px;
+  color: var(--text-2);
+  line-height: 1.45;
+}
+
+.focusInfoEffects {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.focusInfoEffect {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--fc-color, var(--green));
+}
+
+.focusInfoWarning {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--red);
+}
+
+/* ─── Tactical Cards ─────────────────────────────────────────────────────── */
+.cardsCount {
+  font-size: 10px;
+  color: var(--text-2);
+  font-weight: 700;
+}
+
+.cardsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  padding: 10px 14px 8px;
+}
+
+.tacticalCard {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 9px;
+  border-radius: 7px;
+  border: 1.5px solid var(--border);
+  background: transparent;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  text-align: left;
+  position: relative;
+}
+
+.tacticalCard:hover {
+  border-color: var(--tc-color, var(--border-md));
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.tacticalCardActive {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 9px;
+  border-radius: 7px;
+  border: 2px solid var(--tc-color, var(--green));
+  background: color-mix(in srgb, var(--tc-color, var(--green)) 14%, transparent);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  text-align: left;
+  position: relative;
+}
+
+.tacticalCardDisabled {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 9px;
+  border-radius: 7px;
+  border: 1.5px solid var(--border);
+  background: transparent;
+  cursor: not-allowed;
+  opacity: 0.4;
+  text-align: left;
+}
+
+.tacticalCardEmoji {
+  font-size: 14px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.tacticalCardLabel {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-1);
+  line-height: 1.35;
+  flex: 1;
+}
+
+.tacticalCardCheck {
+  font-size: 10px;
+  font-weight: 900;
+  color: var(--tc-color, var(--green));
+  margin-left: auto;
+}
+
+.cardsActive {
+  margin: 0 14px 12px;
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.styleTrait {
+.cardsActiveItem {
   display: flex;
   align-items: center;
-  gap: 5px;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: color-mix(in srgb, var(--tc-color, var(--green)) 10%, transparent);
+  border-radius: 6px;
+  border-left: 3px solid var(--tc-color, var(--green));
   font-size: 10px;
-  color: var(--green);
+  font-weight: 700;
+  color: var(--text-1);
 }
 
-.styleTraitBonus {
-  font-weight: 800;
-  font-size: 11px;
-}
-
-.styleTraitCost {
-  display: flex;
-  align-items: center;
-  gap: 5px;
+.cardsActiveEffect {
   font-size: 10px;
-  color: var(--red);
-  margin-top: 2px;
+  color: var(--tc-color, var(--green));
+  font-weight: 700;
 }
 
 /* ─── Stage buttons (pressing / defLine / width) ─────────────────────────── */
@@ -1227,6 +1612,14 @@
   font-size: 11px;
   color: var(--text-2);
   line-height: 1.5;
+}
+
+.roleStatEffect {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--green);
+  margin-top: 3px;
+  opacity: 0.85;
 }
 
 .noRoles {

@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { requireAuth, type AuthRequest } from '../middleware/auth'
 import * as managementService from '../services/management.service'
 import { prisma } from '../prisma'
+import { VALID_SPECIALIZATIONS } from '../services/specialization.service'
 
 const router = Router({ mergeParams: true })
 router.use(requireAuth)
@@ -11,10 +12,13 @@ router.use(requireAuth)
 
 const tacticSchema = z.object({
   formation: z.string(),
-  style: z.enum(['possession', 'counter', 'pressing', 'lowblock']),
+  style: z.enum(['possession', 'counter', 'pressing', 'lowblock', 'gegenpress', 'wing_play', 'direct']),
   pressingIntensity: z.number().int().min(0).max(100),
   defensiveLine: z.number().int().min(0).max(100),
   width: z.number().int().min(0).max(100),
+  tempo: z.number().int().min(0).max(100).optional(),
+  tacticalFocus: z.string().nullable().optional(),
+  tacticalCards: z.array(z.string()).max(3).optional(),
   lineup: z.array(z.object({ instanceId: z.string(), position: z.string() })).length(11),
   subs: z.array(z.object({
     outInstanceId: z.string(),
@@ -45,9 +49,17 @@ router.patch('/:id/tactic', async (req: AuthRequest, res) => {
       res.status(403).json({ error: 'You do not have a club in this league' })
       return
     }
+    const currentIdentity = (club as any).lastTacticIdentity as string | null
+    const newIdentity = parsed.data.style
+    const identityChanged = currentIdentity !== null && currentIdentity !== newIdentity
+
     const updated = await prisma.club.update({
       where: { id: club.id },
-      data: { tactic: parsed.data },
+      data: {
+        tactic: parsed.data,
+        lastTacticIdentity: newIdentity,
+        ...(identityChanged ? { tacticFamiliarity: 25 } : {}),
+      },
     })
     res.json(updated)
   } catch (err: any) {
@@ -225,6 +237,31 @@ router.get('/:id/coach-advice', async (req: AuthRequest, res) => {
   try {
     const advice = await managementService.getCoachAdvice(req.params.id, req.userId!)
     res.json(advice)
+  } catch (err: any) {
+    res.status(400).json({ error: err.message })
+  }
+})
+
+// ─── Manager Specialization ───────────────────────────────────────────────────
+
+router.post('/:id/specialization', async (req: AuthRequest, res) => {
+  const parsed = z.object({ specialization: z.string() }).safeParse(req.body)
+  if (!parsed.success) { res.status(400).json({ error: 'specialization required' }); return }
+  if (!(VALID_SPECIALIZATIONS as string[]).includes(parsed.data.specialization)) {
+    res.status(400).json({ error: 'Invalid specialization' }); return
+  }
+  try {
+    const club = await prisma.club.findFirst({
+      where: { leagueId: req.params.id, userId: req.userId! },
+      select: { id: true, managerSpecialization: true },
+    })
+    if (!club) { res.status(403).json({ error: 'No club in this league' }); return }
+    if (club.managerSpecialization) { res.status(400).json({ error: 'Specialization already chosen  -  cannot be changed' }); return }
+    await prisma.club.update({
+      where: { id: club.id },
+      data: { managerSpecialization: parsed.data.specialization },
+    })
+    res.json({ ok: true, specialization: parsed.data.specialization })
   } catch (err: any) {
     res.status(400).json({ error: err.message })
   }

@@ -1,14 +1,14 @@
 import { prisma } from '../prisma'
 
 export interface NewsItem {
-  type: 'result' | 'scorer' | 'streak' | 'injury' | 'transfer' | 'upset'
+  type: 'result' | 'scorer' | 'streak' | 'injury' | 'transfer' | 'upset' | 'personality' | 'fan'
   headline: string
   detail: string
   matchday: number
 }
 
 export async function getLeagueNews(leagueId: string): Promise<NewsItem[]> {
-  const league = await prisma.league.findUnique({ where: { id: leagueId }, select: { currentDay: true } })
+  const league = await prisma.league.findUnique({ where: { id: leagueId }, select: { currentDay: true, newsEvents: true } })
   if (!league || league.currentDay === 0) return []
 
   const day = league.currentDay
@@ -23,7 +23,7 @@ export async function getLeagueNews(leagueId: string): Promise<NewsItem[]> {
       },
       orderBy: { matchday: 'desc' },
     }),
-    // All clubs — used for streak computation
+    // All clubs  -  used for streak computation
     prisma.club.findMany({ where: { leagueId }, select: { id: true, name: true } }),
     // Injured players (top 3)
     prisma.playerInstance.findMany({
@@ -90,7 +90,7 @@ export async function getLeagueNews(leagueId: string): Promise<NewsItem[]> {
     })
 
     for (const club of allClubs) {
-      // Already sorted desc by matchday — iterate most-recent-first
+      // Already sorted desc by matchday  -  iterate most-recent-first
       const clubMatches = form5.filter(m => m.homeClubId === club.id || m.awayClubId === club.id)
       if (clubMatches.length < 3) continue
 
@@ -156,12 +156,27 @@ export async function getLeagueNews(leagueId: string): Promise<NewsItem[]> {
     })
   }
 
+  // ── Personality discoveries & fan events from League.newsEvents ──────────────
+  if (Array.isArray(league.newsEvents)) {
+    const recent = (league.newsEvents as any[])
+      .filter(e => e.matchday >= Math.max(1, day - 5))
+      .slice(-8)
+    for (const e of recent) {
+      items.push({
+        type: e.type === 'personality' ? 'personality' : 'fan',
+        headline: e.headline,
+        detail: e.detail,
+        matchday: e.matchday,
+      })
+    }
+  }
+
   // Sort: most recent matchday first, then results before meta items
   items.sort((a, b) => {
     if (b.matchday !== a.matchday) return b.matchday - a.matchday
-    const order = ['result', 'upset', 'streak', 'scorer', 'injury', 'transfer']
+    const order = ['result', 'upset', 'personality', 'fan', 'streak', 'scorer', 'injury', 'transfer']
     return order.indexOf(a.type) - order.indexOf(b.type)
   })
 
-  return items.slice(0, 12)
+  return items.slice(0, 15)
 }

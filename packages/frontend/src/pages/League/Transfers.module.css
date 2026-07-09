@@ -198,6 +198,12 @@
   color: var(--text-3);
 }
 
+.playerWage {
+  font-size: 10px;
+  color: var(--text-3);
+  font-weight: 600;
+}
+
 .playerInjured {
   font-size: 10px;
   color: var(--red);

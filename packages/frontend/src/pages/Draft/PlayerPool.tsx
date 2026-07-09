@@ -1,6 +1,12 @@
 import { flagUrl } from '../../utils/flagCodes'
 import { posClass, ovrColor } from '../../utils/helpers'
-import type { PlayerData, AvailablePlayer, ClubInfo } from './types'
+import type { PlayerData } from './types'
+
+interface AvailablePlayer {
+  id: string
+  playerId: string
+  player: PlayerData
+}
 
 // ─── MiniStats ────────────────────────────────────────────────────────────────
 
@@ -33,13 +39,7 @@ interface PlayerPoolProps {
   minOvr: string
   maxOvr: string
   canAfford: boolean
-  myClub: ClubInfo | undefined
-  isMyTurn: boolean
-  isAuction: boolean
-  nominateMode: boolean
-  isMyNominatorTurn: boolean
-  auctionInstanceId: string | null | undefined
-  picking: string | null
+  pickedPlayerIds: Set<string>  // playerIds already in the user's picks
   compareList: PlayerData[]
   error: string
   onPosFilterChange: (v: string) => void
@@ -50,20 +50,17 @@ interface PlayerPoolProps {
   onClearFilters: () => void
   onPlayerClick: (inst: AvailablePlayer) => void
   onToggleCompare: (p: PlayerData) => void
-  onPick: (playerId: string) => void
-  onNominate: (instanceId: string) => void
+  onAdd: (inst: AvailablePlayer) => void
   onLoadMore: () => void
-  onCancelNominate: () => void
 }
 
 export function PlayerPool({
   players, playersLoading, hasMore,
   posFilter, search, minOvr, maxOvr, canAfford,
-  myClub, isMyTurn, isAuction, nominateMode, isMyNominatorTurn, auctionInstanceId,
-  picking, compareList, error,
+  pickedPlayerIds, compareList, error,
   onPosFilterChange, onSearchChange, onMinOvrChange, onMaxOvrChange,
   onCanAffordToggle, onClearFilters, onPlayerClick, onToggleCompare,
-  onPick, onNominate, onLoadMore,
+  onAdd, onLoadMore,
 }: PlayerPoolProps) {
   return (
     <div>
@@ -84,13 +81,6 @@ export function PlayerPool({
               transition: 'all 0.15s',
             }}>{g}</button>
           ))}
-          <button onClick={() => onPosFilterChange('RECOMMEND')} style={{
-            padding: '7px 14px', border: 'none', cursor: 'pointer',
-            fontFamily: 'var(--font-body)', fontSize: 12, fontWeight: 700,
-            background: posFilter === 'RECOMMEND' ? 'var(--gold)' : 'transparent',
-            color: posFilter === 'RECOMMEND' ? '#000' : 'var(--gold)',
-            transition: 'all 0.15s',
-          }} title="Show affordable players for positions your squad is missing">★ Recommend</button>
         </div>
         <input placeholder="Search player..." value={search} onChange={e => onSearchChange(e.target.value)} style={{ flex: 1, minWidth: 160, maxWidth: 240 }} />
       </div>
@@ -127,22 +117,16 @@ export function PlayerPool({
           <button
             onClick={onClearFilters}
             style={{ padding: '5px 10px', borderRadius: 'var(--radius-sm)', fontSize: 11, cursor: 'pointer', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-3)' }}
-          >✕ Clear</button>
+          >Clear</button>
         )}
         <span style={{ fontSize: 12, color: 'var(--text-2)', marginLeft: 'auto', whiteSpace: 'nowrap' }}>
           {playersLoading ? 'Loading...' : `${players.length} shown${hasMore ? '+' : ''}`}
         </span>
       </div>
 
-      {posFilter === 'RECOMMEND' && (
-        <div style={{ padding: '8px 12px', background: 'rgba(233,196,106,0.08)', border: '1px solid rgba(233,196,106,0.2)', borderRadius: 'var(--radius-sm)', marginBottom: 12, fontSize: 12, color: 'var(--gold)' }}>
-          Showing affordable players for your missing squad positions
-        </div>
-      )}
-
       {error && <p className="error-text" style={{ marginBottom: 10 }}>{error}</p>}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 'calc(100vh - 340px)', overflowY: 'auto', paddingRight: 4 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 'calc(100vh - 320px)', overflowY: 'auto', paddingRight: 4 }}>
         {playersLoading && (
           <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-2)', fontSize: 13 }}>Loading players...</div>
         )}
@@ -152,8 +136,7 @@ export function PlayerPool({
         {players.map(inst => {
           const p = inst.player
           const flagSrc = flagUrl(p.nationality)
-          const playerAffordable = !myClub || myClub.budget >= p.baseValue
-          const isPicking = picking === p.id
+          const alreadyPicked = pickedPlayerIds.has(p.id)
           const inCompare = compareList.some(c => c.id === p.id)
 
           return (
@@ -162,28 +145,30 @@ export function PlayerPool({
               style={{
                 display: 'grid', gridTemplateColumns: '44px 44px 1fr auto auto auto',
                 alignItems: 'center', gap: 12, padding: '10px 14px',
-                background: inCompare ? 'rgba(233,196,106,0.06)' : 'var(--bg-card)',
-                border: `1px solid ${inCompare ? 'rgba(233,196,106,0.35)' : 'var(--border)'}`,
-                borderRadius: 'var(--radius-sm)', opacity: playerAffordable ? 1 : 0.45,
+                background: alreadyPicked
+                  ? 'rgba(54,226,126,0.06)'
+                  : inCompare ? 'rgba(233,196,106,0.06)' : 'var(--bg-card)',
+                border: `1px solid ${alreadyPicked ? 'rgba(54,226,126,0.4)' : inCompare ? 'rgba(233,196,106,0.35)' : 'var(--border)'}`,
+                borderRadius: 'var(--radius-sm)',
                 cursor: 'pointer', transition: 'border-color 0.15s, background 0.15s',
               }}
               onClick={() => onPlayerClick(inst)}
-              onMouseEnter={e => { if (!inCompare && playerAffordable) (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border-md)' }}
-              onMouseLeave={e => { if (!inCompare) (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border)' }}
+              onMouseEnter={e => { if (!alreadyPicked && !inCompare) (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border-md)' }}
+              onMouseLeave={e => { if (!alreadyPicked && !inCompare) (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border)' }}
             >
               {/* Face photo */}
               <div style={{ width: 44, height: 52, borderRadius: 6, overflow: 'hidden', background: 'var(--bg-base)', flexShrink: 0 }}>
                 {p.photoUrl
-                  ? <img src={p.photoUrl} alt="" referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} onError={e => { const el = e.currentTarget as HTMLImageElement; el.style.display = 'none'; const p = el.parentElement; if (p) p.setAttribute('data-failed', '1') }} />
+                  ? <img src={p.photoUrl} alt="" referrerPolicy="no-referrer" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top' }} onError={e => { const el = e.currentTarget as HTMLImageElement; el.style.display = 'none'; const par = el.parentElement; if (par) par.setAttribute('data-failed', '1') }} />
                   : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-3)', fontSize: 22 }}>?</div>
                 }
               </div>
 
-              {/* OVR + all positions */}
+              {/* OVR + positions */}
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, lineHeight: 1, color: ovrColor(p.overall) }}>{p.overall}</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2, justifyContent: 'center', marginTop: 3 }}>
-                  {(p.positions?.length ? p.positions : [p.position]).map((pos, i) => (
+                  {(p.positions?.length ? p.positions : [p.position]).map((pos: string, i: number) => (
                     <span key={pos} className={posClass(pos)} style={{ fontSize: 8, padding: '1px 3px', opacity: i === 0 ? 1 : 0.65 }}>{pos}</span>
                   ))}
                 </div>
@@ -200,16 +185,12 @@ export function PlayerPool({
                 <MiniStats p={p} />
               </div>
 
-              {/* Price */}
+              {/* Market value */}
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 700, color: playerAffordable ? 'var(--text-1)' : 'var(--red)' }}>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 700, color: 'var(--text-1)' }}>
                   €{(p.baseValue / 1000).toFixed(1)}M
                 </div>
-                {myClub && (
-                  <div style={{ fontSize: 10, color: 'var(--text-2)', marginTop: 2 }}>
-                    {playerAffordable ? `€${((myClub.budget - p.baseValue) / 1000).toFixed(1)}M left` : "Can't afford"}
-                  </div>
-                )}
+                <div style={{ fontSize: 10, color: 'var(--text-2)', marginTop: 2 }}>market val</div>
               </div>
 
               {/* Compare button */}
@@ -220,26 +201,16 @@ export function PlayerPool({
                 title="Compare"
               >⇄</button>
 
-              {/* Pick/Nominate button */}
-              {isAuction ? (
-                <button
-                  className={`btn ${nominateMode && isMyNominatorTurn && !auctionInstanceId ? 'btn-green' : 'btn-ghost'}`}
-                  style={{ fontSize: 12, padding: '7px 14px', minWidth: 72 }}
-                  disabled={!isMyNominatorTurn || !!auctionInstanceId}
-                  onClick={e => { e.stopPropagation(); onNominate(inst.id) }}
-                >
-                  Nominate
-                </button>
-              ) : (
-                <button
-                  className={`btn ${isMyTurn && playerAffordable ? 'btn-green' : 'btn-ghost'}`}
-                  style={{ fontSize: 12, padding: '7px 14px', minWidth: 60 }}
-                  disabled={!isMyTurn || !playerAffordable || !!picking}
-                  onClick={e => { e.stopPropagation(); onPick(p.id) }}
-                >
-                  {isPicking ? '...' : 'Pick'}
-                </button>
-              )}
+              {/* Add to picks button */}
+              <button
+                className={`btn ${alreadyPicked ? 'btn-ghost' : 'btn-green'}`}
+                style={{ fontSize: 12, padding: '7px 14px', minWidth: 80, opacity: alreadyPicked ? 0.5 : 1 }}
+                disabled={alreadyPicked}
+                onClick={e => { e.stopPropagation(); if (!alreadyPicked) onAdd(inst) }}
+                title={alreadyPicked ? 'Already in your picks' : 'Add to picks'}
+              >
+                {alreadyPicked ? '✓ Added' : '+ Add'}
+              </button>
             </div>
           )
         })}

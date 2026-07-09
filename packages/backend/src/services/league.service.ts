@@ -4,29 +4,23 @@ import { generateRoundRobin } from '../simulation/schedule'
 import { generateCupBracket } from '../simulation/cup'
 import type { GrowthEntry } from './sponsor.service'
 
-const AI_TEAM_NAMES = [
-  'FC Redwood', 'United City', 'Athletic Blue', 'Sporting Verde',
-  'Royal Crown FC', 'Iron Gate FC', 'Silver Star United', 'Thunder Bay FC',
-  'Coastal United', 'Mountain Lions FC', 'Valley United', 'Harbor City FC',
-  'Riverside FC', 'Lakeside Athletic', 'Northgate FC', 'Southend United',
-  'Eastside FC', 'Westbridge City',
-]
 
 export async function createLeague(
   userId: string,
   data: {
     name: string
+    clubName: string
     startingBudget: number
     maxClubs: number
     seasonLength: number
     squadSize: number
     hasCup?: boolean
     competitionType?: string
+    windowDays?: number
+    maxManualPicks?: number
+    wageCap?: number
   },
 ) {
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { username: true } })
-  if (!user) throw new Error('User not found')
-
   return prisma.league.create({
     data: {
       name: data.name,
@@ -36,9 +30,12 @@ export async function createLeague(
       squadSize: data.squadSize,
       hasCup: data.hasCup ?? false,
       competitionType: (data.competitionType as any) ?? 'LEAGUE',
+      windowDays: data.windowDays ?? 3,
+      maxManualPicks: data.maxManualPicks ?? 11,
+      wageCap: data.wageCap ?? 0,
       clubs: {
         create: {
-          name: `${user.username} FC`,
+          name: data.clubName,
           budget: data.startingBudget,
           userId,
         },
@@ -67,64 +64,10 @@ export async function joinLeague(userId: string, leagueId: string, clubName: str
   })
 }
 
-export async function startDraft(leagueId: string, requestingUserId: string, draftType: 'SNAKE' | 'AUCTION' = 'SNAKE') {
-  const league = await prisma.league.findUnique({
-    where: { id: leagueId },
-    include: { clubs: true },
-  })
-  if (!league) throw new Error('League not found')
-  if (league.status !== 'SETUP') throw new Error('Draft has already started')
-
-  // Only the league creator (first club owner) can start the draft
-  const firstClub = league.clubs.find((c) => !c.isAI)
-  if (firstClub?.userId !== requestingUserId) throw new Error('Only the league creator can start the draft')
-
-  const humanCount = league.clubs.filter((c) => !c.isAI).length
-  const aiCount = league.maxClubs - humanCount
-  const usedNames = new Set(league.clubs.map((c) => c.name))
-  const availableAINames = AI_TEAM_NAMES.filter((n) => !usedNames.has(n))
-
-  if (aiCount > 0) {
-    await prisma.club.createMany({
-      data: Array.from({ length: aiCount }, (_, i) => ({
-        name: availableAINames[i] ?? `AI Club ${i + 1}`,
-        budget: league.startingBudget,
-        isAI: true,
-        leagueId,
-      })),
-    })
-  }
-
-  const allClubs = await prisma.club.findMany({ where: { leagueId } })
-
-  // Create player instances for this league in batches to avoid a single huge query
-  const allPlayers = await prisma.player.findMany({ select: { id: true } })
-  const BATCH = 500
-  for (let i = 0; i < allPlayers.length; i += BATCH) {
-    await prisma.playerInstance.createMany({
-      data: allPlayers.slice(i, i + BATCH).map(p => ({ playerId: p.id, leagueId })),
-      skipDuplicates: true,
-    })
-  }
-
-  // Randomize initial draft order
-  const shuffled = [...allClubs].sort(() => Math.random() - 0.5)
-
-  const session = await prisma.draftSession.create({
-    data: {
-      leagueId,
-      type: draftType,
-      status: 'ACTIVE',
-      pickOrder: shuffled.map((c) => c.id),
-      currentRound: 1,
-      currentPick: 0,
-      roundsTotal: league.squadSize,
-    },
-  })
-
-  await prisma.league.update({ where: { id: leagueId }, data: { status: 'DRAFTING' } })
-
-  return { session, clubs: allClubs }
+export async function startDraft(leagueId: string, requestingUserId: string) {
+  // Delegates to auction service  -  kept for backward compatibility with route handler
+  const { openWindow } = await import('./auction.service')
+  return openWindow(leagueId, requestingUserId)
 }
 
 export async function startSeason(leagueId: string) {
@@ -150,7 +93,7 @@ export async function startSeason(leagueId: string) {
     await generateCupBracket(leagueId)
   }
 
-  await prisma.league.update({ where: { id: leagueId }, data: { status: 'ACTIVE' } })
+  await prisma.league.update({ where: { id: leagueId }, data: { status: 'ACTIVE', currentDay: 0 } })
 }
 
 export async function startNewSeason(leagueId: string, userId: string): Promise<{ growthChanges: GrowthEntry[] }> {
@@ -185,7 +128,7 @@ export async function startNewSeason(leagueId: string, userId: string): Promise<
     data: { status: 'FAILED' },
   })
 
-  // Clear match history (delete dependents first — no cascade set in schema)
+  // Clear match history (delete dependents first  -  no cascade set in schema)
   await prisma.transferListing.deleteMany({ where: { leagueId } })
   await prisma.playerBoost.deleteMany({ where: { leagueId } })
   await prisma.matchPerformance.deleteMany({ where: { match: { leagueId } } })
@@ -287,7 +230,7 @@ function buildPlayerGrowthUpdate(player: {
     updates[stat] = Math.max(20, Math.min(99, current + change))
   }
 
-  // Summary stats — recalculate from updated detailed stats or approximate
+  // Summary stats  -  recalculate from updated detailed stats or approximate
   for (const [summary, components] of Object.entries(SUMMARY_COMPONENTS)) {
     const values = components.map(c => (updates[c] ?? player[c] as number)).filter(v => typeof v === 'number')
     if (values.length === 0) continue
@@ -295,7 +238,7 @@ function buildPlayerGrowthUpdate(player: {
     updates[summary] = Math.max(20, Math.min(99, avg))
   }
 
-  // Overall — capped at potential for growth, floor at 30
+  // Overall  -  capped at potential for growth, floor at 30
   updates.overall = Math.max(30, Math.min(player.potential, player.overall + delta))
   updates.age = player.age + 1
 
@@ -549,8 +492,11 @@ export async function deleteLeague(leagueId: string, userId: string) {
   // Cascade manually (schema uses RESTRICT on some FKs)
   await prisma.matchPerformance.deleteMany({ where: { match: { leagueId } } })
   await prisma.matchEvent.deleteMany({ where: { match: { leagueId } } })
-  await prisma.draftPick.deleteMany({ where: { session: { leagueId } } })
-  await prisma.draftSession.deleteMany({ where: { leagueId } })
+  // Clean up transfer window auctions
+  await prisma.bid.deleteMany({ where: { auction: { leagueId } } })
+  await prisma.watchlistEntry.deleteMany({ where: { auction: { leagueId } } })
+  await prisma.auction.deleteMany({ where: { leagueId } })
+  await prisma.transferWindow.deleteMany({ where: { leagueId } })
   await prisma.playerInstance.deleteMany({ where: { leagueId } })
   await prisma.match.deleteMany({ where: { leagueId } })
   await prisma.club.deleteMany({ where: { leagueId } })
@@ -585,7 +531,7 @@ export async function getLeague(leagueId: string) {
         },
         orderBy: [{ points: 'desc' }, { goalsFor: 'desc' }],
       },
-      draftSession: true,
+      transferWindow: { select: { status: true, opensAt: true } },
     },
   })
 }

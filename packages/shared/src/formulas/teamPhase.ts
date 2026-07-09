@@ -12,6 +12,7 @@ export interface LineupEntry {
   assignedPosition: string   // position slot they're playing this match
   naturalPosition: string    // player's native position (Player.position)
   trainedPosition: string | null
+  role?: string              // tactical role assigned by the manager
   attrs: PlayerAttrsForRoles
   morale: number             // 0–100 (inter-match)
   form: number               // 0–100 (inter-match)
@@ -32,10 +33,11 @@ export interface TeamPhaseScores {
 }
 
 export interface TacticModifiers {
-  style: 'possession' | 'counter' | 'pressing' | 'lowblock'
+  style: 'possession' | 'counter' | 'pressing' | 'lowblock' | 'gegenpress' | 'wing_play' | 'direct'
   pressingIntensity: number  // 0–100
   defensiveLine: number      // 0–100
   width: number              // 0–100
+  tempo?: number             // 0–100 (20=slow, 50=balanced, 80=fast)
 }
 
 // Condition multiplier applied to each player's role rating.
@@ -149,21 +151,44 @@ export function calcTeamPhase(
     gkSave * 0.25
 
   // ── Tactic multipliers ────────────────────────────────────────────────────
-  const atkMul  = style === 'counter'    ? 1.06 : style === 'possession' ? 1.02 : 1.00
-  const defMul  = style === 'lowblock'   ? 1.10 : style === 'pressing'   ? 1.03 : 1.00
-  const midMul  = style === 'possession' ? 1.08 : style === 'counter'    ? 0.92 : 1.00
-  const presMul = style === 'pressing'   ? 1.18 : style === 'lowblock'   ? 0.65 : style === 'counter' ? 0.85 : 1.00
+  const atkMul  = style === 'counter'    ? 1.06
+                : style === 'possession' ? 1.02
+                : style === 'direct'     ? 1.08
+                : style === 'wing_play'  ? 1.05
+                : 1.00
+  const defMul  = style === 'lowblock'              ? 1.10
+                : (style === 'pressing' || style === 'gegenpress') ? 1.03
+                : 1.00
+  const midMul  = style === 'possession' ? 1.08
+                : style === 'counter'    ? 0.92
+                : style === 'direct'     ? 0.85
+                : style === 'wing_play'  ? 0.93
+                : 1.00
+  const presMul = (style === 'pressing' || style === 'gegenpress') ? 1.18
+                : style === 'lowblock'   ? 0.65
+                : style === 'counter'    ? 0.85
+                : style === 'wing_play'  ? 0.88
+                : style === 'direct'     ? 1.05
+                : 1.00
 
   // Defensive line: high line compresses play → boosts def/mid, low line drops back → slight def drop
   // Range: 0.90 (line=0) to 1.10 (line=100), centred at 1.00 (line=50)
   const defLineMul = 1 + (defLine - 0.5) * 0.20
 
+  // Tempo: fast = more attacks but rushed (fewer quality chances), slow = patient (better quality)
+  const tempoBuf    = ((tactic?.tempo ?? 50) - 50) / 50  // -1 to +1
+  const tempoAtkMul = 1 + tempoBuf * 0.04
+  const tempoChaMul = 1 - tempoBuf * 0.05
+
+  // Wing Play gets an extra boost from width when playing wide
+  const wingPlayBoost = style === 'wing_play' ? (0.5 + width * 0.3) : 1.0
+
   return {
-    attackStrength:     clamp(attackRaw * atkMul,  40, 99),
+    attackStrength:     clamp(attackRaw * atkMul * tempoAtkMul,  40, 99),
     midfieldControl:    clamp(midRaw    * midMul  * (1 + (defLine - 0.5) * 0.08), 40, 99),
     defensiveStrength:  clamp(defRaw    * defMul  * defLineMul, 40, 99),
     pressingStrength:   clamp(pressRaw  * presMul, 20, 99),
-    chanceCreation:     clamp(chanceRaw,            40, 99),
+    chanceCreation:     clamp(chanceRaw * tempoChaMul * wingPlayBoost, 40, 99),
     finishingQuality:   clamp(finRaw,               40, 99),
     goalkeepingQuality: clamp(gkSave,               30, 99),
     setPieceAttack:     clamp(setPieceAtkRaw,        40, 99),

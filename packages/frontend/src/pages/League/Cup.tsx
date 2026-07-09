@@ -56,7 +56,7 @@ export default function Cup({ leagueId, league }: { leagueId: string; league: Le
                 if (m.isBye && m.winnerId) {
                   return (
                     <div key={mi} style={{ padding: '8px 12px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', fontSize: 12, color: 'var(--text-2)', textAlign: 'center', opacity: 0.6 }}>
-                      {clubMap[m.winnerId] ?? '—'} <span style={{ color: 'var(--text-3)' }}>(bye)</span>
+                      {clubMap[m.winnerId] ?? ' - '} <span style={{ color: 'var(--text-3)' }}>(bye)</span>
                     </div>
                   )
                 }

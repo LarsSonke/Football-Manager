@@ -51,7 +51,7 @@ const EMBLEM_PATHS: Partial<Record<EmblemKey, string>> = {
 }
 
 const EMBLEM_LABELS: Record<EmblemKey, string> = {
-  none: '—', star: '★', bolt: '↯', crown: '♛',
+  none: ' - ', star: '★', bolt: '↯', crown: '♛',
   diamond: '◆', cross: '✚', chevron: '∧', ring: '◯',
   flames: '≋', sword: '|', castle: '⌂', wings: '~',
   arrow: '▲', trident: 'Ψ',

@@ -4,6 +4,8 @@ import { Search, Clipboard, Dumbbell, Megaphone, Building2, Shirt, Wine } from '
 import { api } from '../../api/client'
 import { BallIcon } from '../../components/icons'
 import type { LeagueData, ClubData } from './types'
+import { getFanMoodInfo } from '../../utils/personalities'
+import { SPECIALIZATION_DEFS, getSpecializationDef } from '../../utils/specializations'
 import styles from './Management.module.css'
 
 // ─── Types & Constants ────────────────────────────────────────────────────────
@@ -98,6 +100,61 @@ function UpgradeCard({ label, icon, currentLevel, type, desc, startingBudget, bu
 
 // ─── Management ───────────────────────────────────────────────────────────────
 
+// ─── Specialization picker ────────────────────────────────────────────────────
+
+function SpecializationPicker({ leagueId, onPicked }: { leagueId: string; onPicked: (spec: string) => void }) {
+  const [selected, setSelected] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [err, setErr] = useState('')
+
+  async function confirmPick() {
+    if (!selected) return
+    setSaving(true); setErr('')
+    try {
+      await api.post(`/leagues/${leagueId}/specialization`, { specialization: selected })
+      onPicked(selected)
+    } catch (e: any) {
+      setErr(e.response?.data?.error ?? 'Failed to save')
+    } finally { setSaving(false) }
+  }
+
+  return (
+    <div className={styles.specPickerOverlay}>
+      <div className={styles.specPickerModal}>
+        <div className={styles.specPickerTitle}>Choose Your Specialization</div>
+        <div className={styles.specPickerSubtitle}>Your philosophy shapes everything. This choice is permanent for this league.</div>
+        <div className={styles.specPickerGrid}>
+          {SPECIALIZATION_DEFS.map(def => (
+            <button
+              key={def.type}
+              className={`${styles.specCard} ${selected === def.type ? styles.specCardSelected : ''}`}
+              style={selected === def.type ? { borderColor: def.color, background: `${def.color}14` } : {}}
+              onClick={() => setSelected(def.type)}
+            >
+              <div className={styles.specCardEmoji}>{def.emoji}</div>
+              <div className={styles.specCardLabel} style={selected === def.type ? { color: def.color } : {}}>{def.label}</div>
+              <div className={styles.specCardDesc}>{def.description}</div>
+              <ul className={styles.specCardEffects}>
+                {def.effects.map((e, i) => <li key={i}>{e}</li>)}
+              </ul>
+            </button>
+          ))}
+        </div>
+        {err && <div className={styles.specPickerErr}>{err}</div>}
+        <button
+          className={`btn btn-green ${styles.specConfirmBtn}`}
+          disabled={!selected || saving}
+          onClick={confirmPick}
+        >
+          {saving ? '...' : selected ? `Confirm  -  ${getSpecializationDef(selected)?.label}` : 'Select a specialization'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ─── Management ───────────────────────────────────────────────────────────────
+
 export default function Management({ league, myClub, isCreator, onRefresh }: {
   league: LeagueData; myClub: ClubData; isCreator: boolean; onRefresh: () => void
 }) {
@@ -111,6 +168,8 @@ export default function Management({ league, myClub, isCreator, onRefresh }: {
   const [coachLoading, setCoachLoading] = useState(false)
   const [windowLoading, setWindowLoading] = useState(false)
   const [windowMsg, setWindowMsg] = useState('')
+  const [showSpecPicker, setShowSpecPicker] = useState(false)
+  const [currentSpec, setCurrentSpec] = useState(myClub.managerSpecialization ?? null)
   const [clubLevels, setClubLevels] = useState({
     scoutLevel: myClub.scoutLevel,
     coachLevel: myClub.coachLevel,
@@ -201,13 +260,97 @@ export default function Management({ league, myClub, isCreator, onRefresh }: {
     <div className={styles.root}>
       {upgradeMsg && <div className={styles.toast}>✓ {upgradeMsg}</div>}
 
+      {/* Specialization picker overlay */}
+      {showSpecPicker && (
+        <SpecializationPicker
+          leagueId={league.id}
+          onPicked={spec => { setCurrentSpec(spec); setShowSpecPicker(false); onRefresh() }}
+        />
+      )}
+
       {/* Budget display */}
-      <div className={styles.budgetBar}>
-        <div>
-          <div className={styles.budgetLabel}>Available Budget</div>
-          <div className={styles.budgetValue}>€{(budget / 1000).toFixed(1)}k</div>
-        </div>
-      </div>
+      {(() => {
+        const totalWage = myClub.squad.reduce((s, p) => s + p.wage, 0)
+        const wageCap = league.wageCap ?? 0
+        const wagePct = wageCap > 0 ? Math.min(100, (totalWage / wageCap) * 100) : null
+        const fmt = (n: number) => n >= 1_000_000 ? `€${(n / 1_000_000).toFixed(2)}M` : `€${(n / 1_000).toFixed(1)}k`
+        return (
+          <div className={styles.budgetBar}>
+            <div style={{ flex: 1 }}>
+              <div className={styles.budgetLabel}>Available Budget</div>
+              <div className={styles.budgetValue}>{fmt(budget)}</div>
+            </div>
+            <div style={{ flex: 1, borderLeft: '1px solid var(--border)', paddingLeft: 16 }}>
+              <div className={styles.budgetLabel}>Wage Bill / Matchday</div>
+              <div className={styles.budgetValue} style={{ fontSize: 18 }}>
+                {fmt(totalWage)}
+                {wageCap > 0 && <span style={{ fontSize: 13, color: wagePct! > 90 ? 'var(--red)' : 'var(--text-2)', fontWeight: 400, marginLeft: 6 }}>of {fmt(wageCap)} cap</span>}
+              </div>
+              {wagePct !== null && (
+                <div style={{ height: 4, background: 'var(--border)', borderRadius: 2, marginTop: 5, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${wagePct}%`, background: wagePct > 90 ? 'var(--red)' : wagePct > 70 ? '#e9c46a' : 'var(--green)', borderRadius: 2 }} />
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* Manager Specialization */}
+      {(() => {
+        const def = currentSpec ? getSpecializationDef(currentSpec) : null
+        return (
+          <div className={styles.card}>
+            <div className="card-header"><span className="accent-bar" /><span className={styles.secLabel}>Manager Specialization</span></div>
+            {def ? (
+              <div className={styles.specDisplay}>
+                <div className={styles.specDisplayEmoji}>{def.emoji}</div>
+                <div className={styles.specDisplayBody}>
+                  <div className={styles.specDisplayLabel} style={{ color: def.color }}>{def.label}</div>
+                  <div className={styles.specDisplayDesc}>{def.description}</div>
+                  <ul className={styles.specDisplayEffects}>
+                    {def.effects.map((e, i) => <li key={i}>{e}</li>)}
+                  </ul>
+                </div>
+              </div>
+            ) : (
+              <div className={styles.specPrompt}>
+                <div className={styles.specPromptText}>You haven't chosen a specialization yet. Your philosophy shapes your entire management style.</div>
+                <button className="btn btn-green" onClick={() => setShowSpecPicker(true)}>Choose Specialization</button>
+              </div>
+            )}
+          </div>
+        )
+      })()}
+
+      {/* Supporter Culture */}
+      {myClub.fanMood !== undefined && (() => {
+        const mood = myClub.fanMood
+        const info = getFanMoodInfo(mood)
+        const pct = mood
+        const barColor = mood >= 70 ? '#4ade80' : mood >= 50 ? '#facc15' : mood >= 30 ? '#fb923c' : '#e5202f'
+        return (
+          <div className={styles.card}>
+            <div className="card-header"><span className="accent-bar" /><span className={styles.secLabel}>Supporter Culture</span></div>
+            <div className={styles.fanMoodBody}>
+              <div className={styles.fanMoodTop}>
+                <div>
+                  <div className={styles.fanMoodLabel}>{info.label}</div>
+                  <div className={styles.fanMoodStars}>
+                    {'★'.repeat(info.stars)}<span style={{ opacity: 0.25 }}>{'★'.repeat(5 - info.stars)}</span>
+                  </div>
+                </div>
+                <div className={styles.fanMoodNumber}>{mood}</div>
+              </div>
+              <div className={styles.fanMoodTrack}>
+                <div className={styles.fanMoodFill} style={{ width: `${pct}%`, background: barColor }} />
+              </div>
+              <div className={styles.fanMoodCommentary}>{info.commentary}</div>
+              <div className={styles.fanMoodHint}>Fan mood affects match day income by up to ±12.5%.</div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Club Name */}
       <div className={styles.card}>

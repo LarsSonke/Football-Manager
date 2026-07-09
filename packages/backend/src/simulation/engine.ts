@@ -35,6 +35,7 @@ interface ShotEvent {
   xg: number
   onTarget: boolean
   isGoal: boolean
+  momentum: number
 }
 
 interface CardEvent {
@@ -72,7 +73,7 @@ function toAttrs(p: Player): PlayerAttrsForRoles {
 // ─── Lineup construction ──────────────────────────────────────────────────────
 
 function buildLineup(club: FullClub, matchday: number): LineupEntry[] {
-  const tactic = club.tactic as { lineup?: { instanceId: string; position: string }[] } | null
+  const tactic = club.tactic as { lineup?: { instanceId: string; position: string; role?: string }[] } | null
   const instanceMap = Object.fromEntries(club.squad.map(s => [s.id, s]))
   const available = (inst: typeof club.squad[number]) => !inst.injured && inst.suspendedMatchday !== matchday
   const healthy = club.squad.filter(available)
@@ -109,6 +110,10 @@ function buildLineup(club: FullClub, matchday: number): LineupEntry[] {
     slots = sorted.map(s => ({ instanceId: s.id, position: s.player.position }))
   }
 
+  const roleMap = Object.fromEntries(
+    (tactic?.lineup ?? []).map(s => [s.instanceId, s.role])
+  )
+
   return slots.slice(0, 11).map(slot => {
     const inst = instanceMap[slot.instanceId]
     return {
@@ -116,6 +121,7 @@ function buildLineup(club: FullClub, matchday: number): LineupEntry[] {
       assignedPosition: slot.position,
       naturalPosition: inst.player.position,
       trainedPosition: inst.trainedPosition ?? null,
+      role: roleMap[slot.instanceId] ?? undefined,
       attrs: toAttrs(inst.player),
       morale: inst.morale,
       form: inst.form,
@@ -145,7 +151,7 @@ function drainStamina(
 
 // ─── xG & shot generation ────────────────────────────────────────────────────
 
-type ChanceType = 'long_shot' | 'header' | 'regular' | 'cutback' | 'one_on_one'
+type ChanceType = 'long_shot' | 'header' | 'regular' | 'cutback' | 'one_on_one' | 'set_piece'
 
 const BASE_XG: Record<ChanceType, number> = {
   long_shot:  0.04,
@@ -153,11 +159,11 @@ const BASE_XG: Record<ChanceType, number> = {
   regular:    0.12,
   cutback:    0.28,
   one_on_one: 0.40,
+  set_piece:  0.22,
 }
 
-function pickChanceType(attPhase: TeamPhaseScores, defPhase: TeamPhaseScores): ChanceType {
-  // Counter attacks produce more one-on-ones; build-up more cutbacks/headers.
-  // Approximate from phase score ratios.
+function pickChanceType(attPhase: TeamPhaseScores, defPhase: TeamPhaseScores, setpieceBoost = false): ChanceType {
+  if (setpieceBoost && rand() < 0.10) return 'set_piece'
   const counterScore = Math.max(0, attPhase.attackStrength - defPhase.midfieldControl)
   const buildupScore = attPhase.chanceCreation
 
@@ -375,15 +381,42 @@ export async function simulateMatch(
   const awayUsedSubs = new Set<string>()
   const subEvents: SubEvent[] = []
 
-  const homeTacticRaw = homeClub.tactic as { style?: string; pressingIntensity?: number; defensiveLine?: number; width?: number } | null
+  const homeTacticRaw = homeClub.tactic as { style?: string; pressingIntensity?: number; defensiveLine?: number; width?: number; tempo?: number; tacticalFocus?: string | null; tacticalCards?: string[] } | null
   const awayTacticRaw = awayClub.tactic as typeof homeTacticRaw
 
   const homeTactic = homeTacticOverride ?? normaliseTactic(homeTacticRaw)
   const awayTactic = awayTacticOverride ?? normaliseTactic(awayTacticRaw)
 
+  const homeFocus = homeTacticRaw?.tacticalFocus ?? null
+  const awayFocus = awayTacticRaw?.tacticalFocus ?? null
+  const homeCards = homeTacticRaw?.tacticalCards ?? []
+  const awayCards = awayTacticRaw?.tacticalCards ?? []
+
+  // ── Specializations ─────────────────────────────────────────────────────
+  const homeSpec = !homeClub.isAI ? (homeClub as any).managerSpecialization as string | null : null
+  const awaySpec = !awayClub.isAI ? (awayClub as any).managerSpecialization as string | null : null
+
+  const applyTacticalGenius = (phase: TeamPhaseScores): TeamPhaseScores => ({
+    ...phase,
+    attackStrength:    phase.attackStrength    * 1.08,
+    defensiveStrength: phase.defensiveStrength * 1.08,
+  })
+
+  // ── Familiarity modifiers ────────────────────────────────────────────────
+  const homeFamMod = 0.85 + ((homeClub as any).tacticFamiliarity ?? 75) / 100 * 0.15
+  const awayFamMod = 0.85 + ((awayClub as any).tacticFamiliarity ?? 75) / 100 * 0.15
+
   // ── Compute phase scores ────────────────────────────────────────────────
   let homePhase = calcTeamPhase(homeLineup, homeTactic)
   let awayPhase = calcTeamPhase(awayLineup, awayTactic)
+  if (homeSpec === 'TACTICAL_GENIUS') homePhase = applyTacticalGenius(homePhase)
+  if (awaySpec === 'TACTICAL_GENIUS') awayPhase = applyTacticalGenius(awayPhase)
+  homePhase = applyRoleBonuses(homePhase, homeLineup)
+  awayPhase = applyRoleBonuses(awayPhase, awayLineup)
+  homePhase = applyFocusAndCards(homePhase, homeFocus, homeCards)
+  awayPhase = applyFocusAndCards(awayPhase, awayFocus, awayCards)
+  homePhase = applyFamiliarityMod(homePhase, homeFamMod)
+  awayPhase = applyFamiliarityMod(awayPhase, awayFamMod)
 
   // ── Match state ─────────────────────────────────────────────────────────
   const stats = {
@@ -396,11 +429,18 @@ export async function simulateMatch(
   const shotEvents: ShotEvent[] = []
   const cardEvents: CardEvent[] = []
 
-  // Goals scored by each player for MatchPerformance
   const goalsByInstance: Record<string, number>    = {}
   const assistsByInstance: Record<string, number>  = {}
   const redCardsByInstance: Record<string, boolean> = {}
   const yellowCardsByInstance: Record<string, number> = {}
+
+  // ── Momentum state ──────────────────────────────────────────────────────
+  let homeMomentum = 50
+  let awayMomentum = 50
+  let homeConsecShots = 0
+  let awayConsecShots = 0
+  let lastSubCount = 0
+  const homeFanMood = (homeClub as any).fanMood ?? 60
 
   // ── 90-minute loop ──────────────────────────────────────────────────────
   for (let minute = 1; minute <= 90; minute++) {
@@ -408,6 +448,30 @@ export async function simulateMatch(
     if (minute % 15 === 0) {
       homePhase = calcTeamPhase(homeLineup, homeTactic)
       awayPhase = calcTeamPhase(awayLineup, awayTactic)
+      if (homeSpec === 'TACTICAL_GENIUS') homePhase = applyTacticalGenius(homePhase)
+      if (awaySpec === 'TACTICAL_GENIUS') awayPhase = applyTacticalGenius(awayPhase)
+      homePhase = applyRoleBonuses(homePhase, homeLineup)
+      awayPhase = applyRoleBonuses(awayPhase, awayLineup)
+      homePhase = applyFocusAndCards(homePhase, homeFocus, homeCards)
+      awayPhase = applyFocusAndCards(awayPhase, awayFocus, awayCards)
+      homePhase = applyFamiliarityMod(homePhase, homeFamMod)
+      awayPhase = applyFamiliarityMod(awayPhase, awayFamMod)
+    }
+
+    // ── Momentum drift & sources ─────────────────────────────────────
+    // Natural drift toward 50
+    homeMomentum = homeMomentum > 50 ? Math.max(50, homeMomentum - 0.5) : Math.min(50, homeMomentum + 0.5)
+    awayMomentum = awayMomentum > 50 ? Math.max(50, awayMomentum - 0.5) : Math.min(50, awayMomentum + 0.5)
+    // Home crowd passive boost + fan mood
+    homeMomentum = clamp(homeMomentum + 0.1 + (homeFanMood > 60 ? (homeFanMood - 60) * 0.006 : 0), 0, 100)
+    // Substitution momentum boost
+    const curSubCount = subEvents.length
+    if (curSubCount > lastSubCount) {
+      for (const sub of subEvents.slice(lastSubCount)) {
+        if (sub.team === 'home') homeMomentum = clamp(homeMomentum + 4, 0, 100)
+        else awayMomentum = clamp(awayMomentum + 4, 0, 100)
+      }
+      lastSubCount = curSubCount
     }
 
     // ── Substitutions ────────────────────────────────────────────────
@@ -437,20 +501,26 @@ export async function simulateMatch(
     const attLineup = homeHasBall ? homeLineup : awayLineup
     const defLineup = homeHasBall ? awayLineup : homeLineup
     const team      = homeHasBall ? 'home' : 'away' as const
+    const attSpec   = homeHasBall ? homeSpec : awaySpec
 
     // ── Shot attempt ──────────────────────────────────────────────────
+    const attackerMomentum = homeHasBall ? homeMomentum : awayMomentum
+    const momentumShotBonus = (attackerMomentum - 50) * 0.001
     const shotProb = clamp(
-      0.05 + 0.30 * attPhase.attackStrength / (attPhase.attackStrength + defPhase.defensiveStrength),
-      0.05, 0.35,
+      0.05 + 0.30 * attPhase.attackStrength / (attPhase.attackStrength + defPhase.defensiveStrength) + momentumShotBonus,
+      0.04, 0.38,
     )
 
     if (rand() < shotProb) {
       stats[team].shots++
-      const chanceType  = pickChanceType(attPhase, defPhase)
+      const chanceType  = pickChanceType(attPhase, defPhase, attSpec === 'SET_PIECE_SPECIALIST')
       const shooter     = pickShooter(attLineup)
       const assister    = pickAssister(attLineup, shooter.instanceId)
       const finQuality  = attPhase.finishingQuality * conditionMultiplier(shooter)
-      const xg          = calcXg(chanceType, finQuality, defPhase.goalkeepingQuality, homeHasBall)
+      const momentumXgBonus = (attackerMomentum - 50) * 0.0005
+      let xg = clamp(calcXg(chanceType, finQuality, defPhase.goalkeepingQuality, homeHasBall) + momentumXgBonus, 0.01, 0.85)
+      // RISK_TAKER: ±20% xG variance
+      if (attSpec === 'RISK_TAKER') xg = clamp(xg * (0.8 + rand() * 0.4), 0.01, 0.92)
       const onTarget    = rand() < clamp(0.38 + (finQuality - 65) / 400, 0.25, 0.60)
       const isGoal      = onTarget && rand() < xg
 
@@ -463,6 +533,24 @@ export async function simulateMatch(
         if (assister) assistsByInstance[assister.instanceId] = (assistsByInstance[assister.instanceId] ?? 0) + 1
         nudgeMorale(attLineup, shooter.instanceId, 8)
         if (assister) nudgeMorale(attLineup, assister.instanceId, 4)
+        // Momentum swing on goal
+        if (homeHasBall) {
+          homeMomentum = clamp(homeMomentum + 15, 0, 100)
+          awayMomentum = clamp(awayMomentum - 10, 0, 100)
+        } else {
+          awayMomentum = clamp(awayMomentum + 15, 0, 100)
+          homeMomentum = clamp(homeMomentum - 10, 0, 100)
+        }
+        homeConsecShots = 0; awayConsecShots = 0
+      }
+
+      // Consecutive shot momentum burst (3 shots in a row = +5)
+      if (homeHasBall) {
+        homeConsecShots++; awayConsecShots = 0
+        if (homeConsecShots >= 3) { homeMomentum = clamp(homeMomentum + 5, 0, 100); homeConsecShots = 0 }
+      } else {
+        awayConsecShots++; homeConsecShots = 0
+        if (awayConsecShots >= 3) { awayMomentum = clamp(awayMomentum + 5, 0, 100); awayConsecShots = 0 }
       }
 
       shotEvents.push({
@@ -470,6 +558,7 @@ export async function simulateMatch(
         shooterInstanceId: shooter.instanceId,
         assisterInstanceId: assister?.instanceId ?? null,
         xg, onTarget, isGoal,
+        momentum: attackerMomentum,
       })
 
       drainStamina(attLineup, true, homeTactic?.pressingIntensity ?? 55)
@@ -491,7 +580,7 @@ export async function simulateMatch(
       yellowCardsByInstance[victim.instanceId] = (yellowCardsByInstance[victim.instanceId] ?? 0) + 1
     }
 
-    // ── Red card (rare — ~0.08/game → 0.0009/min) ─────────────────────
+    // ── Red card (rare  -  ~0.08/game → 0.0009/min) ─────────────────────
     if (rand() < 0.0009) {
       const victim = pickCardVictim(defLineup)
       const cardTeam = homeHasBall ? 'away' : 'home' as const
@@ -518,6 +607,17 @@ export async function simulateMatch(
     goalsByInstance, assistsByInstance, redCardsByInstance, yellowCardsByInstance,
   )
 
+  await Promise.all([
+    prisma.club.update({
+      where: { id: match.homeClubId },
+      data: { tacticFamiliarity: Math.min(100, ((homeClub as any).tacticFamiliarity ?? 75) + 10) } as any,
+    }),
+    prisma.club.update({
+      where: { id: match.awayClubId },
+      data: { tacticFamiliarity: Math.min(100, ((awayClub as any).tacticFamiliarity ?? 75) + 10) } as any,
+    }),
+  ])
+
   return {
     matchId: match.id,
     homeClubId: match.homeClubId,
@@ -529,33 +629,132 @@ export async function simulateMatch(
   }
 }
 
+// ─── Role bonuses ─────────────────────────────────────────────────────────────
+
+const ROLE_BOOSTS: Partial<Record<string, Partial<Record<keyof TeamPhaseScores, number>>>> = {
+  'shot-stopper':       { goalkeepingQuality: 0.12 },
+  'sweeper-keeper':     { goalkeepingQuality: 0.06 },
+  'stopper':            { defensiveStrength: 0.10 },
+  'ball-playing-cb':    { midfieldControl: 0.08 },
+  'attacking-fullback': { chanceCreation: 0.08 },
+  'fullback':           { defensiveStrength: 0.06 },
+  'holding':            { defensiveStrength: 0.08 },
+  'defensive-mid':      { pressingStrength: 0.10, defensiveStrength: 0.06 },
+  'box-to-box':         { attackStrength: 0.04, pressingStrength: 0.04 },
+  'deep-lying':         { midfieldControl: 0.12 },
+  'playmaker':          { chanceCreation: 0.12 },
+  'shadow-striker':     { attackStrength: 0.08, chanceCreation: 0.05 },
+  'winger':             { chanceCreation: 0.10 },
+  'inside-forward':     { attackStrength: 0.10, finishingQuality: 0.05 },
+  'false-9':            { chanceCreation: 0.12, finishingQuality: -0.06 },
+  'target-forward':     { setPieceAttack: 0.18, finishingQuality: 0.05 },
+  'complete':           { attackStrength: 0.03, defensiveStrength: 0.03 },
+}
+
+function applyRoleBonuses(phase: TeamPhaseScores, lineup: LineupEntry[]): TeamPhaseScores {
+  const p = { ...phase }
+  const roleCounts: Record<string, number> = {}
+  for (const e of lineup) {
+    if (e.role) roleCounts[e.role] = (roleCounts[e.role] ?? 0) + 1
+  }
+  for (const [role, count] of Object.entries(roleCounts)) {
+    const boosts = ROLE_BOOSTS[role]
+    if (!boosts) continue
+    // Each role scales: 1 player = 33%, 2 = 67%, 3+ = 100% of max bonus
+    const scale = Math.min(count, 3) / 3
+    for (const [key, pct] of Object.entries(boosts) as [keyof TeamPhaseScores, number][]) {
+      p[key] = clamp(p[key] * (1 + pct * scale), 20, 99)
+    }
+  }
+  return p
+}
+
+// ─── Tactical focus + card phase modifiers ───────────────────────────────────
+
+const FOCUS_MODS: Record<string, Partial<Record<keyof TeamPhaseScores, number>>> = {
+  attack_wings:    { chanceCreation: 0.08 },
+  through_middle:  { midfieldControl: 0.06, chanceCreation: 0.04 },
+  fast_counter:    { attackStrength: 0.06, chanceCreation: -0.06 },
+  patient_buildup: { midfieldControl: 0.08, chanceCreation: 0.05, attackStrength: -0.04 },
+  high_press:      { pressingStrength: 0.15 },
+  park_bus:        { defensiveStrength: 0.12, attackStrength: -0.15 },
+}
+
+const CARD_MODS: Record<string, Partial<Record<keyof TeamPhaseScores, number>>> = {
+  overlap_fullbacks: { chanceCreation: 0.06 },
+  target_weak_link:  { finishingQuality: 0.08 },
+  high_risk_reward:  { attackStrength: 0.08, defensiveStrength: -0.06 },
+  crowd_midfield:    { midfieldControl: 0.10, chanceCreation: -0.06 },
+  time_wasting:      { defensiveStrength: 0.10 },
+  shoot_on_sight:    { finishingQuality: 0.06, chanceCreation: -0.04 },
+  set_piece_focus:   { setPieceAttack: 0.15 },
+  press_trap:        { pressingStrength: 0.10, defensiveStrength: 0.04 },
+  direct_balls:      { attackStrength: 0.05, midfieldControl: -0.10 },
+  false_nine_drop:   { chanceCreation: 0.08, finishingQuality: -0.04 },
+}
+
+function applyFocusAndCards(
+  phase: TeamPhaseScores,
+  focus: string | null,
+  cards: string[],
+): TeamPhaseScores {
+  const p = { ...phase }
+  const applyMod = (mods: Partial<Record<keyof TeamPhaseScores, number>>) => {
+    for (const [key, pct] of Object.entries(mods) as [keyof TeamPhaseScores, number][]) {
+      p[key] = clamp(p[key] * (1 + pct), 20, 99)
+    }
+  }
+  if (focus && FOCUS_MODS[focus]) applyMod(FOCUS_MODS[focus])
+  for (const cardId of cards) {
+    if (CARD_MODS[cardId]) applyMod(CARD_MODS[cardId])
+  }
+  return p
+}
+
+// ─── Tactic familiarity modifier ─────────────────────────────────────────────
+// mod = 0.85 + (familiarity/100) * 0.15 → at 100% fam: no effect; at 25%: ~15% penalty
+
+function applyFamiliarityMod(phase: TeamPhaseScores, mod: number): TeamPhaseScores {
+  return {
+    ...phase,
+    attackStrength:    clamp(phase.attackStrength    * mod, 20, 99),
+    defensiveStrength: clamp(phase.defensiveStrength * mod, 20, 99),
+    midfieldControl:   clamp(phase.midfieldControl   * mod, 20, 99),
+    pressingStrength:  clamp(phase.pressingStrength  * mod, 20, 99),
+    chanceCreation:    clamp(phase.chanceCreation    * mod, 20, 99),
+    finishingQuality:  clamp(phase.finishingQuality  * mod, 20, 99),
+  }
+}
+
 // ─── Tactic normalisation ─────────────────────────────────────────────────────
 
 type NormalisedTactic = {
-  style: 'possession' | 'counter' | 'pressing' | 'lowblock'
+  style: 'possession' | 'counter' | 'pressing' | 'lowblock' | 'gegenpress' | 'wing_play' | 'direct'
   pressingIntensity: number
   defensiveLine: number
   width: number
+  tempo: number
 }
 
-function normaliseTactic(raw: { style?: string; pressingIntensity?: number; defensiveLine?: number; width?: number } | null): NormalisedTactic | null {
+function normaliseTactic(raw: { style?: string; pressingIntensity?: number; defensiveLine?: number; width?: number; tempo?: number } | null): NormalisedTactic | null {
   if (!raw) return null
-  const validStyles = ['possession', 'counter', 'pressing', 'lowblock'] as const
+  const validStyles = ['possession', 'counter', 'pressing', 'lowblock', 'gegenpress', 'wing_play', 'direct'] as const
   return {
     style:             (validStyles.includes(raw.style as typeof validStyles[number]) ? raw.style : 'possession') as NormalisedTactic['style'],
     pressingIntensity: raw.pressingIntensity ?? 55,
     defensiveLine:     raw.defensiveLine     ?? 50,
     width:             raw.width             ?? 50,
+    tempo:             raw.tempo             ?? 50,
   }
 }
 
 // ─── AI match-specific tactic adaptation ─────────────────────────────────────
-// Observed match-history profile for an opponent — built from their last N matches.
+// Observed match-history profile for an opponent  -  built from their last N matches.
 // Using real stats (possession, shots, xG, cards) rather than their stored tactic
 // setting, so the AI reacts to how a team actually plays, not what they claim to.
 
 export interface OpponentProfile {
-  avgPossession:    number   // 0–100 — how much they dominate the ball
+  avgPossession:    number   // 0–100  -  how much they dominate the ball
   avgShots:         number   // shots attempted per game
   avgXG:            number   // expected goals per game
   avgCards:         number   // yellow + 2×red per game (aggression proxy)
@@ -625,7 +824,7 @@ export function buildOpponentProfile(
 
 export function adaptTacticForOpponent(club: FullClub, opp: OpponentProfile): NormalisedTactic {
   const base = normaliseTactic(club.tactic as any) ?? {
-    style: 'possession' as const, pressingIntensity: 55, defensiveLine: 50, width: 50,
+    style: 'possession' as const, pressingIntensity: 55, defensiveLine: 50, width: 50, tempo: 50,
   }
 
   let pressDelta = 0
@@ -712,6 +911,7 @@ export function adaptTacticForOpponent(club: FullClub, opp: OpponentProfile): No
     pressingIntensity: Math.round(clamp(base.pressingIntensity + pressDelta, 12, 95)),
     defensiveLine:     Math.round(clamp(base.defensiveLine     + lineDelta,  18, 85)),
     width:             Math.round(clamp(base.width             + widthDelta, 25, 85)),
+    tempo:             base.tempo,
   }
 }
 
@@ -755,6 +955,7 @@ async function saveMatch(
           instanceId: s.shooterInstanceId,
           assistInstanceId: s.assisterInstanceId,
           xg: s.xg,
+          momentum: Math.round(s.momentum),
         },
       })
     }
@@ -856,7 +1057,7 @@ function makePerformance(
   // GK playing outfield or outfield playing GK: heavily penalise match rating
   const isCrossRole = (entry.naturalPosition === 'GK') !== (entry.assignedPosition === 'GK')
   if (isCrossRole) {
-    // Compress rating toward the floor — max ~5.0 no matter how many goals
+    // Compress rating toward the floor  -  max ~5.0 no matter how many goals
     rating = 4.0 + (rating - 4.0) * 0.35
     rating = clamp(rating, 4.0, 5.0)
   }
@@ -946,8 +1147,10 @@ function calcFitnessDrain(entry: LineupEntry, tacticStyle: string): number {
 
   // Tactic style: pressing demands more running from everyone; low block much less
   const tacticFactor =
-    tacticStyle === 'pressing'   ? 1.22 :
+    (tacticStyle === 'pressing' || tacticStyle === 'gegenpress') ? 1.22 :
+    tacticStyle === 'direct'     ? 1.12 :
     tacticStyle === 'counter'    ? 1.08 :
+    tacticStyle === 'wing_play'  ? 1.05 :
     tacticStyle === 'possession' ? 1.00 :
     /* lowblock */                 0.78
 

@@ -190,7 +190,7 @@ function ReplayTicker({ match, onClose }: { match: MatchDetail; onClose: () => v
           </div>
         </div>
 
-        {/* Events feed — chronological, scrolls to latest */}
+        {/* Events feed  -  chronological, scrolls to latest */}
         <div className={styles.replayFeed} ref={feedRef}>
           <div className={styles.replayKickoff}>{kickoffLine}</div>
           {(() => {

@@ -2,7 +2,6 @@ import { Router } from 'express'
 import { z } from 'zod'
 import { requireAuth, type AuthRequest } from '../middleware/auth'
 import * as leagueService from '../services/league.service'
-import * as draftService from '../services/draft.service'
 import { prisma } from '../prisma'
 import { simulateLeagueMatchday, simulateSeasonFast } from '../scheduler/matchday.scheduler'
 import { getLeagueNews } from '../services/news.service'
@@ -12,12 +11,16 @@ router.use(requireAuth)
 
 const createSchema = z.object({
   name: z.string().min(3).max(50),
+  clubName: z.string().min(3).max(50),
   startingBudget: z.number().int().min(1_000_000).max(100_000_000),
   maxClubs: z.number().int().min(2).max(18).default(18),
   seasonLength: z.number().int().min(10).max(40).default(34),
   squadSize: z.number().int().min(11).max(30).default(25),
   hasCup: z.boolean().default(false),
   competitionType: z.enum(['LEAGUE', 'WORLD_CUP', 'CHAMPIONS_LEAGUE']).default('LEAGUE'),
+  windowDays: z.number().int().min(1).max(7).default(3),
+  maxManualPicks: z.number().int().min(1).max(30).default(11),
+  wageCap: z.number().int().min(0).default(0),
 })
 
 const joinSchema = z.object({
@@ -202,7 +205,7 @@ router.get('/:id/clubs/:clubId/profile', async (req: AuthRequest, res) => {
       })),
       topPerformers: perfGroups.map(g => ({
         instanceId: g.instanceId,
-        name: perfMap[g.instanceId]?.player.name ?? '—',
+        name: perfMap[g.instanceId]?.player.name ?? ' - ',
         position: perfMap[g.instanceId]?.player.position ?? '?',
         goals: g._sum.goals ?? 0,
         assists: g._sum.assists ?? 0,
@@ -261,15 +264,9 @@ router.post('/:id/simulate-season', async (req: AuthRequest, res) => {
 })
 
 router.post('/:id/draft/start', async (req: AuthRequest, res) => {
-  const draftType: 'SNAKE' | 'AUCTION' = req.body?.type === 'AUCTION' ? 'AUCTION' : 'SNAKE'
   try {
-    const result = await leagueService.startDraft(req.params.id, req.userId!, draftType)
+    const result = await leagueService.startDraft(req.params.id, req.userId!)
     res.json(result)
-    if (draftType === 'AUCTION') {
-      draftService.kickoffAuctionIfAIFirst(req.params.id).catch(() => {})
-    } else {
-      draftService.kickoffFirstPickIfAI(req.params.id).catch(() => {})
-    }
   } catch (err: any) {
     res.status(400).json({ error: err.message })
   }

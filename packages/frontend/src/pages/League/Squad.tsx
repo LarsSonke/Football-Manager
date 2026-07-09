@@ -4,6 +4,7 @@ import { posClass } from '../../utils/helpers'
 import { PlayerPhoto } from '../../components/PlayerPhoto'
 import type { SquadPlayer, PlayerData } from './types'
 import { POS_ORDER } from './types'
+import { getPersonalityInfo } from '../../utils/personalities'
 import styles from './Squad.module.css'
 
 // ─── Manga helpers ────────────────────────────────────────────────────────────
@@ -71,6 +72,21 @@ function Stars({ value, max = 5 }: { value: number; max?: number }) {
     <span className={styles.stars}>
       {'★'.repeat(Math.max(0, Math.min(max, value)))}
       <span className={styles.starsEmpty}>{'★'.repeat(Math.max(0, max - Math.min(max, value)))}</span>
+    </span>
+  )
+}
+
+function FanFavBadge({ score }: { score: number }) {
+  if (score >= 100) return <span className={styles.fanLegendBadge} title={`Fan Legend (${score} pts)`}>★</span>
+  if (score >= 50) return <span className={styles.fanFavBadge} title={`Fan Favourite (${score} pts)`}>♥</span>
+  return null
+}
+
+function PersonalityTag({ type }: { type: string }) {
+  const info = getPersonalityInfo(type)
+  return (
+    <span className={styles.personalityTag} style={{ borderColor: info.color, color: info.color }} title={info.description}>
+      {info.label}
     </span>
   )
 }
@@ -165,6 +181,10 @@ function PlayerDetailModal({ player, slotPos, onClose }: { player: SquadPlayer; 
                 <Stars value={p.skillMoves} />
                 <span className={styles.modalStatLabel}>Skill</span>
               </div>
+              <div>
+                <span className={styles.modalOvrValue} style={{ fontSize: 16, color: 'var(--text-2)' }}>€{(player.wage / 1000).toFixed(0)}k</span>
+                <span className={styles.modalStatLabel}>Wage/md</span>
+              </div>
               {p.nationality && (
                 <span className={styles.modalNationality}>
                   {flagUrl(p.nationality) && <img src={flagUrl(p.nationality)!} alt="" className={styles.modalFlag} />}
@@ -178,6 +198,29 @@ function PlayerDetailModal({ player, slotPos, onClose }: { player: SquadPlayer; 
 
         {/* Body */}
         <div className={styles.modalBody}>
+          {/* Personality discoveries */}
+          {(player.discoveredPersonalities?.length ?? 0) > 0 && (
+            <div className={styles.modalPersonalities}>
+              <div className={styles.modalSectionLabel}>Personality</div>
+              <div className={styles.personalityTagRow}>
+                {player.discoveredPersonalities!.map(p => (
+                  <PersonalityTag key={p} type={p} />
+                ))}
+              </div>
+            </div>
+          )}
+          {/* Fan favourite status */}
+          {(player.fanFavouriteScore ?? 0) >= 50 && (
+            <div className={styles.fanFavSection}>
+              <span className={(player.fanFavouriteScore ?? 0) >= 100 ? styles.fanLegendSectionIcon : styles.fanFavSectionIcon}>
+                {(player.fanFavouriteScore ?? 0) >= 100 ? '★' : '♥'}
+              </span>
+              <span className={styles.fanFavLabel}>
+                {(player.fanFavouriteScore ?? 0) >= 100 ? 'Club Legend' : 'Fan Favourite'}
+              </span>
+              <span className={styles.fanFavScore}>{player.fanFavouriteScore} pts</span>
+            </div>
+          )}
           <div className={styles.modalSectionLabel}>Main Stats</div>
           <div className={styles.modalMainStatsGrid}>
             {mainStats.map(s => <ModalStatBar key={s.label} label={s.label} value={s.value} dark />)}
@@ -198,10 +241,11 @@ function PlayerDetailModal({ player, slotPos, onClose }: { player: SquadPlayer; 
 
 // ─── Squad ────────────────────────────────────────────────────────────────────
 
-export default function Squad({ squad, physioLevel, budget, nextMatchday, onHeal, onTrain }: {
+export default function Squad({ squad, physioLevel, budget, wageCap, nextMatchday, onHeal, onTrain }: {
   squad: SquadPlayer[]
   physioLevel: number
   budget: number
+  wageCap?: number
   nextMatchday: number
   onHeal: (instanceId: string) => void
   onTrain: (instanceId: string, position: string) => void
@@ -224,6 +268,9 @@ export default function Squad({ squad, physioLevel, budget, nextMatchday, onHeal
     return ai !== bi ? ai - bi : b.player.overall - a.player.overall
   })
 
+  const totalWage = squad.reduce((s, p) => s + p.wage, 0)
+  const wagePct = wageCap && wageCap > 0 ? Math.min(100, (totalWage / wageCap) * 100) : null
+
   return (
     <>
       {detailPlayer && (
@@ -233,6 +280,22 @@ export default function Squad({ squad, physioLevel, budget, nextMatchday, onHeal
           onClose={() => setDetailPlayer(null)}
         />
       )}
+
+      <div className={styles.wageBillBar}>
+        <span className={styles.wageBillLabel}>Wage bill</span>
+        <span className={styles.wageBillAmount}>€{(totalWage / 1000).toFixed(1)}k / match</span>
+        {wagePct !== null && (
+          <div className={styles.wageBillTrack}>
+            <div
+              className={styles.wageBillFill}
+              style={{ width: `${wagePct}%`, background: wagePct >= 90 ? 'var(--red)' : wagePct >= 70 ? '#e9c46a' : 'var(--green)' }}
+            />
+          </div>
+        )}
+        {wageCap && wageCap > 0 && (
+          <span className={styles.wageBillCap}>cap €{(wageCap / 1000).toFixed(0)}k</span>
+        )}
+      </div>
 
       <div className={styles.grid}>
         {sorted.map((inst, idx) => {
@@ -259,7 +322,7 @@ export default function Squad({ squad, physioLevel, budget, nextMatchday, onHeal
                 {/* Diagonal hatch overlay */}
                 <div className={styles.hatch} />
 
-                {/* Angled position tag — top right */}
+                {/* Angled position tag  -  top right */}
                 <div className={styles.posTag}>
                   <span className={styles.posTagLabel}>{inst.player.position}</span>
                 </div>
@@ -290,7 +353,7 @@ export default function Squad({ squad, physioLevel, budget, nextMatchday, onHeal
                     {inst.player.name.split(' ').slice(-1)[0]}
                   </div>
                   <div className={styles.playerMeta}>
-                    {role} · {inst.player.age}
+                    {role} · {inst.player.age} · <span className={styles.wageInline}>€{(inst.wage / 1000).toFixed(0)}k/md</span>
                   </div>
 
                   {/* Key stats + form bars */}
@@ -315,7 +378,7 @@ export default function Squad({ squad, physioLevel, budget, nextMatchday, onHeal
                 {/* Yellow card warning strip */}
                 {inst.yellowCards > 0 && inst.suspendedMatchday !== nextMatchday && inst.yellowCards % 5 === 4 && (
                   <div className={styles.stripYellowCard}>
-                    {inst.yellowCards % 5}/5 yellows — next = ban
+                    {inst.yellowCards % 5}/5 yellows  -  next = ban
                   </div>
                 )}
 
@@ -323,6 +386,20 @@ export default function Squad({ squad, physioLevel, budget, nextMatchday, onHeal
                 {inst.player.age <= 22 && inst.player.potential - inst.player.overall >= 6 && (
                   <div className={styles.stripProspect}>
                     Prospect · Pot {inst.player.potential}
+                  </div>
+                )}
+
+                {/* Fan favourite badge */}
+                {(inst.fanFavouriteScore ?? 0) >= 50 && (
+                  <FanFavBadge score={inst.fanFavouriteScore!} />
+                )}
+
+                {/* Discovered personality tags */}
+                {(inst.discoveredPersonalities?.length ?? 0) > 0 && (
+                  <div className={styles.cardPersonalities}>
+                    {inst.discoveredPersonalities!.slice(0, 2).map(p => (
+                      <PersonalityTag key={p} type={p} />
+                    ))}
                   </div>
                 )}
               </div>

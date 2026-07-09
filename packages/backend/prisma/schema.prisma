@@ -78,13 +78,20 @@ model League {
   transferWindowOpen Boolean         @default(true)
   cupBracket         Json?
   competitionType    CompetitionType @default(LEAGUE)
+  newsEvents         Json?
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
+
+  // ── Transfer window config ─────────────────────────────────────────────────
+  windowDays      Int   @default(3)     // duration of initial window
+  maxManualPicks  Int   @default(11)    // max players won from auctions before auto-fill
+  releaseSchedule Json?                 // { "0": ["ST","CF",...], "1": [...], "2": [...] }
+  wageCap         Int   @default(0)     // weekly wage cap per club (0 = disabled)
 
   clubs           Club[]
   matches         Match[]
   playerInstances PlayerInstance[]
-  draftSession    DraftSession?
+  transferWindow  TransferWindow?
 }
 
 enum CompetitionType {
@@ -119,6 +126,10 @@ model Club {
   trainingLevel  Int @default(0)  // 0-3
   kitLevel       Int @default(0)  // 0-3
   vipLevel       Int @default(0)  // 0-3
+  fanMood               Int     @default(60) // 0-100
+  managerSpecialization String?
+  tacticFamiliarity     Int     @default(75) // 0-100
+  lastTacticIdentity    String?
 
   leagueId String
   league   League @relation(fields: [leagueId], references: [id])
@@ -139,7 +150,7 @@ model Club {
   squad             PlayerInstance[]
   homeMatches       Match[]           @relation("HomeClub")
   awayMatches       Match[]           @relation("AwayClub")
-  draftPicks        DraftPick[]
+  bids              Bid[]
   sponsorDeals      SponsorDeal[]
   transferListings  TransferListing[] @relation("SellerListings")
 }
@@ -200,49 +211,50 @@ model Player {
   physical  Int
 
   // ── Detailed attributes ───────────────────────────────────────────────────
-  atkCrossing       Int @default(50)  // attacking_crossing
-  atkFinishing      Int @default(50)  // attacking_finishing
-  atkHeadAccuracy   Int @default(50)  // attacking_heading_accuracy
-  atkShortPassing   Int @default(50)  // attacking_short_passing
-  atkVolleys        Int @default(50)  // attacking_volleys
-  sklDribbling      Int @default(50)  // skill_dribbling
-  sklCurve          Int @default(50)  // skill_curve
-  sklFkAccuracy     Int @default(50)  // skill_fk_accuracy
-  sklLongPassing    Int @default(50)  // skill_long_passing
-  sklBallControl    Int @default(50)  // skill_ball_control
-  movAcceleration   Int @default(50)  // movement_acceleration
-  movSprintSpeed    Int @default(50)  // movement_sprint_speed
-  movAgility        Int @default(50)  // movement_agility
-  movReactions      Int @default(50)  // movement_reactions
-  movBalance        Int @default(50)  // movement_balance
-  powShotPower      Int @default(50)  // power_shot_power
-  powJumping        Int @default(50)  // power_jumping
-  powStamina        Int @default(50)  // power_stamina
-  powStrength       Int @default(50)  // power_strength
-  powLongShots      Int @default(50)  // power_long_shots
-  menAggression     Int @default(50)  // mentality_aggression
-  menInterceptions  Int @default(50)  // mentality_interceptions
-  menPositioning    Int @default(50)  // mentality_positioning
-  menVision         Int @default(50)  // mentality_vision
-  menPenalties      Int @default(50)  // mentality_penalties
-  menComposure      Int @default(50)  // mentality_composure
-  defMarkingAware   Int @default(50)  // defending_marking_awareness
-  defStandingTackle Int @default(50)  // defending_standing_tackle
-  defSlidingTackle  Int @default(50)  // defending_sliding_tackle
-  gkDiving          Int @default(10)  // goalkeeping_diving
-  gkHandling        Int @default(10)  // goalkeeping_handling
-  gkKicking         Int @default(10)  // goalkeeping_kicking
-  gkPositioning     Int @default(10)  // goalkeeping_positioning
-  gkReflexes        Int @default(10)  // goalkeeping_reflexes
-  gkSpeed           Int @default(10)  // goalkeeping_speed
-  weakFoot          Int @default(3)   // 1–5 scale
-  skillMoves        Int @default(3)   // 1–5 scale
-  heightCm          Int @default(181) // height in cm
+  atkCrossing       Int @default(50)
+  atkFinishing      Int @default(50)
+  atkHeadAccuracy   Int @default(50)
+  atkShortPassing   Int @default(50)
+  atkVolleys        Int @default(50)
+  sklDribbling      Int @default(50)
+  sklCurve          Int @default(50)
+  sklFkAccuracy     Int @default(50)
+  sklLongPassing    Int @default(50)
+  sklBallControl    Int @default(50)
+  movAcceleration   Int @default(50)
+  movSprintSpeed    Int @default(50)
+  movAgility        Int @default(50)
+  movReactions      Int @default(50)
+  movBalance        Int @default(50)
+  powShotPower      Int @default(50)
+  powJumping        Int @default(50)
+  powStamina        Int @default(50)
+  powStrength       Int @default(50)
+  powLongShots      Int @default(50)
+  menAggression     Int @default(50)
+  menInterceptions  Int @default(50)
+  menPositioning    Int @default(50)
+  menVision         Int @default(50)
+  menPenalties      Int @default(50)
+  menComposure      Int @default(50)
+  defMarkingAware   Int @default(50)
+  defStandingTackle Int @default(50)
+  defSlidingTackle  Int @default(50)
+  gkDiving          Int @default(10)
+  gkHandling        Int @default(10)
+  gkKicking         Int @default(10)
+  gkPositioning     Int @default(10)
+  gkReflexes        Int @default(10)
+  gkSpeed           Int @default(10)
+  weakFoot          Int @default(3)
+  skillMoves        Int @default(3)
+  heightCm          Int @default(181)
 
   positions      String[]
   preferredRoles String[]
   baseValue      Int
   photoUrl       String?
+  personalities  String[] @default([])
 
   instances PlayerInstance[]
 }
@@ -288,12 +300,16 @@ model PlayerInstance {
 
   wage Int @default(0)
 
+  discoveredPersonalities String[] @default([])
+  fanFavouriteScore       Int      @default(0)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   performances    MatchPerformance[]
   transferListing TransferListing?
   boosts          PlayerBoost[]
+  auction         Auction?
 
   @@unique([playerId, leagueId])
 }
@@ -332,8 +348,8 @@ model Match {
   homeScore Int?
   awayScore Int?
 
-  competition String @default("LEAGUE")  // "LEAGUE" | "CUP"
-  cupRound    String?                    // "R32" | "R16" | "QF" | "SF" | "F"
+  competition String @default("LEAGUE")
+  cupRound    String?
 
   homeLineup Json?
   awayLineup Json?
@@ -392,56 +408,85 @@ model PlayerBoost {
   leagueId      String
   instanceId    String
   instance      PlayerInstance @relation(fields: [instanceId], references: [id])
-  stat          String         // 'pace' | 'shooting' | 'passing' | 'defending' | 'physical'
+  stat          String
   amount        Int
   matchdaysLeft Int
   createdAt     DateTime       @default(now())
 }
 
-// ─── DRAFT ────────────────────────────────────────────────────────────────────
+// ─── TRANSFER WINDOW (initial squad building) ────────────────────────────────
 
-model DraftSession {
-  id       String      @id @default(cuid())
-  leagueId String      @unique
-  league   League      @relation(fields: [leagueId], references: [id])
+model TransferWindow {
+  id       String       @id @default(cuid())
+  leagueId String       @unique
+  league   League       @relation(fields: [leagueId], references: [id])
 
-  type          DraftType   @default(SNAKE)
-  status        DraftStatus @default(PENDING)
-  currentRound  Int         @default(1)
-  currentPick   Int         @default(0)
-  pickOrder     String[]
-  roundsTotal   Int         @default(25) // players per team
-  pickTimeLimit Int         @default(90)
-  auctionState  Json?       // AuctionRound | null — populated when type === AUCTION and status === ACTIVE
+  status  WindowStatus @default(PENDING)
+  opensAt DateTime?
+
+  auctions Auction[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  picks DraftPick[]
 }
 
-enum DraftType {
-  SNAKE
-  AUCTION
-}
-
-enum DraftStatus {
+enum WindowStatus {
   PENDING
-  ACTIVE
-  COMPLETED
+  OPEN
+  CLOSED
 }
 
-model DraftPick {
-  id        String       @id @default(cuid())
-  sessionId String
-  session   DraftSession @relation(fields: [sessionId], references: [id])
+model Auction {
+  id         String         @id @default(cuid())
+  windowId   String
+  window     TransferWindow @relation(fields: [windowId], references: [id])
+  leagueId   String
+  instanceId String         @unique
+  instance   PlayerInstance @relation(fields: [instanceId], references: [id])
+
+  openingBid   Int
+  currentBid   Int
+  winnerClubId String?
+
+  releasedAt DateTime
+  endsAt     DateTime
+  status     AuctionStatus @default(SCHEDULED)
+
+  bids      Bid[]
+  watchedBy WatchlistEntry[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum AuctionStatus {
+  SCHEDULED
+  OPEN
+  WON
+  UNSOLD
+}
+
+model Bid {
+  id        String  @id @default(cuid())
+  auctionId String
+  auction   Auction @relation(fields: [auctionId], references: [id])
   clubId    String
-  club      Club         @relation(fields: [clubId], references: [id])
+  club      Club    @relation(fields: [clubId], references: [id])
 
-  playerId   String
-  round      Int
-  pickNumber Int
-  price      Int
+  amount  Int
+  maxBid  Int?    // proxy bid maximum (private  -  never exposed to other clubs)
+  isProxy Boolean @default(false)
 
-  pickedAt DateTime @default(now())
+  createdAt DateTime @default(now())
+}
+
+model WatchlistEntry {
+  id        String  @id @default(cuid())
+  auctionId String
+  auction   Auction @relation(fields: [auctionId], references: [id])
+  clubId    String
+
+  createdAt DateTime @default(now())
+
+  @@unique([auctionId, clubId])
 }

@@ -21,11 +21,14 @@ interface LeagueEntry {
 
 interface CreateForm {
   name: string
+  clubName: string
   startingBudget: number
   maxClubs: number
   seasonLength: number
   squadSize: number
   hasCup: boolean
+  windowDays: number
+  maxManualPicks: number
 }
 
 const STATUS_BADGE: Record<string, string> = {
@@ -55,11 +58,14 @@ export default function Dashboard() {
   const [joinName, setJoinName] = useState('')
   const [form, setForm] = useState<CreateForm>({
     name: '',
+    clubName: '',
     startingBudget: 10_000_000,
     maxClubs: 18,
     seasonLength: 34,
     squadSize: 25,
     hasCup: false,
+    windowDays: 3,
+    maxManualPicks: 11,
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -76,7 +82,7 @@ export default function Dashboard() {
       const r = await api.get('/leagues/mine')
       setLeagues(r.data)
       setPanel('none')
-      setForm({ name: '', startingBudget: 10_000_000, maxClubs: 18, seasonLength: 34, squadSize: 25, hasCup: false })
+      setForm({ name: '', clubName: '', startingBudget: 10_000_000, maxClubs: 18, seasonLength: 34, squadSize: 25, hasCup: false, windowDays: 3, maxManualPicks: 11 })
     } catch (err: any) {
       setError(err.response?.data?.error ?? 'Failed to create league')
     } finally {
@@ -122,7 +128,7 @@ export default function Dashboard() {
             <h1 className={styles.chapterTitle}>MY LEAGUES</h1>
             <p className={styles.chapterSubtitle}>
               {leagues.length === 0
-                ? 'No leagues yet — create one or invite friends'
+                ? 'No leagues yet  -  create one or invite friends'
                 : `${leagues.length} league${leagues.length > 1 ? 's' : ''} active`}
             </p>
           </div>
@@ -154,6 +160,15 @@ export default function Dashboard() {
                     placeholder="e.g. Friday Night League"
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  />
+                </div>
+
+                <div className={styles.fullSpan}>
+                  <label className={styles.fieldLabel}>Your club name</label>
+                  <input
+                    placeholder="e.g. Red Devils FC"
+                    value={form.clubName}
+                    onChange={(e) => setForm({ ...form, clubName: e.target.value })}
                   />
                 </div>
 
@@ -203,6 +218,28 @@ export default function Dashboard() {
                   />
                 </div>
 
+                <div>
+                  <label className={styles.fieldLabel}>Transfer window</label>
+                  <div className={styles.sliderValue}>{form.windowDays} day{form.windowDays !== 1 ? 's' : ''}</div>
+                  <input
+                    type="range" min={1} max={7} step={1}
+                    value={form.windowDays}
+                    onChange={(e) => setForm({ ...form, windowDays: Number(e.target.value) })}
+                    className={styles.rangeInput}
+                  />
+                </div>
+
+                <div>
+                  <label className={styles.fieldLabel}>Manual picks limit</label>
+                  <div className={styles.sliderValue}>{form.maxManualPicks} players</div>
+                  <input
+                    type="range" min={1} max={form.squadSize} step={1}
+                    value={form.maxManualPicks}
+                    onChange={(e) => setForm({ ...form, maxManualPicks: Number(e.target.value) })}
+                    className={styles.rangeInput}
+                  />
+                </div>
+
                 <div className={styles.fullSpan}>
                   <label className={styles.cupLabel}>
                     <input
@@ -220,7 +257,7 @@ export default function Dashboard() {
 
                 <div className={styles.fieldActions}>
                   <button className="btn btn-outline" onClick={() => setPanel('none')}>Cancel</button>
-                  <button className="btn btn-green" onClick={createLeague} disabled={loading || !form.name}>
+                  <button className="btn btn-green" onClick={createLeague} disabled={loading || !form.name || !form.clubName}>
                     {loading ? 'Creating...' : 'Create League'}
                   </button>
                 </div>
@@ -243,7 +280,7 @@ export default function Dashboard() {
                 </div>
                 <div>
                   <label className={styles.fieldLabel}>Your club name</label>
-                  <input placeholder="e.g. Lars United" value={joinName} onChange={(e) => setJoinName(e.target.value)} />
+                  <input placeholder="e.g. Red Devils FC" value={joinName} onChange={(e) => setJoinName(e.target.value)} />
                 </div>
                 <div className={styles.joinActions}>
                   <button className="btn btn-outline" onClick={() => setPanel('none')}>Cancel</button>

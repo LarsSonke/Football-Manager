@@ -7,23 +7,23 @@ import type { PlayerData } from './types'
 // ─── Tooltip descriptions ─────────────────────────────────────────────────────
 
 const ROLE_DESCRIPTIONS: Record<string, string> = {
-  'shot-stopper':       'Focuses purely on making saves — better reflexes and reactions between the posts.',
-  'sweeper-keeper':     'Sweeps behind the defence — rushes out for through balls, aggressive 1v1.',
-  'stopper':            'Aggressive centre-back — wins direct confrontations and aerial duels.',
-  'ball-playing-cb':    'Starts attacks from the back — accurate long passes out of defence.',
-  'attacking-fullback': 'Overlaps and delivers crosses — contributes directly to offensive play.',
-  'fullback':           'Stays defensively solid — prioritises marking wingers and covering depth.',
-  'holding':            'Sits deep and shields the backline — breaks up play and covers space.',
-  'defensive-mid':      'Intercepts and disrupts — strong defensive presence in the midfield.',
-  'box-to-box':         'Gets forward and tracks back — contributes to both attack and defence.',
-  'deep-lying':         'Dictates tempo from deep — accurate passing and game management.',
-  'playmaker':          'Creates chances for others — boosts key passes and assists.',
-  'shadow-striker':     'Arrives late in the box — high runs and finishing from midfield positions.',
-  'winger':             'Provides width and pace — dribbles past fullbacks, delivers crosses.',
-  'inside-forward':     'Cuts inside onto stronger foot — dangerous at shooting from wide angles.',
-  'false-9':            'Drops deep to link play — pulls defenders out of position, creates space.',
-  'complete':           'Balanced all-round — hold-up, movement and finishing in equal measure.',
-  'target-forward':     'Physical aerial presence — brings others into play and wins flick-ons.',
+  'shot-stopper':       'Focuses purely on making saves  -  better reflexes and reactions between the posts.',
+  'sweeper-keeper':     'Sweeps behind the defence  -  rushes out for through balls, aggressive 1v1.',
+  'stopper':            'Aggressive centre-back  -  wins direct confrontations and aerial duels.',
+  'ball-playing-cb':    'Starts attacks from the back  -  accurate long passes out of defence.',
+  'attacking-fullback': 'Overlaps and delivers crosses  -  contributes directly to offensive play.',
+  'fullback':           'Stays defensively solid  -  prioritises marking wingers and covering depth.',
+  'holding':            'Sits deep and shields the backline  -  breaks up play and covers space.',
+  'defensive-mid':      'Intercepts and disrupts  -  strong defensive presence in the midfield.',
+  'box-to-box':         'Gets forward and tracks back  -  contributes to both attack and defence.',
+  'deep-lying':         'Dictates tempo from deep  -  accurate passing and game management.',
+  'playmaker':          'Creates chances for others  -  boosts key passes and assists.',
+  'shadow-striker':     'Arrives late in the box  -  high runs and finishing from midfield positions.',
+  'winger':             'Provides width and pace  -  dribbles past fullbacks, delivers crosses.',
+  'inside-forward':     'Cuts inside onto stronger foot  -  dangerous at shooting from wide angles.',
+  'false-9':            'Drops deep to link play  -  pulls defenders out of position, creates space.',
+  'complete':           'Balanced all-round  -  hold-up, movement and finishing in equal measure.',
+  'target-forward':     'Physical aerial presence  -  brings others into play and wins flick-ons.',
 }
 
 // ─── HoverTag (badge with portal tooltip) ────────────────────────────────────
@@ -124,7 +124,7 @@ export function PlayerDetailModal({ p, isMyTurn, canAfford, onPick, onClose, onT
           <div style={{ flex: 1 }}>
             <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 800, color: 'var(--text-1)', lineHeight: 1.15 }}>{p.name}</div>
             <div style={{ fontSize: 11, color: 'var(--text-2)', marginTop: 3 }}>
-              {flagSrc && <img src={flagSrc} alt="" style={{ width: 16, height: 12, verticalAlign: 'middle', borderRadius: 1, marginRight: 3 }} />}{p.nationality ?? '—'} · {p.age}y · POT <span style={{ color: p.potential >= 90 ? 'var(--gold)' : p.potential >= 85 ? 'var(--green)' : 'var(--text-1)', fontWeight: 700 }}>{p.potential}</span>
+              {flagSrc && <img src={flagSrc} alt="" style={{ width: 16, height: 12, verticalAlign: 'middle', borderRadius: 1, marginRight: 3 }} />}{p.nationality ?? ' - '} · {p.age}y · POT <span style={{ color: p.potential >= 90 ? 'var(--gold)' : p.potential >= 85 ? 'var(--green)' : 'var(--text-1)', fontWeight: 700 }}>{p.potential}</span>
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2, marginTop: 6 }}>
               {(p.positions?.length ? p.positions : [p.position]).map((pos, i) => (

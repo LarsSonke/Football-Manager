@@ -1,9 +1,9 @@
-// Custom football-specific SVG icons — all use currentColor
+// Custom football-specific SVG icons  -  all use currentColor
 // For standard icons (Trophy, Star, Target, etc.) import directly from lucide-react
 
 type IconProps = { size?: number; className?: string }
 
-/** Soccer ball — goals, training, dribbling */
+/** Soccer ball  -  goals, training, dribbling */
 export function BallIcon({ size = 14, className }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" fill="none" className={className} aria-hidden="true">
@@ -32,7 +32,7 @@ export function CardIcon({ color, size = 12, className }: { color: 'yellow' | 'r
   )
 }
 
-/** Substitution — two opposing arrows (player on ↑ / player off ↓) */
+/** Substitution  -  two opposing arrows (player on ↑ / player off ↓) */
 export function SubIcon({ size = 14, className }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">

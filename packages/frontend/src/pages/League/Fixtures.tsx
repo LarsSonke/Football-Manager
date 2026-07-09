@@ -128,8 +128,8 @@ export function DraftSummaryOverlay({ league, onDismiss }: { league: LeagueData;
       <div className={styles.draftPanel}>
         <div className={styles.draftHeader}>
           <div>
-            <div className={styles.draftHeaderLabel}>Draft Complete · {league.name}</div>
-            <div className={styles.draftHeaderTitle}>Every Club Has Its Squad</div>
+            <div className={styles.draftHeaderLabel}>Transfer Window Complete · {league.name}</div>
+            <div className={styles.draftHeaderTitle}>Squads Are Set - Season Begins</div>
           </div>
           <button onClick={onDismiss} className={styles.draftCloseBtn}>Close</button>
         </div>
@@ -168,7 +168,7 @@ export function DraftSummaryOverlay({ league, onDismiss }: { league: LeagueData;
           })}
         </div>
         <div className={styles.draftFooter}>
-          <button className="btn btn-green" onClick={onDismiss}>Let's Play →</button>
+          <button className="btn btn-green" onClick={onDismiss}>Start the Season →</button>
         </div>
       </div>
     </div>

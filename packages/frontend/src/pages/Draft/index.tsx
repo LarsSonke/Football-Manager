@@ -45,6 +45,8 @@ function statusLabel(a: AuctionSummary): string {
   return 'BID'
 }
 
+const MARKET_PAGE = 40
+
 const POS_GROUPS: Record<string, string[]> = {
   GK: ['GK'],
   DEF: ['CB', 'LB', 'RB'],
@@ -395,6 +397,11 @@ export default function TransferMarket() {
   const [myBidCount, setMyBidCount] = useState(0)
   const [watchlistCount, setWatchlistCount] = useState(0)
 
+  // Pagination
+  const [marketSkip, setMarketSkip] = useState(0)
+  const [marketHasMore, setMarketHasMore] = useState(false)
+  const [visibleCount, setVisibleCount] = useState(20)  // client-side limit for my-bids/watchlist
+
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const fetchPage = useCallback(async () => {
@@ -407,7 +414,7 @@ export default function TransferMarket() {
 
   const fetchAuctions = useCallback(async (currentTab: Tab, filters: {
     q: string; pos: string; minOvr: string; maxOvr: string
-  }) => {
+  }, skip = 0, append = false) => {
     if (!leagueId) return
     setLoading(true)
     try {
@@ -420,25 +427,32 @@ export default function TransferMarket() {
         }
         if (filters.minOvr) params.set('minOvr', filters.minOvr)
         if (filters.maxOvr) params.set('maxOvr', filters.maxOvr)
-        params.set('take', '80')
+        params.set('take', String(MARKET_PAGE + 1))  // fetch one extra to detect more
+        params.set('skip', String(skip))
         const r = await api.get(`/draft/${leagueId}/market?${params}`)
-        setAuctions(r.data)
+        const data: AuctionSummary[] = r.data
+        const hasMore = data.length > MARKET_PAGE
+        setMarketHasMore(hasMore)
+        setMarketSkip(skip)
+        setAuctions(prev => append ? [...prev, ...data.slice(0, MARKET_PAGE)] : data.slice(0, MARKET_PAGE))
       } else if (currentTab === 'my-bids') {
         const r = await api.get(`/draft/${leagueId}/my-bids`)
         setAuctions(r.data)
         setMyBidCount(r.data.length)
+        setVisibleCount(20)
       } else {
         const r = await api.get(`/draft/${leagueId}/watchlist`)
         setAuctions(r.data)
         setWatchlistCount(r.data.length)
+        setVisibleCount(20)
       }
     } finally {
       setLoading(false)
     }
   }, [leagueId])
 
-  const doFetch = useCallback((t: Tab) => {
-    fetchAuctions(t, { q: search, pos: posFilter, minOvr, maxOvr })
+  const doFetch = useCallback((t: Tab, skip = 0, append = false) => {
+    fetchAuctions(t, { q: search, pos: posFilter, minOvr, maxOvr }, skip, append)
   }, [fetchAuctions, search, posFilter, minOvr, maxOvr])
 
   useEffect(() => {
@@ -450,11 +464,13 @@ export default function TransferMarket() {
   // Re-fetch when tab changes
   useEffect(() => { doFetch(tab) }, [tab]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Debounce filter changes (market tab only)
+  // Debounce filter changes (market tab only) - reset to page 0
   useEffect(() => {
     if (tab !== 'market') return
+    setMarketSkip(0)
+    setMarketHasMore(false)
     if (searchTimer.current) clearTimeout(searchTimer.current)
-    searchTimer.current = setTimeout(() => doFetch('market'), search ? 300 : 0)
+    searchTimer.current = setTimeout(() => doFetch('market', 0, false), search ? 300 : 0)
     return () => { if (searchTimer.current) clearTimeout(searchTimer.current) }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, posFilter, minOvr, maxOvr])
@@ -635,17 +651,39 @@ export default function TransferMarket() {
               {tab === 'my-bids' ? 'No active bids' : tab === 'watchlist' ? 'Nothing on your watchlist' : 'No auctions found'}
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
-              {auctions.map(a => (
-                <AuctionCard
-                  key={a.id}
-                  auction={a}
-                  onBid={setBidAuction}
-                  onWatch={handleWatch}
-                  onDetail={a => setDetailAuction(a)}
-                />
-              ))}
-            </div>
+            <>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
+                {(tab === 'market' ? auctions : auctions.slice(0, visibleCount)).map(a => (
+                  <AuctionCard
+                    key={a.id}
+                    auction={a}
+                    onBid={setBidAuction}
+                    onWatch={handleWatch}
+                    onDetail={a => setDetailAuction(a)}
+                  />
+                ))}
+              </div>
+              {/* Load more - market: server-side; others: client-side */}
+              {tab === 'market' && marketHasMore && (
+                <button
+                  className="btn btn-outline"
+                  style={{ width: '100%', marginTop: 12, fontSize: 12 }}
+                  disabled={loading}
+                  onClick={() => doFetch('market', marketSkip + MARKET_PAGE, true)}
+                >
+                  {loading ? 'Loading...' : `Load more`}
+                </button>
+              )}
+              {tab !== 'market' && auctions.length > visibleCount && (
+                <button
+                  className="btn btn-outline"
+                  style={{ width: '100%', marginTop: 12, fontSize: 12 }}
+                  onClick={() => setVisibleCount(c => c + 20)}
+                >
+                  Show more ({auctions.length - visibleCount} remaining)
+                </button>
+              )}
+            </>
           )}
         </div>
 

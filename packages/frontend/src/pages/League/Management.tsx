@@ -10,6 +10,12 @@ import styles from './Management.module.css'
 
 // ─── Types & Constants ────────────────────────────────────────────────────────
 
+interface ScoutResult { matchday: number; goalsFor: number; goalsAgainst: number; formation?: string; stats?: { avgGoalsFor: number; avgGoalsAgainst: number; avgPossession: number } }
+interface ScoutSquadPlayer { name: string; position: string; overall: number; fitness: number }
+interface ScoutReport { scoutLevel: number; recentResults: ScoutResult[]; formation?: string; stats?: { avgGoalsFor: number; avgGoalsAgainst: number; avgPossession: number }; likelySquad?: ScoutSquadPlayer[]; error?: string }
+interface CoachPlayer { name: string; position: string; overall: number }
+interface CoachAdvice { coachLevel: number; recommendedFormation: string; formationReason: string; currentFormation?: string; topPlayers?: CoachPlayer[]; styleAdvice?: string; error?: string }
+
 type UpgradeType = 'scout' | 'coach' | 'trainer' | 'marketing' | 'stadium' | 'training' | 'kit' | 'vip'
 
 const UPGRADE_COSTS_PCT: Record<UpgradeType, number[]> = {
@@ -162,9 +168,9 @@ export default function Management({ league, myClub, isCreator, onRefresh }: {
   const [boostMsg, setBoostMsg] = useState('')
   const [boostLoading, setBoostLoading] = useState<string | null>(null)
   const [scoutClubId, setScoutClubId] = useState('')
-  const [scoutReport, setScoutReport] = useState<object | null>(null)
+  const [scoutReport, setScoutReport] = useState<ScoutReport | null>(null)
   const [scoutLoading, setScoutLoading] = useState(false)
-  const [coachAdvice, setCoachAdvice] = useState<object | null>(null)
+  const [coachAdvice, setCoachAdvice] = useState<CoachAdvice | null>(null)
   const [coachLoading, setCoachLoading] = useState(false)
   const [windowLoading, setWindowLoading] = useState(false)
   const [windowMsg, setWindowMsg] = useState('')
@@ -439,9 +445,61 @@ export default function Management({ league, myClub, isCreator, onRefresh }: {
               </button>
             </div>
             {scoutReport && (
-              <div className={styles.reportJson}>
-                <pre className={styles.reportPre}>{JSON.stringify(scoutReport, null, 2)}</pre>
-              </div>
+              scoutReport.error
+                ? <p style={{ color: 'var(--red)', fontSize: 13, marginTop: 10 }}>{scoutReport.error}</p>
+                : <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    {scoutReport.recentResults.length > 0 && (
+                      <div>
+                        <div className={styles.reportSectionLabel}>Recent Results</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 6 }}>
+                          {scoutReport.recentResults.map(r => {
+                            const result = r.goalsFor > r.goalsAgainst ? 'W' : r.goalsFor < r.goalsAgainst ? 'L' : 'D'
+                            const color = result === 'W' ? 'var(--green)' : result === 'L' ? 'var(--red)' : 'var(--text-2)'
+                            return (
+                              <div key={r.matchday} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 12 }}>
+                                <span style={{ color: 'var(--text-3)', minWidth: 24 }}>MD{r.matchday}</span>
+                                <span style={{ fontWeight: 800, color, minWidth: 18, textAlign: 'center' }}>{result}</span>
+                                <span style={{ color: 'var(--text-1)', fontWeight: 600 }}>{r.goalsFor} - {r.goalsAgainst}</span>
+                                {r.formation && <span style={{ color: 'var(--text-3)', fontSize: 11 }}>{r.formation}</span>}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+                    {scoutReport.stats && (
+                      <div>
+                        <div className={styles.reportSectionLabel}>Season Averages</div>
+                        <div style={{ display: 'flex', gap: 16, marginTop: 6 }}>
+                          {[
+                            { label: 'Goals/game', val: scoutReport.stats.avgGoalsFor.toFixed(1) },
+                            { label: 'Conceded/game', val: scoutReport.stats.avgGoalsAgainst.toFixed(1) },
+                            { label: 'Possession', val: `${scoutReport.stats.avgPossession.toFixed(0)}%` },
+                          ].map(s => (
+                            <div key={s.label} style={{ textAlign: 'center' }}>
+                              <div style={{ fontSize: 18, fontFamily: 'var(--font-display)', fontWeight: 800, color: 'var(--text-1)' }}>{s.val}</div>
+                              <div style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 2 }}>{s.label}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {scoutReport.likelySquad && scoutReport.likelySquad.length > 0 && (
+                      <div>
+                        <div className={styles.reportSectionLabel}>Likely Squad</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 6 }}>
+                          {scoutReport.likelySquad.map((p, i) => (
+                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+                              <span className={`pos pos-${p.position === 'GK' ? 'gk' : ['CB','LB','RB'].includes(p.position) ? 'def' : ['CDM','CM','CAM','LM','RM'].includes(p.position) ? 'mid' : 'att'}`} style={{ fontSize: 9 }}>{p.position}</span>
+                              <span style={{ flex: 1, color: 'var(--text-1)' }}>{p.name}</span>
+                              <span style={{ color: 'var(--text-2)', fontWeight: 700 }}>{p.overall}</span>
+                              <span style={{ color: p.fitness >= 75 ? 'var(--green)' : p.fitness >= 50 ? '#e9c46a' : 'var(--red)', fontSize: 11 }}>{p.fitness}%</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
             )}
           </div>
         </div>
@@ -456,9 +514,40 @@ export default function Management({ league, myClub, isCreator, onRefresh }: {
               {coachLoading ? '...' : 'Get Advice'}
             </button>
             {coachAdvice && (
-              <div className={styles.reportJson}>
-                <pre className={styles.reportPre}>{JSON.stringify(coachAdvice, null, 2)}</pre>
-              </div>
+              coachAdvice.error
+                ? <p style={{ color: 'var(--red)', fontSize: 13, marginTop: 10 }}>{coachAdvice.error}</p>
+                : <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: 26, fontFamily: 'var(--font-display)', fontWeight: 800, color: 'var(--green)' }}>{coachAdvice.recommendedFormation}</div>
+                        <div style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 2 }}>Recommended</div>
+                      </div>
+                      {coachAdvice.currentFormation && (
+                        <div style={{ textAlign: 'center' }}>
+                          <div style={{ fontSize: 26, fontFamily: 'var(--font-display)', fontWeight: 800, color: 'var(--text-2)' }}>{coachAdvice.currentFormation}</div>
+                          <div style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 2 }}>Current</div>
+                        </div>
+                      )}
+                    </div>
+                    <p style={{ fontSize: 12, color: 'var(--text-2)', margin: 0 }}>{coachAdvice.formationReason}</p>
+                    {coachAdvice.styleAdvice && (
+                      <p style={{ fontSize: 12, color: 'var(--text-2)', margin: 0, borderLeft: '2px solid var(--green)', paddingLeft: 10 }}>{coachAdvice.styleAdvice}</p>
+                    )}
+                    {coachAdvice.topPlayers && coachAdvice.topPlayers.length > 0 && (
+                      <div>
+                        <div className={styles.reportSectionLabel}>Suggested XI</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 6 }}>
+                          {coachAdvice.topPlayers.map((p, i) => (
+                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+                              <span className={`pos pos-${p.position === 'GK' ? 'gk' : ['CB','LB','RB'].includes(p.position) ? 'def' : ['CDM','CM','CAM','LM','RM'].includes(p.position) ? 'mid' : 'att'}`} style={{ fontSize: 9 }}>{p.position}</span>
+                              <span style={{ flex: 1, color: 'var(--text-1)' }}>{p.name}</span>
+                              <span style={{ color: 'var(--text-2)', fontWeight: 700 }}>{p.overall}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
             )}
           </div>
         </div>

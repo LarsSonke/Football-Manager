@@ -1628,3 +1628,60 @@
   padding: 16px;
   text-align: center;
 }
+
+/* ─── Settings tab bar ───────────────────────────────────────────────────── */
+.settingsTabs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  background: var(--bg-card);
+  border-radius: 10px;
+  padding: 3px;
+  margin-bottom: 8px;
+}
+
+.settingsTab {
+  padding: 7px 4px;
+  border: none;
+  background: none;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-display);
+  color: var(--text-2);
+  cursor: pointer;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: background 0.13s, color 0.13s;
+}
+
+.settingsTab:hover {
+  background: rgba(244, 241, 234, 0.06);
+  color: var(--text-1);
+}
+
+.settingsTabActive {
+  composes: settingsTab;
+  background: var(--accent);
+  color: #000;
+}
+
+/* ─── Scout tab empty state ──────────────────────────────────────────────── */
+.scoutEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 32px 16px;
+  color: var(--text-2);
+}
+
+.scoutEmptyIcon {
+  font-size: 28px;
+  opacity: 0.5;
+}
+
+.scoutEmptyText {
+  font-size: 12px;
+  text-align: center;
+}

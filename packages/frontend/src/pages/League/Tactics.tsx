@@ -633,6 +633,7 @@ export default function Tactics({ leagueId, myClub, nextOpponent, onSaved, nextM
   const [presets, setPresets] = useState<TacticPreset[]>(() => {
     try { return JSON.parse(localStorage.getItem(`tactic-presets-${leagueId}`) ?? '[]') } catch { return [] }
   })
+  const [settingsTab, setSettingsTab] = useState<'style' | 'instructions' | 'squad' | 'scout'>('style')
 
   useEffect(() => {
     if (!mountedRef.current) { mountedRef.current = true; return }
@@ -1270,8 +1271,45 @@ export default function Tactics({ leagueId, myClub, nextOpponent, onSaved, nextM
       {/* Right: settings */}
       <div className={styles.settingsCol}>
 
-        {/* Opponent Report + Tactical Battle */}
-        {nextOpponent && (() => {
+        {/* Team rating - always visible */}
+        <div className={styles.ratingCard}>
+          <div className={styles.ratingLabel}>Team Rating</div>
+          <div className={styles.ratingRow}>
+            <span className={styles.ratingValue}>{currentRating ?? ' - '}</span>
+            {previewRating !== null && currentRating !== null && (
+              <>
+                <span className={styles.ratingArrow}>{'→'}</span>
+                <div>
+                  <span className={previewRating > currentRating ? styles.ratingPreviewGood : previewRating < currentRating ? styles.ratingPreviewBad : styles.ratingPreviewSame}>
+                    {previewRating}
+                  </span>
+                  <span className={previewRating > currentRating ? styles.ratingDeltaGood : previewRating < currentRating ? styles.ratingDeltaBad : styles.ratingDeltaSame}>
+                    {previewRating > currentRating ? `+${previewRating - currentRating}` :
+                     previewRating < currentRating ? `${previewRating - currentRating}` : '='}</span>
+                </div>
+              </>
+            )}
+          </div>
+          {previewRating !== null && (
+            <div className={styles.ratingHint}>Drop to apply · drag away to cancel</div>
+          )}
+        </div>
+
+        {/* Tab bar */}
+        <div className={styles.settingsTabs}>
+          {(['style', 'instructions', 'squad', 'scout'] as const).map(tab => (
+            <button
+              key={tab}
+              onClick={() => setSettingsTab(tab)}
+              className={settingsTab === tab ? styles.settingsTabActive : styles.settingsTab}
+            >
+              {tab === 'style' ? 'Style' : tab === 'instructions' ? 'Instructions' : tab === 'squad' ? 'Squad' : 'Scout'}
+            </button>
+          ))}
+        </div>
+
+        {/* Tab: Scout - Opponent Report (defined first so it renders when tab=scout) */}
+        {settingsTab === 'scout' && nextOpponent && (() => {
           const oppTactic = nextOpponent.tactic
           const oppStyle = (oppTactic?.style === 'pressing' ? 'gegenpress' : oppTactic?.style) ?? 'possession'
           const oppIdentity = IDENTITY_DEFS.find(d => d.id === oppStyle) ?? IDENTITY_DEFS[0]
@@ -1331,34 +1369,15 @@ export default function Tactics({ leagueId, myClub, nextOpponent, onSaved, nextM
             </div>
           )
         })()}
-
-        {/* Team rating */}
-        <div className={styles.ratingCard}>
-          <div className={styles.ratingLabel}>Team Rating</div>
-          <div className={styles.ratingRow}>
-            <span className={styles.ratingValue}>{currentRating ?? ' - '}</span>
-            {previewRating !== null && currentRating !== null && (
-              <>
-                <span className={styles.ratingArrow}>→</span>
-                <div>
-                  <span className={previewRating > currentRating ? styles.ratingPreviewGood : previewRating < currentRating ? styles.ratingPreviewBad : styles.ratingPreviewSame}>
-                    {previewRating}
-                  </span>
-                  <span className={previewRating > currentRating ? styles.ratingDeltaGood : previewRating < currentRating ? styles.ratingDeltaBad : styles.ratingDeltaSame}>
-                    {previewRating > currentRating ? `+${previewRating - currentRating}` :
-                     previewRating < currentRating ? `${previewRating - currentRating}` : '='}
-                  </span>
-                </div>
-              </>
-            )}
+        {settingsTab === 'scout' && !nextOpponent && (
+          <div className={styles.scoutEmpty}>
+            <span className={styles.scoutEmptyIcon}>{'🔍'}</span>
+            <div className={styles.scoutEmptyText}>No upcoming opponent yet</div>
           </div>
-          {previewRating !== null && (
-            <div className={styles.ratingHint}>Drop to apply · drag away to cancel</div>
-          )}
-        </div>
+        )}
 
-        {/* Team Identity */}
-        <div className={styles.settingsCard}>
+        {/* Team Identity - Style tab */}
+        {settingsTab === 'style' && <div className={styles.settingsCard}>
           <div className="card-header">
             <span className="accent-bar" />
             <span className={styles.secLabel}>Team Identity</span>
@@ -1404,10 +1423,10 @@ export default function Tactics({ leagueId, myClub, nextOpponent, onSaved, nextM
               </div>
             )
           })()}
-        </div>
+        </div>}
 
-        {/* Team Instructions */}
-        <div className={styles.settingsCard}>
+        {/* Team Instructions - Instructions tab */}
+        {settingsTab === 'instructions' && <div className={styles.settingsCard}>
           <div className="card-header">
             <span className="accent-bar" />
             <span className={styles.secLabel}>Team Instructions</span>
@@ -1483,10 +1502,10 @@ export default function Tactics({ leagueId, myClub, nextOpponent, onSaved, nextM
             </div>
 
           </div>
-        </div>
+        </div>}
 
-        {/* Tactical Focus */}
-        <div className={styles.settingsCard}>
+        {/* Tactical Focus - Style tab */}
+        {settingsTab === 'style' && <div className={styles.settingsCard}>
           <div className="card-header">
             <span className="accent-bar" />
             <span className={styles.secLabel}>Match Focus</span>
@@ -1517,10 +1536,10 @@ export default function Tactics({ leagueId, myClub, nextOpponent, onSaved, nextM
               </div>
             )
           })()}
-        </div>
+        </div>}
 
-        {/* Tactical Cards */}
-        <div className={styles.settingsCard}>
+        {/* Tactical Cards - Instructions tab */}
+        {settingsTab === 'instructions' && <div className={styles.settingsCard}>
           <div className="card-header">
             <span className="accent-bar" />
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flex: 1 }}>
@@ -1563,10 +1582,10 @@ export default function Tactics({ leagueId, myClub, nextOpponent, onSaved, nextM
               })}
             </div>
           )}
-        </div>
+        </div>}
 
-        {/* Substitutions */}
-        <div className={styles.settingsCard}>
+        {/* Substitutions - Squad tab */}
+        {settingsTab === 'squad' && <div className={styles.settingsCard}>
           <div className="card-header">
             <span className="accent-bar" />
             <span className={styles.secLabel}>Substitutions</span>
@@ -1640,10 +1659,10 @@ export default function Tactics({ leagueId, myClub, nextOpponent, onSaved, nextM
               </button>
             )}
           </div>
-        </div>
+        </div>}
 
-        {/* Fit legend */}
-        <div className={styles.settingsCard}>
+        {/* Fit legend - Squad tab */}
+        {settingsTab === 'squad' && <div className={styles.settingsCard}>
           <div className="card-header">
             <span className="accent-bar" />
             <span className={styles.secLabel}>Position Fit</span>
@@ -1656,10 +1675,10 @@ export default function Tactics({ leagueId, myClub, nextOpponent, onSaved, nextM
               </div>
             ))}
           </div>
-        </div>
+        </div>}
 
-        {/* Presets */}
-        <div className={styles.settingsCard}>
+        {/* Presets - Squad tab */}
+        {settingsTab === 'squad' && <div className={styles.settingsCard}>
           <div className="card-header">
             <span className="accent-bar" />
             <span className={styles.secLabel}>Presets</span>
@@ -1682,7 +1701,7 @@ export default function Tactics({ leagueId, myClub, nextOpponent, onSaved, nextM
               <div className={styles.presetsMaxNote}>Max 4 presets  -  delete one to save a new preset</div>
             )}
           </div>
-        </div>
+        </div>}
 
         {/* Save */}
         <div className={styles.saveRow}>

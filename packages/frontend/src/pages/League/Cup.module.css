@@ -1,0 +1,240 @@
+/* ─── Layout ──────────────────────────────────────────────────────────────── */
+.scrollWrap {
+  overflow-x: auto;
+  padding: 4px 0 16px;
+}
+
+.bracketRow {
+  display: flex;
+  gap: 0;
+  align-items: flex-start;
+  min-width: max-content;
+}
+
+/* ─── Round wrapper ───────────────────────────────────────────────────────── */
+.roundWrapper {
+  display: flex;
+  flex-direction: column;
+  min-width: 190px;
+}
+
+.roundHeader {
+  text-align: center;
+  padding: 6px 8px 12px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 12px;
+}
+
+.roundHeaderFinal {
+  border-bottom-color: rgba(245, 166, 35, 0.4);
+}
+
+.roundName {
+  display: block;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+
+.roundHeaderFinal .roundName {
+  color: var(--gold);
+}
+
+.roundDay {
+  display: block;
+  font-size: 9px;
+  color: var(--text-3);
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+/* ─── Match column ────────────────────────────────────────────────────────── */
+.matchColumn {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  flex: 1;
+  padding: 0 8px;
+}
+
+.matchColumnFinal {
+  justify-content: center;
+}
+
+/* ─── Match pair (two cards + connector) ─────────────────────────────────── */
+.matchPair {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+  margin-bottom: 12px;
+}
+
+.matchPair:last-child {
+  margin-bottom: 0;
+}
+
+/* ─── Single-match slot (final) ──────────────────────────────────────────── */
+.singleSlot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ─── Match slot ──────────────────────────────────────────────────────────── */
+.matchSlot {
+  position: relative;
+  height: 80px;
+}
+
+/* ─── Connector: horizontal arm (right side of each card) ────────────────── */
+.connectorArm {
+  position: absolute;
+  right: -21px; /* extends into the gap between columns */
+  top: 50%;
+  transform: translateY(-50%);
+  width: 21px;
+  height: 1px;
+  background: rgba(244, 241, 234, 0.18);
+  pointer-events: none;
+}
+
+/* ─── Connector: vertical brace between paired arms ──────────────────────── */
+/*
+   Within matchPair (flex column, gap 8px):
+   - Slot 0: 0px to 80px, center at 40px
+   - Gap: 8px
+   - Slot 1: 88px to 168px, center at 128px
+   Brace runs from y=40 to y=128 on the right edge, positioned absolutely.
+*/
+.connectorBrace {
+  position: absolute;
+  right: -21px;
+  top: 40px;      /* center of first slot */
+  height: 88px;   /* 128 - 40 */
+  width: 1px;
+  background: rgba(244, 241, 234, 0.18);
+  pointer-events: none;
+}
+
+/* Output arm from midpoint of brace to next column */
+.connectorBrace::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 44px; /* half of 88px = midpoint between the two cards */
+  width: 21px;
+  height: 1px;
+  background: rgba(244, 241, 234, 0.18);
+}
+
+/* ─── Match card ──────────────────────────────────────────────────────────── */
+.matchCard {
+  height: 100%;
+  padding: 8px 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  font-size: 12px;
+  box-sizing: border-box;
+}
+
+.matchCardPlayed {
+  border-color: rgba(54, 226, 126, 0.2);
+}
+
+.matchCardFinal {
+  border-color: rgba(245, 166, 35, 0.4);
+  background: linear-gradient(135deg, rgba(245, 166, 35, 0.06) 0%, var(--bg-card) 60%);
+  min-width: 190px;
+}
+
+.matchCardBye {
+  justify-content: center;
+  gap: 4px;
+  opacity: 0.55;
+  font-style: italic;
+}
+
+/* ─── Final badge ─────────────────────────────────────────────────────────── */
+.finalTag {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 2px;
+  line-height: 1;
+}
+
+/* ─── Team name rows ──────────────────────────────────────────────────────── */
+.matchTeam {
+  color: var(--text-1);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.matchTeam[data-winner="true"] {
+  color: var(--green);
+  font-weight: 700;
+}
+
+.matchTeam[data-loser="true"] {
+  color: var(--text-3);
+  font-weight: 400;
+}
+
+.matchVs {
+  font-size: 9px;
+  color: var(--text-3);
+  text-align: center;
+}
+
+.matchTbd {
+  font-size: 10px;
+  color: var(--text-3);
+  font-style: italic;
+  text-align: center;
+}
+
+.byeLabel {
+  font-size: 11px;
+  color: var(--text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.byeTag {
+  font-size: 9px;
+  color: var(--text-3);
+}
+
+/* ─── Empty / loading states ──────────────────────────────────────────────── */
+.loading {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-2);
+  font-size: 13px;
+}
+
+.empty {
+  text-align: center;
+  padding: 64px 0;
+  color: var(--text-2);
+}
+
+.emptyIcon {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 10px;
+  opacity: 0.4;
+}

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../stores/auth.store'
+import { NotificationBell } from './NotificationBell'
 
 interface NavbarProps {
   backTo?: string
@@ -22,6 +23,7 @@ export function Navbar({ backTo, backLabel, children }: NavbarProps) {
       </Link>
       <div className="nav-spacer" />
       {user && <span className="nav-user">{user.username}</span>}
+      {user && <NotificationBell />}
       {children}
     </nav>
   )

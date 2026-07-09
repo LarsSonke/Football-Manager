@@ -1,0 +1,129 @@
+/* ─── Page layout ─────────────────────────────────────────────────────────── */
+.header {
+  background: linear-gradient(110deg, rgba(54, 226, 126, 0.1) 0%, var(--bg-card) 60%);
+  border-bottom: 1px solid var(--border);
+  padding: 20px 24px;
+}
+
+.headerInner {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.headerTitle {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.headerSub {
+  font-size: 13px;
+  color: var(--text-2);
+  margin-top: 4px;
+}
+
+.headerBudget {
+  flex: 1 1 300px;
+  max-width: 500px;
+}
+
+.layout {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px 24px;
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 24px;
+  align-items: start;
+}
+
+.tabRow {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.filterSearch {
+  flex: 1 1 180px;
+  min-width: 120px;
+}
+
+.filterOvr {
+  width: 80px;
+}
+
+.auctionGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  position: sticky;
+  top: 76px;
+}
+
+/* ─── Mobile ──────────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .header {
+    padding: 14px 16px;
+  }
+
+  .headerTitle {
+    font-size: 20px;
+  }
+
+  .layout {
+    grid-template-columns: 1fr;
+    padding: 12px 16px;
+    gap: 16px;
+  }
+
+  .sidebar {
+    position: static;
+    order: -1;
+  }
+
+  .auctionGrid {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  }
+
+  .filterOvr {
+    width: 70px;
+  }
+}
+
+@media (max-width: 480px) {
+  .header {
+    padding: 12px 12px;
+  }
+
+  .layout {
+    padding: 10px 12px;
+  }
+
+  .auctionGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .tabRow {
+    gap: 2px;
+  }
+}

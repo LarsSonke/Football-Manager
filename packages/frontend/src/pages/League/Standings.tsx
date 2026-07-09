@@ -219,41 +219,71 @@ export default function Standings({
 
       {/* ── Past seasons ── */}
       {history && history.length > 0 && (
-        <div className={styles.historySection}>
-          <div className={styles.historySectionHeading}>
-            <span className={styles.historySectionTitle}>Past Seasons</span>
-            <span className={styles.historySectionRule} />
-          </div>
+        <HistorySection history={history} myClubId={myClubId} />
+      )}
+    </>
+  )
+}
 
-          <div className={styles.historyList}>
-            {[...history].reverse().map((snap, si) => (
-              <div key={si} className={styles.historySeason}>
-                <div className={styles.historySeasonHeader}>
-                  <span>Season {history.length - si}</span>
-                  <span className={styles.historyTopLabel}>
-                    {snap.endedOnDay} matchdays
-                    {snap.clubs.length > 5 && ' · top 5 shown'}
-                  </span>
-                </div>
-                <div className={styles.historyRows}>
-                  {snap.clubs.slice(0, 5).map((c, ci) => (
-                    <div key={c.id} className={styles.historyRow} data-winner={String(ci === 0)}>
+// ─── HistorySection ───────────────────────────────────────────────────────────
+
+function HistorySection({ history, myClubId }: { history: SeasonSnapshot[]; myClubId: string | undefined }) {
+  const [expandedSeasons, setExpandedSeasons] = useState<Set<number>>(new Set())
+
+  function toggleSeason(si: number) {
+    setExpandedSeasons(prev => {
+      const next = new Set(prev)
+      if (next.has(si)) next.delete(si)
+      else next.add(si)
+      return next
+    })
+  }
+
+  return (
+    <div className={styles.historySection}>
+      <div className={styles.historySectionHeading}>
+        <span className={styles.historySectionTitle}>Past Seasons</span>
+        <span className={styles.historySectionRule} />
+      </div>
+
+      <div className={styles.historyList}>
+        {[...history].reverse().map((snap, si) => {
+          const expanded = expandedSeasons.has(si)
+          const visibleClubs = expanded ? snap.clubs : snap.clubs.slice(0, 5)
+          const hasMore = snap.clubs.length > 5
+
+          return (
+            <div key={si} className={styles.historySeason}>
+              <div className={styles.historySeasonHeader}>
+                <span>Season {history.length - si}</span>
+                <span className={styles.historyTopLabel}>{snap.endedOnDay} matchdays</span>
+              </div>
+              <div className={styles.historyRows}>
+                {visibleClubs.map((c, ci) => {
+                  const isMe = c.id === myClubId
+                  return (
+                    <div key={c.id} className={styles.historyRow} data-winner={String(ci === 0)} data-mine={String(isMe)}>
                       <span className={styles.historyRank} data-winner={String(ci === 0)}>
                         {ci === 0 ? <Trophy size={14} /> : ci + 1}
                       </span>
-                      <span className={styles.historyClubName}>{c.name}</span>
+                      <span className={styles.historyClubName} data-mine={String(isMe)}>{c.name}</span>
                       <span className={styles.historyRecord}>{c.wins}W {c.draws}D {c.losses}L</span>
                       <span className={styles.historyPoints} data-winner={String(ci === 0)}>
                         {c.points} pts
                       </span>
                     </div>
-                  ))}
-                </div>
+                  )
+                })}
               </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </>
+              {hasMore && (
+                <button className={styles.historyExpandBtn} onClick={() => toggleSeason(si)}>
+                  {expanded ? `Show less` : `Show all ${snap.clubs.length} clubs`}
+                </button>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
   )
 }

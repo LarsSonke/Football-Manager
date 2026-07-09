@@ -5,8 +5,10 @@ import { useAuth } from '../../stores/auth.store'
 import { api } from '../../api/client'
 import { posClass } from '../../utils/helpers'
 import { Navbar } from '../../components/Navbar'
+import { useNotifications } from '../../stores/notifications.store'
 import type { AuctionSummary, BudgetStats, MarketPageData } from './types'
 import { PlayerDetailModal } from './PlayerDetailModal'
+import tStyles from './Transfer.module.css'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -402,7 +404,11 @@ export default function TransferMarket() {
   const [marketHasMore, setMarketHasMore] = useState(false)
   const [visibleCount, setVisibleCount] = useState(20)  // client-side limit for my-bids/watchlist
 
+  // Won players for closed window summary
+  const [wonPlayers, setWonPlayers] = useState<AuctionSummary[]>([])
+
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const addNotification = useNotifications(s => s.add)
 
   const fetchPage = useCallback(async () => {
     if (!leagueId) return
@@ -482,17 +488,38 @@ export default function TransferMarket() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab])
 
+  // Load won players when window is closed
+  useEffect(() => {
+    if (!leagueId || pageData?.window.status !== 'CLOSED') return
+    api.get(`/draft/${leagueId}/my-bids`)
+      .then(r => setWonPlayers((r.data as AuctionSummary[]).filter(a => a.status === 'WON' && a.isLeading)))
+      .catch(() => {})
+  }, [leagueId, pageData?.window.status])
+
   // Socket  -  live bid updates
   useEffect(() => {
     if (!leagueId) return
     const socket: Socket = io()
     socket.emit('join:draft', leagueId)
     socket.on('auction:bid', (data: { auctionId: string; currentBid: number; endsAt: string }) => {
-      setAuctions(prev => prev.map(a =>
-        a.id === data.auctionId
-          ? { ...a, currentBid: data.currentBid, endsAt: data.endsAt, bidCount: a.bidCount + 1 }
-          : a,
-      ))
+      setAuctions(prev => {
+        const next = prev.map(a => {
+          if (a.id !== data.auctionId) return a
+          const wasLeading = a.isLeading
+          const updated = { ...a, currentBid: data.currentBid, endsAt: data.endsAt, bidCount: a.bidCount + 1, isLeading: false }
+          if (wasLeading) {
+            addNotification({
+              type: 'outbid',
+              title: 'You were outbid!',
+              body: `${a.player.name} - new bid: ${formatEur(data.currentBid)}`,
+              leagueId: leagueId ?? undefined,
+              auctionId: a.id,
+            })
+          }
+          return updated
+        })
+        return next
+      })
     })
     socket.on('window:finalized', () => navigate(`/league/${leagueId}`))
     return () => { socket.disconnect() }
@@ -506,7 +533,9 @@ export default function TransferMarket() {
 
   async function handleWatch(a: AuctionSummary) {
     await api.post(`/draft/${leagueId}/watchlist/${a.id}`)
-    setAuctions(prev => prev.map(x => x.id === a.id ? { ...x, isWatching: !x.isWatching } : x))
+    const willBeWatching = !a.isWatching
+    setAuctions(prev => prev.map(x => x.id === a.id ? { ...x, isWatching: willBeWatching } : x))
+    setWatchlistCount(prev => Math.max(0, prev + (willBeWatching ? 1 : -1)))
   }
 
   async function handleFinalize() {
@@ -548,32 +577,28 @@ export default function TransferMarket() {
       </Navbar>
 
       {/* Header */}
-      <div style={{ background: 'linear-gradient(110deg, rgba(54,226,126,0.1) 0%, var(--bg-card) 60%)', borderBottom: '1px solid var(--border)', padding: '20px 24px' }}>
-        <div style={{ maxWidth: 1400, margin: '0 auto' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap' }}>
-            <div>
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: 26, fontWeight: 800, letterSpacing: 0.5 }}>
-                TRANSFER WINDOW
-              </div>
-              <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 4 }}>
-                {openCount} auctions live · {scheduledCount} upcoming · {wonCount} completed
-              </div>
+      <div className={tStyles.header}>
+        <div className={tStyles.headerInner}>
+          <div>
+            <div className={tStyles.headerTitle}>TRANSFER WINDOW</div>
+            <div className={tStyles.headerSub}>
+              {openCount} auctions live · {scheduledCount} upcoming · {wonCount} completed
             </div>
-            {budgetStats && (
-              <div style={{ flex: '1 1 300px', maxWidth: 500 }}>
-                <BudgetBar stats={budgetStats} />
-              </div>
-            )}
           </div>
+          {budgetStats && (
+            <div className={tStyles.headerBudget}>
+              <BudgetBar stats={budgetStats} />
+            </div>
+          )}
         </div>
       </div>
 
-      <div style={{ maxWidth: 1400, margin: '0 auto', padding: '20px 24px', display: 'grid', gridTemplateColumns: '1fr 280px', gap: 24, alignItems: 'start' }}>
+      <div className={tStyles.layout}>
 
         {/* ── Main column ────────────────────────────────────────────────────── */}
         <div>
           {/* Tabs */}
-          <div style={{ display: 'flex', gap: 4, marginBottom: 16 }}>
+          <div className={tStyles.tabRow}>
             {(['market', 'my-bids', 'watchlist'] as Tab[]).map(t => (
               <button
                 key={t}
@@ -599,12 +624,12 @@ export default function TransferMarket() {
 
           {/* Filters (market only) */}
           {tab === 'market' && (
-            <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+            <div className={tStyles.filters}>
               <input
                 placeholder="Search player..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                style={{ flex: '1 1 180px', minWidth: 120 }}
+                className={tStyles.filterSearch}
               />
               <select
                 value={posFilter}
@@ -622,14 +647,14 @@ export default function TransferMarket() {
                 placeholder="Min OVR"
                 value={minOvr}
                 onChange={e => setMinOvr(e.target.value)}
-                style={{ width: 80 }}
+                className={tStyles.filterOvr}
               />
               <input
                 type="number"
                 placeholder="Max OVR"
                 value={maxOvr}
                 onChange={e => setMaxOvr(e.target.value)}
-                style={{ width: 80 }}
+                className={tStyles.filterOvr}
               />
               {(search || posFilter !== 'ALL' || minOvr || maxOvr) && (
                 <button
@@ -652,7 +677,7 @@ export default function TransferMarket() {
             </div>
           ) : (
             <>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
+              <div className={tStyles.auctionGrid}>
                 {(tab === 'market' ? auctions : auctions.slice(0, visibleCount)).map(a => (
                   <AuctionCard
                     key={a.id}
@@ -688,7 +713,7 @@ export default function TransferMarket() {
         </div>
 
         {/* ── Sidebar ──────────────────────────────────────────────────────── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, position: 'sticky', top: 76 }}>
+        <div className={tStyles.sidebar}>
 
           {/* Window status card */}
           <div className="card" style={{ padding: 0 }}>
@@ -754,9 +779,31 @@ export default function TransferMarket() {
           )}
 
           {windowClosed && (
-            <div style={{ padding: '12px 16px', background: 'rgba(54,226,126,0.08)', border: '1px solid rgba(54,226,126,0.25)', borderRadius: 'var(--radius)', textAlign: 'center' }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--green)', marginBottom: 4 }}>Window Closed</div>
-              <div style={{ fontSize: 12, color: 'var(--text-2)' }}>Season is starting...</div>
+            <div className="card" style={{ padding: 0 }}>
+              <div className="card-header" style={{ borderColor: 'rgba(54,226,126,0.2)' }}>
+                <span className="accent-bar" style={{ background: 'var(--green)' }} />
+                <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--green)' }}>Window Closed</span>
+              </div>
+              <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ fontSize: 12, color: 'var(--text-2)' }}>
+                  {wonPlayers.length > 0
+                    ? `You secured ${wonPlayers.length} player${wonPlayers.length !== 1 ? 's' : ''}. Season is starting soon.`
+                    : 'Season is starting soon.'}
+                </div>
+                {wonPlayers.length > 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {wonPlayers.map(a => (
+                      <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', background: 'var(--bg-card-2)', borderRadius: 'var(--radius-sm)' }}>
+                        <span className={posClass(a.player.position)} style={{ fontSize: 9 }}>{a.player.position}</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.player.name}</div>
+                          <div style={{ fontSize: 10, color: 'var(--text-3)' }}>{formatEur(a.currentBid)} · {a.player.overall} OVR</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>

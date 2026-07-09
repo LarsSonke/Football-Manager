@@ -216,7 +216,7 @@ export default function Management({ league, myClub, isCreator, onRefresh }: {
     try {
       const r = await api.get(`/leagues/${league.id}/scout/${scoutClubId}`)
       setScoutReport(r.data)
-    } catch (e: any) { setScoutReport({ error: e.response?.data?.error ?? 'Failed' }) }
+    } catch (e: any) { setScoutReport({ scoutLevel: 0, recentResults: [], error: e.response?.data?.error ?? 'Failed' }) }
     finally { setScoutLoading(false) }
   }
 
@@ -225,7 +225,7 @@ export default function Management({ league, myClub, isCreator, onRefresh }: {
     try {
       const r = await api.get(`/leagues/${league.id}/coach-advice`)
       setCoachAdvice(r.data)
-    } catch (e: any) { setCoachAdvice({ error: e.response?.data?.error ?? 'Failed' }) }
+    } catch (e: any) { setCoachAdvice({ coachLevel: 0, recommendedFormation: '', formationReason: '', error: e.response?.data?.error ?? 'Failed' }) }
     finally { setCoachLoading(false) }
   }
 

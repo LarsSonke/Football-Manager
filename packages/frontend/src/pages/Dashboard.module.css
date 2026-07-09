@@ -237,6 +237,11 @@
   background: #1c1c22;
 }
 
+.leagueCardActive {
+  border-left-color: var(--accent) !important;
+  border-left-width: 4px;
+}
+
 .ghostRank {
   position: absolute;
   right: -8px;

@@ -16,6 +16,7 @@ interface SimResult {
   awayScore: number
   competition: string
   stats: { home: TeamStats; away: TeamStats }
+  injuries: Array<{ clubId: string; playerName: string; daysOut: number }>
 }
 
 interface TeamStats {
@@ -597,7 +598,7 @@ export async function simulateMatch(
   // ── Persist results ─────────────────────────────────────────────────
   await saveMatch(match, homeGoals, awayGoals, stats, shotEvents, cardEvents, subEvents, homeLineup, awayLineup)
   await updateStandings(match.homeClubId, match.awayClubId, homeGoals, awayGoals)
-  await applyMatchInjuries(match)
+  const injuries = await applyMatchInjuries(match)
   await saveMatchPerformances(
     match, homeLineup, awayLineup, homeGoals, awayGoals,
     goalsByInstance, assistsByInstance, subEvents,
@@ -626,6 +627,7 @@ export async function simulateMatch(
     awayScore: awayGoals,
     competition: match.competition ?? 'LEAGUE',
     stats,
+    injuries,
   }
 }
 
@@ -1094,13 +1096,14 @@ async function updateStandings(homeId: string, awayId: string, h: number, a: num
 
 // ─── Injuries ─────────────────────────────────────────────────────────────────
 
-async function applyMatchInjuries(match: FullMatch): Promise<void> {
+async function applyMatchInjuries(match: FullMatch): Promise<Array<{ clubId: string; playerName: string; daysOut: number }>> {
   const candidates = [
-    ...match.homeClub.squad,
-    ...match.awayClub.squad,
+    ...match.homeClub.squad.map(p => ({ ...p, clubId: match.homeClubId })),
+    ...match.awayClub.squad.map(p => ({ ...p, clubId: match.awayClubId })),
   ].filter(p => !p.injured)
 
   const updates: Promise<unknown>[] = []
+  const newInjuries: Array<{ clubId: string; playerName: string; daysOut: number }> = []
   for (const inst of candidates) {
     if (rand() < 0.04) {
       const days = Math.floor(rand() * 12) + 3  // 3–14 days
@@ -1110,9 +1113,11 @@ async function applyMatchInjuries(match: FullMatch): Promise<void> {
           data: { injured: true, injuryDaysLeft: days },
         }),
       )
+      newInjuries.push({ clubId: inst.clubId, playerName: inst.player.name, daysOut: days })
     }
   }
   await Promise.all(updates)
+  return newInjuries
 }
 
 // ─── Post-match condition updates ────────────────────────────────────────────

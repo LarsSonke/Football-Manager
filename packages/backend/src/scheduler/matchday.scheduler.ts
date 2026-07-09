@@ -247,7 +247,8 @@ export async function simulateLeagueMatchday(leagueId: string, options?: { skipB
     await broadcastMatchesLive(leagueId, results.map(r => r.matchId))
 
     try {
-      getIO().to(`league:${leagueId}`).emit('matchday:complete', { matchday: nextDay, results, awards })
+      const injuries = results.flatMap(r => r.injuries ?? [])
+      getIO().to(`league:${leagueId}`).emit('matchday:complete', { matchday: nextDay, results, awards, injuries })
       if (sponsorResolutions.length > 0) {
         getIO().to(`league:${leagueId}`).emit('sponsor:resolved', { resolutions: sponsorResolutions })
       }
@@ -283,7 +284,7 @@ async function saveForfeit(
   match: { id: string; homeClubId: string; awayClubId: string; competition: string | null },
   homeScore: number,
   awayScore: number,
-): Promise<{ matchId: string; homeClubId: string; awayClubId: string; homeScore: number; awayScore: number; competition: string; stats: { home: object; away: object } }> {
+): Promise<{ matchId: string; homeClubId: string; awayClubId: string; homeScore: number; awayScore: number; competition: string; stats: { home: object; away: object }; injuries: [] }> {
   const empty = { shots: 0, shotsOnTarget: 0, xG: 0, possession: 50, yellowCards: 0, redCards: 0 }
   await prisma.match.update({
     where: { id: match.id },
@@ -297,7 +298,7 @@ async function saveForfeit(
   else { homeUpd.draws = { increment: 1 }; homeUpd.points = { increment: 1 }; awayUpd.draws = { increment: 1 }; awayUpd.points = { increment: 1 } }
   await prisma.club.update({ where: { id: match.homeClubId }, data: homeUpd as any })
   await prisma.club.update({ where: { id: match.awayClubId }, data: awayUpd as any })
-  return { matchId: match.id, homeClubId: match.homeClubId, awayClubId: match.awayClubId, homeScore, awayScore, competition: match.competition ?? 'LEAGUE', stats: { home: empty, away: empty } }
+  return { matchId: match.id, homeClubId: match.homeClubId, awayClubId: match.awayClubId, homeScore, awayScore, competition: match.competition ?? 'LEAGUE', stats: { home: empty, away: empty }, injuries: [] }
 }
 
 async function broadcastMatchesLive(leagueId: string, matchIds: string[]): Promise<void> {

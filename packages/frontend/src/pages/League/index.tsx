@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import type { ReactNode } from 'react'
 import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { io, type Socket } from 'socket.io-client'
+import { useNotifications } from '../../stores/notifications.store'
 import { Trophy, BarChart2, Clock, Calendar, Grid2X2, ArrowLeftRight, Mail, Settings, TrendingUp, Swords } from 'lucide-react'
 import { useAuth } from '../../stores/auth.store'
 import { api } from '../../api/client'
@@ -200,7 +201,7 @@ function LiveTicker({ matches, myClubId, onDismiss }: { matches: Map<string, Liv
     SUBSTITUTION: <SubIcon size={12} />, PENALTY_MISS: '✗',
   }
 
-  const renderEvent = (evt: LiveMatchState['events'][number], m: LiveMatchState) => {
+  const renderEvent = (evt: LiveMatchState['events'][number]) => {
     const d = evt.detail as any
     const isHome = d?.team === 'home'
     const name = evt.eventType === 'SUBSTITUTION'
@@ -245,7 +246,7 @@ function LiveTicker({ matches, myClubId, onDismiss }: { matches: Map<string, Liv
             </div>
             {myMatch.events.length > 0 && (
               <div className={styles.liveTickerEvents}>
-                {[...myMatch.events].reverse().slice(0, 8).reverse().map(evt => renderEvent(evt, myMatch))}
+                {[...myMatch.events].reverse().slice(0, 8).reverse().map(evt => renderEvent(evt))}
               </div>
             )}
           </div>
@@ -312,6 +313,7 @@ export default function League() {
   const myClubIdRef = useRef<string | undefined>(undefined)
   const myClubWagesRef = useRef<number>(0)
   const prevStatusRef = useRef<string | undefined>(undefined)
+  const addNotification = useNotifications(s => s.add)
 
   const refresh = useCallback(() => {
     if (!id) return
@@ -365,7 +367,7 @@ export default function League() {
     if (!id) return
     const socket: Socket = io()
     socket.emit('join:league', id)
-    socket.on('matchday:complete', (data: { matchday: number; results: Array<{ matchId: string; homeClubId: string; awayClubId: string; homeScore: number; awayScore: number }>; awards?: MatchdayAwards | null }) => {
+    socket.on('matchday:complete', (data: { matchday: number; results: Array<{ matchId: string; homeClubId: string; awayClubId: string; homeScore: number; awayScore: number }>; awards?: MatchdayAwards | null; injuries?: Array<{ clubId: string; playerName: string; daysOut: number }> }) => {
       const cid = myClubIdRef.current
       const mine = cid ? data.results.find(r => r.homeClubId === cid || r.awayClubId === cid) : null
       let msg: string
@@ -384,6 +386,18 @@ export default function League() {
       setNotification(msg)
       setTimeout(() => setNotification(null), 10000)
       if (data.awards) setAwards(data.awards)
+      // Notify about injuries to my squad
+      if (cid && data.injuries) {
+        const myInjuries = data.injuries.filter(i => i.clubId === cid)
+        for (const inj of myInjuries) {
+          addNotification({
+            type: 'injury',
+            title: 'Player Injured',
+            body: `${inj.playerName} is out for ${inj.daysOut} matchday${inj.daysOut !== 1 ? 's' : ''}`,
+            leagueId: id ?? undefined,
+          })
+        }
+      }
       refresh()
     })
     socket.on('sponsor:resolved', (data: { resolutions: Array<{ clubId: string; sponsorName: string; sponsorEmoji: string; completed: boolean; reward: number }> }) => {

@@ -313,7 +313,7 @@ export default function Dashboard() {
               <div
                 key={entry.id}
                 onClick={() => navigate(`/league/${entry.league.id}`)}
-                className={styles.leagueCard}
+                className={`${styles.leagueCard} ${entry.league.status === 'ACTIVE' ? styles.leagueCardActive : ''}`}
                 style={{ animation: `mgUp .4s ${(i * 0.06).toFixed(2)}s both` }}
               >
                 {/* ghost rank number */}

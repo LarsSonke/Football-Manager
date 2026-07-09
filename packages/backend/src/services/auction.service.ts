@@ -433,7 +433,7 @@ export async function placeBid(
     if (auction.endsAt <= now) throw new Error('Auction has ended')
 
     const effectiveMax = maxBid !== undefined ? Math.max(amount, maxBid) : amount
-    const minBid = auction.currentBid + MIN_INCREMENT
+    const minBid = auction.winnerClubId ? auction.currentBid + MIN_INCREMENT : auction.openingBid
 
     if (amount < minBid) {
       throw new Error(`Minimum bid is €${minBid.toLocaleString('en-US')}`)
